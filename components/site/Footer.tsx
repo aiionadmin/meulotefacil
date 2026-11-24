@@ -1,23 +1,22 @@
 "use client";
 
 import RidgelineDitherFooter from "@/components/ui/ridgeline-dither-footer";
-import { Logo } from "@/components/brand/Logo";
 import { INSTITUTIONAL } from "@/lib/institutional";
 import { FOOTER_COLS, SITE_NAV } from "@/lib/site-nav";
 
 /**
  * Site footer, Ridgeline Dither Footer (21st) adaptado a ink/paper/Montserrat.
- * Sem links /auth.
+ * Sem links /auth. Sem marca SVG à esquerda do nome (o ícone parecia um “L”).
  */
 export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <div className="[&_.rdf-bar]:relative [&_.rdf-bar]:z-[3] [&_.rdf-bar]:bg-gradient-to-b [&_.rdf-bar]:from-[#f3f1ec] [&_.rdf-bar]:via-[#f3f1ec]/92 [&_.rdf-bar]:to-transparent [&_.rdf-bar]:pb-10 [&_.rdf-tag]:text-[#3f4743] [&_.rdf-col-title]:text-ink">
+    <div className="[&_.rdf-bar]:relative [&_.rdf-bar]:z-[3] [&_.rdf-bar]:bg-gradient-to-b [&_.rdf-bar]:from-[#f3f1ec] [&_.rdf-bar]:via-[#f3f1ec]/92 [&_.rdf-bar]:to-transparent [&_.rdf-bar]:pb-10 [&_.rdf-tag]:text-[#3f4743] [&_.rdf-col-title]:text-ink [&_.rdf-logo]:gap-0">
     <RidgelineDitherFooter
       name={INSTITUTIONAL.name}
       brandHref="/"
-      logo={<Logo variant="mono" className="text-ink scale-90" />}
+      logo={<span aria-hidden className="hidden" />}
       tagline={`${INSTITUTIONAL.missao} Atuação em ${INSTITUTIONAL.atuacao.join(", ")} (SP), desde ${INSTITUTIONAL.founded}.`}
       columns={[
         {

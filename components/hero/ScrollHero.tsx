@@ -203,14 +203,17 @@ export function ScrollHero() {
                   <span
                     className={cn(
                       "h-1.5 w-1.5 rounded-full transition-all sm:h-2 sm:w-2",
-                      active ? "scale-125 bg-brand-orange" : "bg-brand-cream/40"
+                      active ? "scale-125 bg-orange-300" : "bg-brand-cream/45"
                     )}
                     aria-hidden
                   />
                   <span
                     className={cn(
                       "hidden text-[10px] font-semibold uppercase tracking-wider sm:inline",
-                      active ? "text-orange-300" : "text-brand-cream/80"
+                      // Ativo em cream claro (nunca ink/laranja escuro sobre o vídeo)
+                      active
+                        ? "text-brand-cream"
+                        : "text-brand-cream/75"
                     )}
                   >
                     {m.label}
