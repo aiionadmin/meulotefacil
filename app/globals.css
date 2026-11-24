@@ -3,7 +3,7 @@
 /*
   Design system — consultoria corporativa (etapa 1)
   Semântica: ink / paper / accent (+ mata, linha)
-  Tipografia: Newsreader (display) + IBM Plex Sans + IBM Plex Mono
+  Tipografia: Montserrat em todo o site
   Aliases grafite/papel/latossolo e brand-* mantidos p/ auth/demo.
 */
 
@@ -179,9 +179,9 @@
   --color-orange-900: var(--orange-900);
   --color-orange-950: var(--orange-950);
 
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
   --radius-sm: 0;
   --radius-md: 2px;
   --radius-lg: var(--radius);
@@ -199,7 +199,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
   }
 
@@ -219,19 +219,18 @@
     text-wrap: balance;
   }
 
-  /* Display: Newsreader — sem caixa alta */
+  /* Display / labels: Montserrat (site inteiro) */
   .font-display {
-    font-family: var(--font-newsreader), ui-serif, Georgia, serif;
-    font-weight: 500;
+    font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
     letter-spacing: -0.02em;
     text-transform: none;
-    font-optical-sizing: auto;
   }
 
   .font-mono-label {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
     font-weight: 500;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     text-transform: none;
   }
 

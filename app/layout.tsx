@@ -1,26 +1,12 @@
 import type { Metadata } from "next";
-import { Newsreader, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import { INSTITUTIONAL } from "@/lib/institutional";
 import "./globals.css";
 
-const newsreader = Newsreader({
+const montserrat = Montserrat({
   subsets: ["latin"],
-  variable: "--font-newsreader",
+  variable: "--font-montserrat",
   weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-
-const plexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  variable: "--font-plex-sans",
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  variable: "--font-plex-mono",
-  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -56,9 +42,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body
-        className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable} font-sans antialiased`}
-      >
+      <body className={`${montserrat.variable} font-sans antialiased`}>
         {children}
         <script
           type="application/ld+json"

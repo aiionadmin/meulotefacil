@@ -11,7 +11,7 @@ type SectionHeadingProps = {
 };
 
 /**
- * Cabeçalho de seção: número IBM Plex Mono + título Newsreader.
+ * Cabeçalho de seção: número + título em Montserrat.
  */
 export function SectionHeading({
   number,
