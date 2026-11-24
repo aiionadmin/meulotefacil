@@ -18,7 +18,7 @@ Se o registry falhar (auth), usar shadcn/ui base + composição própria no mesm
 | Bloco | Tentativa | Resultado | Implementação |
 |-------|-----------|-----------|----------------|
 | Navbar | `https://21st.dev/r/aceternity/floating-navbar` | **403 auth** (`authentication_required`) | `components/site/Header.tsx` — floating strip própria |
-| Footer | `https://21st.dev/r/aceternity/footer` | **404** no registry | `components/site/Footer.tsx` — footer técnico próprio |
+| Footer | Ridgeline Dither Footer (paste 21st) | Integrado | `components/ui/ridgeline-dither-footer.tsx` + `components/site/Footer.tsx` |
 | Accordion / Tabs | shadcn local | Já presentes | `components/ui/*` |
 
 `components.json` adicionado para próximos `shadcn add`.
