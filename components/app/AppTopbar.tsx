@@ -36,26 +36,20 @@ import { createClient } from "@/lib/supabase/client";
 import { clearDemoSession } from "@/lib/auth-demo";
 
 const crumbs: Record<string, string> = {
-  dashboard: "Dashboard",
-  lotes: "Lotes",
-  mapa: "Mapa",
-  clientes: "Clientes",
-  propostas: "Propostas",
-  contratos: "Contratos",
-  financeiro: "Financeiro",
+  dashboard: "Painel",
+  processos: "Processos",
+  nucleos: "Núcleos",
   documentos: "Documentos",
+  protocolo: "Protocolo",
   configuracoes: "Configurações",
 };
 
 const commands = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/lotes", label: "Lotes" },
-  { href: "/lotes/mapa", label: "Mapa de lotes" },
-  { href: "/clientes", label: "Clientes" },
-  { href: "/propostas", label: "Propostas" },
-  { href: "/contratos", label: "Contratos" },
-  { href: "/financeiro", label: "Financeiro" },
+  { href: "/dashboard", label: "Painel" },
+  { href: "/processos", label: "Processos" },
+  { href: "/nucleos", label: "Núcleos" },
   { href: "/documentos", label: "Documentos" },
+  { href: "/protocolo", label: "Protocolo" },
   { href: "/configuracoes", label: "Configurações" },
 ];
 
@@ -64,7 +58,6 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
-
   const parts = pathname.split("/").filter(Boolean);
 
   useEffect(() => {
@@ -88,18 +81,27 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
 
   return (
     <header className="flex h-16 items-center gap-3 border-b border-border bg-card px-4">
-      <Button variant="ghost" size="icon" className="lg:hidden text-foreground" onClick={onMenu}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-foreground lg:hidden"
+        onClick={onMenu}
+      >
         <Menu className="h-5 w-5" />
       </Button>
 
       <nav className="hidden text-sm text-muted-foreground sm:flex sm:items-center sm:gap-1">
         <Link href="/dashboard" className="hover:text-brand-orange">
-          App
+          Sistema
         </Link>
         {parts.map((p, i) => (
           <span key={p} className="flex items-center gap-1">
             <span>/</span>
-            <span className={i === parts.length - 1 ? "font-medium text-foreground" : ""}>
+            <span
+              className={
+                i === parts.length - 1 ? "font-medium text-foreground" : ""
+              }
+            >
               {crumbs[p] || p}
             </span>
           </span>
@@ -115,16 +117,21 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
         >
           <Search className="h-3.5 w-3.5" />
           Buscar
-          <kbd className="rounded border border-border bg-muted px-1.5 text-[10px]">⌘K</kbd>
+          <kbd className="rounded border border-border bg-muted px-1.5 text-[10px]">
+            ⌘K
+          </kbd>
         </Button>
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(true)}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={() => setOpen(true)}
+        >
           <Search className="h-4 w-4" />
         </Button>
-
         <Button variant="ghost" size="icon" aria-label="Notificações">
           <Bell className="h-4 w-4" />
         </Button>
-
         <Button
           variant="ghost"
           size="icon"
@@ -134,10 +141,12 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
           <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
         </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange">
+            <button
+              type="button"
+              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
+            >
               <Avatar className="h-9 w-9">
                 <AvatarFallback>
                   {demoUser.nome
@@ -174,7 +183,7 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
       </div>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Buscar páginas, módulos…" />
+        <CommandInput placeholder="Buscar páginas…" />
         <CommandList>
           <CommandEmpty>Nenhum resultado.</CommandEmpty>
           <CommandGroup heading="Navegação">

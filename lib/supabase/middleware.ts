@@ -4,12 +4,10 @@ import { isSupabaseConfigured } from "./client";
 
 const APP_PREFIXES = [
   "/dashboard",
-  "/lotes",
-  "/clientes",
-  "/propostas",
-  "/contratos",
-  "/financeiro",
+  "/processos",
+  "/nucleos",
   "/documentos",
+  "/protocolo",
   "/configuracoes",
 ];
 

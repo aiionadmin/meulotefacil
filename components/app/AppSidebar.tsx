@@ -5,30 +5,54 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Map,
-  Users,
-  FileText,
-  ScrollText,
-  Wallet,
+  FolderKanban,
   FolderOpen,
+  Hash,
   Settings,
   ChevronLeft,
   ChevronRight,
-  LandPlot,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import type { Papel } from "@/lib/data/types";
 
 const nav = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "corretor", "cliente"] as Papel[] },
-  { href: "/lotes", label: "Lotes", icon: LandPlot, roles: ["admin", "corretor"] as Papel[] },
-  { href: "/lotes/mapa", label: "Mapa", icon: Map, roles: ["admin", "corretor"] as Papel[] },
-  { href: "/clientes", label: "Clientes", icon: Users, roles: ["admin", "corretor"] as Papel[] },
-  { href: "/propostas", label: "Propostas", icon: FileText, roles: ["admin", "corretor"] as Papel[] },
-  { href: "/contratos", label: "Contratos", icon: ScrollText, roles: ["admin", "corretor", "cliente"] as Papel[] },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet, roles: ["admin", "corretor", "cliente"] as Papel[] },
-  { href: "/documentos", label: "Documentos", icon: FolderOpen, roles: ["admin", "corretor", "cliente"] as Papel[] },
-  { href: "/configuracoes", label: "Configurações", icon: Settings, roles: ["admin", "corretor", "cliente"] as Papel[] },
+  {
+    href: "/dashboard",
+    label: "Painel",
+    icon: LayoutDashboard,
+    roles: ["admin", "corretor", "cliente"] as Papel[],
+  },
+  {
+    href: "/processos",
+    label: "Processos",
+    icon: FolderKanban,
+    roles: ["admin", "corretor", "cliente"] as Papel[],
+  },
+  {
+    href: "/nucleos",
+    label: "Núcleos",
+    icon: Map,
+    roles: ["admin", "corretor"] as Papel[],
+  },
+  {
+    href: "/documentos",
+    label: "Documentos",
+    icon: FolderOpen,
+    roles: ["admin", "corretor", "cliente"] as Papel[],
+  },
+  {
+    href: "/protocolo",
+    label: "Protocolo",
+    icon: Hash,
+    roles: ["admin", "corretor", "cliente"] as Papel[],
+  },
+  {
+    href: "/configuracoes",
+    label: "Configurações",
+    icon: Settings,
+    roles: ["admin", "corretor", "cliente"] as Papel[],
+  },
 ];
 
 export function AppSidebar({
@@ -69,7 +93,11 @@ export function AppSidebar({
             className="rounded-md p-1.5 text-brand-cream/70 hover:bg-brand-navy hover:text-brand-orange"
             aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
           </button>
         )}
       </div>
@@ -78,10 +106,7 @@ export function AppSidebar({
         {items.map((item) => {
           const active =
             pathname === item.href ||
-            (item.href !== "/dashboard" &&
-              item.href !== "/lotes/mapa" &&
-              pathname.startsWith(item.href) &&
-              !(item.href === "/lotes" && pathname.startsWith("/lotes/mapa")));
+            (item.href !== "/dashboard" && pathname.startsWith(item.href));
           const Icon = item.icon;
           return (
             <Link

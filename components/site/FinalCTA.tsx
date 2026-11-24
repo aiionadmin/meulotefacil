@@ -1,15 +1,16 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useMagnetic } from "@/components/motion/useMagnetic";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
+import { whatsappUrl } from "@/lib/institutional";
 
 export function FinalCTA() {
   const rootRef = useRef<HTMLElement>(null);
   const btnWrap = useMagnetic<HTMLDivElement>(0.3);
+  const wa = whatsappUrl();
 
   useGSAP(
     () => {
@@ -78,15 +79,16 @@ export function FinalCTA() {
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
         <h2 className="font-display text-3xl sm:text-5xl lg:text-6xl">
-          Pronto para conquistar seu lote?
+          Seu imóvel está sem escritura?
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-brand-navy/80">
-          Escolha o empreendimento, simule as parcelas e fale com um consultor.
-          Do jeito fácil.
+          Fale com quem já regularizou milhares de lotes em Campinas e região.
         </p>
         <div ref={btnWrap} className="mt-10 inline-flex">
           <Button asChild size="lg" variant="secondary">
-            <Link href="/empreendimentos">Quero meu lote</Link>
+            <a href={wa} target="_blank" rel="noopener noreferrer">
+              Falar no WhatsApp
+            </a>
           </Button>
         </div>
       </div>

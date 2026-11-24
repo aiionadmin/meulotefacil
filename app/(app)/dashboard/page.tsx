@@ -1,25 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { lotes } from "@/lib/data/lotes";
-import { atividades, propostas, vendasPorMes } from "@/lib/data/clientes";
-import { formatCurrency } from "@/lib/utils";
+import { nucleos } from "@/lib/data/nucleos";
+import { processos, statusProcessoLabel } from "@/lib/data/processos";
 import { useCounter } from "@/components/motion/useCounter";
-import { SalesChartLazy } from "@/components/app/SalesChartLazy";
+import { faseLabel } from "@/lib/data/nucleos";
 
-function Kpi({
-  label,
-  value,
-  prefix = "",
-  suffix = "",
-}: {
-  label: string;
-  value: number;
-  prefix?: string;
-  suffix?: string;
-}) {
-  const ref = useCounter<HTMLSpanElement>(value, { prefix, suffix });
+function Kpi({ label, value }: { label: string; value: number }) {
+  const ref = useCounter<HTMLSpanElement>(value);
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -37,81 +27,68 @@ function Kpi({
 }
 
 export default function DashboardPage() {
-  const disponiveis = lotes.filter((l) => l.status === "disponivel").length;
-  const reservados = lotes.filter((l) => l.status === "reservado").length;
-  const vendidos = lotes.filter((l) => l.status === "vendido").length;
-  const receita = vendasPorMes[vendasPorMes.length - 1]?.receita ?? 0;
+  const concluidos = nucleos.filter((n) => n.status === "concluido" || n.status === "em_registro").length;
+  const andamento = nucleos.filter((n) => n.status === "em_andamento").length;
+  const docsPendentes = processos.reduce((a, p) => a + p.docsPendentes, 0);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl text-brand-navy dark:text-brand-cream">
-          Dashboard
+          Painel de processos
         </h1>
         <p className="text-sm text-muted-foreground">
-          Visão geral · dados mock {/* TODO: plugar Supabase */}
+          Acompanhamento de regularização · {/* TODO: plugar Supabase */}
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Kpi label="Lotes disponíveis" value={disponiveis} />
-        <Kpi label="Reservados" value={reservados} />
-        <Kpi label="Vendidos" value={vendidos} />
-        <Kpi label="Receita do mês" value={receita} prefix="R$ " />
-        <Kpi label="Inadimplência" value={3.2} suffix="%" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Kpi label="Núcleos concluídos / registro" value={concluidos} />
+        <Kpi label="Núcleos em andamento" value={andamento} />
+        <Kpi label="Processos ativos" value={processos.length} />
+        <Kpi label="Docs pendentes" value={docsPendentes} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
           <CardHeader>
-            <CardTitle>Vendas por mês</CardTitle>
+            <CardTitle>Processos recentes</CardTitle>
           </CardHeader>
-          <CardContent>
-            <SalesChartLazy data={vendasPorMes} />
+          <CardContent className="space-y-3">
+            {processos.map((p) => (
+              <Link
+                key={p.id}
+                href="/processos"
+                className="flex items-start justify-between gap-3 border-b border-border pb-3 last:border-0 last:pb-0 hover:opacity-80"
+              >
+                <div>
+                  <p className="text-sm font-medium">{p.protocolo}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {p.nucleoNome} · {p.moradorNome}
+                  </p>
+                </div>
+                <Badge variant="secondary">{statusProcessoLabel[p.status]}</Badge>
+              </Link>
+            ))}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Últimas propostas</CardTitle>
+            <CardTitle>Fases do processo</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {propostas.slice(0, 4).map((p) => (
-              <div
-                key={p.id}
-                className="flex items-start justify-between gap-3 border-b border-border pb-3 last:border-0 last:pb-0"
-              >
-                <div>
-                  <p className="text-sm font-medium">{p.clienteNome}</p>
-                  <p className="text-xs text-muted-foreground">{p.loteLabel}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold tabular-nums">
-                    {formatCurrency(p.valor)}
-                  </p>
-                  <Badge variant="secondary" className="mt-1">
-                    {p.status.replace("_", " ")}
-                  </Badge>
-                </div>
+          <CardContent className="space-y-3 text-sm">
+            {(Object.keys(faseLabel) as (keyof typeof faseLabel)[]).map((f, i) => (
+              <div key={f} className="flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-navy text-xs font-bold text-brand-orange">
+                  {i + 1}
+                </span>
+                <span>{faseLabel[f]}</span>
               </div>
             ))}
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Atividades recentes</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {atividades.map((a) => (
-            <div key={a.id} className="flex items-center justify-between gap-4">
-              <p className="text-sm">{a.texto}</p>
-              <span className="shrink-0 text-xs text-muted-foreground">{a.quando}</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
     </div>
   );
 }

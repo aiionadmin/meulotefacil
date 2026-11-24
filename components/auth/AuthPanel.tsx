@@ -31,12 +31,12 @@ export function AuthPanel() {
       <Logo variant="full" />
       <div className="relative z-10 max-w-md">
         <h1 className="font-display text-4xl leading-tight">
-          Seu lote. Seu lugar.{" "}
-          <span className="text-brand-orange">Do jeito fácil.</span>
+          Transformando vidas.{" "}
+          <span className="text-brand-orange">Realizando sonhos.</span>
         </h1>
         <p className="mt-4 text-brand-cream/70">
-          Acesse a área do cliente para acompanhar propostas, contratos e
-          parcelas em um só lugar.
+          Acompanhe o processo de regularização: núcleo, fase, documentos e
+          protocolo — em um só lugar.
         </p>
       </div>
 

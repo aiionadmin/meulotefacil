@@ -9,24 +9,41 @@ import {
 
 const faqs = [
   {
-    q: "Preciso dar uma entrada alta?",
-    a: "Não necessariamente. Trabalhamos com condições de entrada facilitada e parcelas acessíveis. Use o simulador e fale com um consultor para o cenário ideal.",
+    q: "Como vocês atuam com as prefeituras?",
+    a: "Com consultoria técnica para definir procedimentos, métodos de análise e fluxos de aprovação, alinhados à lei e às boas práticas.",
   },
   {
-    q: "Os lotes já têm infraestrutura?",
-    a: "Depende do empreendimento. Na ficha de cada lançamento você encontra o que já está entregue — vias, água, energia, drenagem e áreas comuns.",
+    q: "O que o município ganha com isso?",
+    a: "Processos mais rápidos, eficientes e eficazes, com segurança jurídica para todos os envolvidos.",
   },
   {
-    q: "Posso reservar online?",
-    a: "Sim. Após escolher o lote, você inicia a reserva pelo site ou com um consultor. Em modo demo, o fluxo completo de pagamento ainda é simulado.",
+    q: "Vocês atendem só o setor público?",
+    a: "Não. Atendemos também empresas, comunidades, cooperativas e associações, em áreas urbanas e rurais.",
   },
   {
-    q: "A documentação está regularizada?",
-    a: "Trabalhamos apenas com empreendimentos com documentação em dia. Os detalhes de matrícula e registro ficam disponíveis na área do cliente.",
+    q: "Vocês fazem o projeto completo?",
+    a: "Sim: do diagnóstico da área ao acompanhamento da aprovação e do registro em cartório.",
   },
   {
-    q: "Consigo construir logo após a compra?",
-    a: "Em geral, sim — conforme regras do loteamento e aprovação municipal. Orientamos você em cada etapa até a construção.",
+    q: "Só trabalham com áreas de interesse social?",
+    a: "Não. Atuamos em REURB-S (interesse social) e REURB-E (interesse específico), incluindo loteamentos e condomínios de médio e alto padrão.",
+  },
+  {
+    q: "Qual é o diferencial da Meu Lote Fácil?",
+    a: "Somos a maior empresa de regularização fundiária de Campinas e região, com mais de 7 mil regularizações concluídas desde 2005.",
+  },
+  // Novas — a confirmar com o cliente
+  {
+    q: "Qual a diferença entre REURB-S e REURB-E?",
+    a: "Resposta a confirmar com o cliente. Em linhas gerais, REURB-S atende interesse social e REURB-E interesse específico.",
+  },
+  {
+    q: "Quanto tempo leva e quanto custa?",
+    a: "Depende do núcleo, da documentação e da fase do processo. Fale conosco no WhatsApp para uma orientação sob medida. (A confirmar com o cliente.)",
+  },
+  {
+    q: "Quais documentos o morador precisa levar?",
+    a: "A lista varia por fase e núcleo. Na área de acompanhamento e no atendimento das unidades orientamos o checklist. (A confirmar com o cliente.)",
   },
 ];
 
@@ -42,8 +59,7 @@ export function FAQ() {
             Perguntas frequentes
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Ainda com dúvida? Fale com a gente pelo WhatsApp ou pelo formulário
-            de contato.
+            Ainda com dúvida? Fale conosco pelo WhatsApp.
           </p>
         </div>
         <Accordion type="single" collapsible className="w-full">

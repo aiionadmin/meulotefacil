@@ -1,23 +1,30 @@
 import type { MetadataRoute } from "next";
-import { empreendimentos } from "@/lib/data/empreendimentos";
+import { nucleos } from "@/lib/data/nucleos";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://meulotefacil.com.br";
-  const staticRoutes = ["", "/empreendimentos", "/simulador", "/sobre", "/contato"].map(
-    (path) => ({
-      url: `${base}${path}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: path === "" ? 1 : 0.8,
-    })
-  );
+  const staticRoutes = [
+    "",
+    "/regularizacoes",
+    "/consulta",
+    "/servicos",
+    "/servicos/consultoria",
+    "/servicos/planos-e-projetos",
+    "/sobre",
+    "/contato",
+  ].map((path) => ({
+    url: `${base}${path}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: path === "" ? 1 : 0.8,
+  }));
 
-  const empRoutes = empreendimentos.map((e) => ({
-    url: `${base}/empreendimentos/${e.slug}`,
+  const nucleoRoutes = nucleos.map((n) => ({
+    url: `${base}/regularizacoes/${n.slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...empRoutes];
+  return [...staticRoutes, ...nucleoRoutes];
 }

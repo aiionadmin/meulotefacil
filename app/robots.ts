@@ -5,7 +5,15 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/dashboard", "/lotes", "/clientes", "/propostas", "/contratos", "/financeiro", "/documentos", "/configuracoes", "/auth/"],
+      disallow: [
+        "/dashboard",
+        "/processos",
+        "/nucleos",
+        "/documentos",
+        "/protocolo",
+        "/configuracoes",
+        "/auth/",
+      ],
     },
     sitemap: "https://meulotefacil.com.br/sitemap.xml",
   };

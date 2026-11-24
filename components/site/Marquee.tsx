@@ -5,11 +5,12 @@ import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
 
 const items = [
-  "Parcelas que cabem no bolso",
-  "Documentação em dia",
-  "Lotes prontos para construir",
-  "Atendimento humano",
-  "Processo 100% transparente",
+  "REURB-S",
+  "REURB-E",
+  "Loteamentos",
+  "Condomínios de lotes",
+  "Conjuntos habitacionais",
+  "Áreas urbanas e rurais",
 ];
 
 export function Marquee() {
@@ -28,9 +29,17 @@ export function Marquee() {
         repeat: -1,
       });
 
-      ScrollTriggerLike(tween);
+      const onWheel = (e: WheelEvent) => {
+        const boost = Math.min(2.5, 1 + Math.abs(e.deltaY) / 400);
+        tween.timeScale(boost);
+        gsap.delayedCall(0.4, () => tween.timeScale(1));
+      };
+      window.addEventListener("wheel", onWheel, { passive: true });
 
-      return () => tween.kill();
+      return () => {
+        window.removeEventListener("wheel", onWheel);
+        tween.kill();
+      };
     },
     { scope: rootRef }
   );
@@ -52,22 +61,4 @@ export function Marquee() {
       </div>
     </div>
   );
-}
-
-function ScrollTriggerLike(tween: gsap.core.Tween) {
-  // React to scroll velocity lightly without hard dependency if ST unavailable
-  const onWheel = (e: WheelEvent) => {
-    const boost = Math.min(2.5, 1 + Math.abs(e.deltaY) / 400);
-    tween.timeScale(boost);
-    gsap.delayedCall(0.4, () => tween.timeScale(1));
-  };
-  window.addEventListener("wheel", onWheel, { passive: true });
-  tween.eventCallback("onComplete", () => {
-    window.removeEventListener("wheel", onWheel);
-  });
-  const originalKill = tween.kill.bind(tween);
-  tween.kill = (...args: Parameters<typeof tween.kill>) => {
-    window.removeEventListener("wheel", onWheel);
-    return originalKill(...args);
-  };
 }

@@ -1,25 +1,31 @@
 import { Hero } from "@/components/site/Hero";
 import { Marquee } from "@/components/site/Marquee";
 import { HowItWorks } from "@/components/site/HowItWorks";
-import { EmpreendimentosGrid } from "@/components/site/EmpreendimentosGrid";
+import { ServicosCards } from "@/components/site/ServicosCards";
+import { RegularizacoesGrid } from "@/components/site/RegularizacoesGrid";
 import { ArcDivider } from "@/components/site/ArcDivider";
-import { SimuladorWidget } from "@/components/site/SimuladorWidget";
+import { ConsultaBairro } from "@/components/site/ConsultaBairro";
 import { WhyUs } from "@/components/site/WhyUs";
 import { Testimonials } from "@/components/site/Testimonials";
 import { FAQ } from "@/components/site/FAQ";
 import { FinalCTA } from "@/components/site/FinalCTA";
-import { LoteMapSection } from "@/components/site/LoteMap";
+import { NucleosMapSection } from "@/components/site/NucleosMap";
 
 export default function HomePage() {
   return (
     <>
       <Hero />
       <Marquee />
+      <ServicosCards />
       <HowItWorks />
       <ArcDivider from="cream" />
-      <EmpreendimentosGrid limit={3} />
-      <LoteMapSection />
-      <SimuladorWidget />
+      <RegularizacoesGrid
+        limit={6}
+        title="Regularizações em destaque"
+        subtitle="Concluídas, em registro e em andamento — veja o portfólio completo."
+      />
+      <NucleosMapSection />
+      <ConsultaBairro />
       <WhyUs />
       <Testimonials />
       <FAQ />

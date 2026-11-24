@@ -4,27 +4,22 @@ import { useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
 
-// TODO: substituir por depoimentos reais
+// TODO: substituir por depoimentos reais / vídeos Vila Paula (prefeito Dário Saadi e vice Wanderley de Almeida)
 const testimonials = [
   {
     quote:
-      "O processo foi bem mais simples do que eu imaginava. Consegui simular e reservar sem burocracia.",
-    author: "Cliente placeholder A",
+      "A regularização trouxe segurança jurídica para as famílias e valorização do imóvel. (Depoimento placeholder — aguardando conteúdo real.)",
+    author: "Morador — placeholder",
   },
   {
     quote:
-      "Gostei da clareza nas parcelas e do acompanhamento do consultor em cada etapa.",
-    author: "Cliente placeholder B",
+      "Vila Paula: vídeos do prefeito Dário Saadi e do vice Wanderley de Almeida são bons para esta seção. (TODO: incorporar mídia real.)",
+    author: "Campinas — placeholder institucional",
   },
   {
     quote:
-      "Escolhi o lote pelo mapa online e em poucos dias já estávamos com a documentação encaminhada.",
-    author: "Cliente placeholder C",
-  },
-  {
-    quote:
-      "Atendimento humano e transparente — exatamente o que eu precisava para decidir com segurança.",
-    author: "Cliente placeholder D",
+      "Processo acompanhado até o registro em cartório. (Placeholder — substituir por depoimento real.)",
+    author: "Associação — placeholder",
   },
 ];
 
@@ -55,11 +50,10 @@ export function Testimonials() {
             Depoimentos
           </p>
           <h2 className="font-display mt-3 text-3xl text-brand-navy sm:text-5xl">
-            Histórias de quem já deu o passo
+            Histórias de quem já tem escritura
           </h2>
           <p className="mt-2 text-xs text-muted-foreground">
-            {/* TODO: substituir por depoimentos reais */}
-            Conteúdo placeholder — aguardando depoimentos reais.
+            Conteúdo placeholder — aguardando depoimentos e vídeos reais.
           </p>
         </div>
       </div>

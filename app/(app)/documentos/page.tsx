@@ -1,28 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { documentos as initial } from "@/lib/data/clientes";
+import { docsMorador } from "@/lib/data/processos";
+import { processos } from "@/lib/data/processos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/app/EmptyState";
 import { Upload } from "lucide-react";
 
 export default function DocumentosPage() {
-  const [docs, setDocs] = useState(initial);
+  const [docs, setDocs] = useState(docsMorador);
   const [dragging, setDragging] = useState(false);
 
   const onFiles = (files: FileList | null) => {
     if (!files?.length) return;
-    // TODO: upload real para Supabase Storage
-    const file = files[0];
+    // TODO: upload real Supabase Storage
     setDocs((prev) => [
       {
-        id: `doc-${Date.now()}`,
-        nome: file.name,
-        tipo: file.name.split(".").pop()?.toUpperCase() || "FILE",
-        tamanho: `${Math.max(1, Math.round(file.size / 1024))} KB`,
-        atualizadoEm: new Date().toISOString().slice(0, 10),
-        relacionadoA: "Upload local (placeholder)",
+        id: `dm-${Date.now()}`,
+        nome: files[0].name,
+        status: "enviado",
+        processoId: "proc-1",
       },
       ...prev,
     ]);
@@ -32,10 +30,10 @@ export default function DocumentosPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl text-brand-navy dark:text-brand-cream">
-          Documentos
+          Documentos do morador
         </h1>
         <p className="text-sm text-muted-foreground">
-          Upload placeholder · {/* TODO: plugar Supabase Storage */}
+          Checklist por processo · {/* TODO: plugar Supabase Storage */}
         </p>
       </div>
 
@@ -50,16 +48,16 @@ export default function DocumentosPage() {
           setDragging(false);
           onFiles(e.dataTransfer.files);
         }}
-        className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-14 text-center transition-colors ${
+        className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-14 text-center ${
           dragging
             ? "border-brand-orange bg-orange-50 dark:bg-brand-navy"
             : "border-border bg-card"
         }`}
       >
         <Upload className="mb-3 h-8 w-8 text-brand-orange" />
-        <p className="font-semibold">Arraste arquivos aqui</p>
+        <p className="font-semibold">Enviar documento</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ou selecione do computador (sem storage ainda)
+          Arraste ou selecione (placeholder sem storage)
         </p>
         <label className="mt-4">
           <input
@@ -73,39 +71,46 @@ export default function DocumentosPage() {
         </label>
       </div>
 
-      {docs.length === 0 ? (
-        <EmptyState title="Nenhum documento" />
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Arquivos</CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="px-3 py-2">Nome</th>
-                  <th className="px-3 py-2">Tipo</th>
-                  <th className="px-3 py-2">Tamanho</th>
-                  <th className="px-3 py-2">Atualizado</th>
-                  <th className="px-3 py-2">Relacionado a</th>
-                </tr>
-              </thead>
-              <tbody>
-                {docs.map((d) => (
+      <Card>
+        <CardHeader>
+          <CardTitle>Checklist</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="px-3 py-2">Documento</th>
+                <th className="px-3 py-2">Processo</th>
+                <th className="px-3 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {docs.map((d) => {
+                const proc = processos.find((p) => p.id === d.processoId);
+                return (
                   <tr key={d.id} className="border-b border-border/60">
                     <td className="px-3 py-3 font-medium">{d.nome}</td>
-                    <td className="px-3 py-3">{d.tipo}</td>
-                    <td className="px-3 py-3">{d.tamanho}</td>
-                    <td className="px-3 py-3">{d.atualizadoEm}</td>
-                    <td className="px-3 py-3">{d.relacionadoA}</td>
+                    <td className="px-3 py-3">{proc?.protocolo ?? "—"}</td>
+                    <td className="px-3 py-3">
+                      <Badge
+                        variant={
+                          d.status === "aprovado"
+                            ? "success"
+                            : d.status === "enviado"
+                              ? "warning"
+                              : "muted"
+                        }
+                      >
+                        {d.status}
+                      </Badge>
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
+                );
+              })}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

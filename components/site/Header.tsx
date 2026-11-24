@@ -7,11 +7,13 @@ import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { gsap } from "@/lib/gsap";
 import { cn, prefersReducedMotion } from "@/lib/utils";
+import { whatsappUrl } from "@/lib/institutional";
 
 const links = [
-  { href: "/empreendimentos", label: "Empreendimentos" },
-  { href: "/simulador", label: "Simulador" },
-  { href: "/sobre", label: "Sobre" },
+  { href: "/regularizacoes", label: "Regularizações" },
+  { href: "/consulta", label: "Meu bairro" },
+  { href: "/servicos", label: "Serviços" },
+  { href: "/sobre", label: "Quem somos" },
   { href: "/contato", label: "Contato" },
 ];
 
@@ -20,6 +22,7 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const lastY = useRef(0);
+  const wa = whatsappUrl();
 
   useEffect(() => {
     const onScroll = () => {
@@ -70,7 +73,7 @@ export function Header() {
             <Logo variant="full" className="scale-90 sm:scale-100" />
           </Link>
 
-          <nav className="hidden items-center gap-8 lg:flex">
+          <nav className="hidden items-center gap-7 lg:flex">
             {links.map((l) => (
               <Link
                 key={l.href}
@@ -87,10 +90,12 @@ export function Header() {
               href="/auth/login"
               className="text-sm font-medium text-brand-cream/85 hover:text-brand-orange"
             >
-              Área do cliente
+              Acompanhar processo
             </Link>
             <Button asChild size="sm">
-              <Link href="/empreendimentos">Quero meu lote</Link>
+              <a href={wa} target="_blank" rel="noopener noreferrer">
+                Falar no WhatsApp
+              </a>
             </Button>
           </div>
 
@@ -132,12 +137,12 @@ export function Header() {
               className="mobile-nav-link mt-4 text-lg text-brand-cream/80"
               onClick={() => setOpen(false)}
             >
-              Área do cliente
+              Acompanhar processo
             </Link>
             <Button asChild size="lg" className="mobile-nav-link mt-2">
-              <Link href="/empreendimentos" onClick={() => setOpen(false)}>
-                Quero meu lote
-              </Link>
+              <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+                Falar no WhatsApp
+              </a>
             </Button>
           </nav>
         </div>

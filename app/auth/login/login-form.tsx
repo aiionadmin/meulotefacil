@@ -91,7 +91,7 @@ export function LoginForm() {
     <div className="rounded-2xl border border-brand-navy/8 bg-white p-6 shadow-sm sm:p-8">
       <h1 className="font-display text-2xl text-brand-navy">Entrar</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Acesse sua área do cliente Meu Lote Fácil.
+        Acompanhe seu processo de regularização fundiária.
       </p>
 
       {!configured && (

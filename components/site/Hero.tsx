@@ -6,16 +6,16 @@ import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMagnetic } from "@/components/motion/useMagnetic";
 import { gsap, useGSAP, SplitText } from "@/lib/gsap";
-import { totalLotesDisponiveis } from "@/lib/data/empreendimentos";
+import { whatsappUrl } from "@/lib/institutional";
 import { prefersReducedMotion } from "@/lib/utils";
+import { useCounter } from "@/components/motion/useCounter";
 
 export function Hero() {
   const rootRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const arcsRef = useRef<HTMLDivElement>(null);
-  const badgeRef = useRef<HTMLSpanElement>(null);
   const ctaRef = useMagnetic<HTMLDivElement>(0.25);
-  const available = totalLotesDisponiveis();
+  const wa = whatsappUrl();
 
   useGSAP(
     () => {
@@ -24,7 +24,7 @@ export function Hero() {
       if (!root || !title) return;
 
       if (prefersReducedMotion()) {
-        gsap.set([title, ".hero-sub", ".hero-cta", ".hero-badge", ".hero-scroll"], {
+        gsap.set([title, ".hero-sub", ".hero-cta", ".hero-stats", ".hero-scroll"], {
           opacity: 1,
           y: 0,
         });
@@ -51,24 +51,11 @@ export function Hero() {
           "-=0.35"
         )
         .fromTo(
-          ".hero-badge",
-          { opacity: 0, scale: 0.9 },
-          { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)" },
+          ".hero-stats",
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
           "-=0.3"
         );
-
-      const obj = { n: 0 };
-      gsap.to(obj, {
-        n: available,
-        duration: 1.6,
-        delay: 0.8,
-        ease: "power2.out",
-        onUpdate: () => {
-          if (badgeRef.current) {
-            badgeRef.current.textContent = `+${Math.round(obj.n)} lotes disponíveis`;
-          }
-        },
-      });
 
       gsap.to(".hero-scroll", {
         y: 8,
@@ -109,7 +96,7 @@ export function Hero() {
         mm.revert();
       };
     },
-    { scope: rootRef, dependencies: [available] }
+    { scope: rootRef }
   );
 
   return (
@@ -131,31 +118,35 @@ export function Hero() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
-        <p className="hero-badge mb-6 inline-flex rounded-full border border-brand-orange/40 bg-brand-orange/10 px-4 py-1.5 text-sm font-medium text-brand-orange opacity-0">
-          <span ref={badgeRef}>+{available} lotes disponíveis</span>
+        <p className="mb-6 text-sm font-semibold uppercase tracking-widest text-brand-orange">
+          Regularização fundiária · desde 2005
         </p>
 
         <h1
           ref={titleRef}
           className="font-display max-w-4xl text-4xl leading-[1.05] sm:text-6xl lg:text-7xl"
         >
-          Seu lote. Seu lugar.{" "}
-          <span className="text-brand-orange">Do jeito fácil.</span>
+          Transformando vidas.{" "}
+          <span className="text-brand-orange">Realizando sonhos.</span>
         </h1>
 
-        <p className="hero-sub mt-6 max-w-xl text-base text-brand-cream/75 opacity-0 sm:text-lg">
-          Parcelamento acessível, documentação em dia e um processo simples para
-          você conquistar o terreno onde a sua história começa.
+        <p className="hero-sub mt-6 max-w-2xl text-base text-brand-cream/75 opacity-0 sm:text-lg">
+          Regularização fundiária de ponta a ponta — do diagnóstico ao registro
+          em cartório — para que cada família tenha a escritura do próprio lote.
         </p>
 
         <div ref={ctaRef} className="hero-cta mt-10 flex flex-wrap gap-4 opacity-0">
           <Button asChild size="lg">
-            <Link href="/empreendimentos">Ver lotes disponíveis</Link>
+            <a href={wa} target="_blank" rel="noopener noreferrer">
+              Falar no WhatsApp
+            </a>
           </Button>
           <Button asChild size="lg" variant="ghost">
-            <Link href="/simulador">Simular parcelas</Link>
+            <Link href="/regularizacoes">Ver regularizações</Link>
           </Button>
         </div>
+
+        <HeroStats />
       </div>
 
       <div className="hero-scroll absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-brand-cream/50">
@@ -163,5 +154,41 @@ export function Hero() {
         <ChevronDown className="h-4 w-4" />
       </div>
     </section>
+  );
+}
+
+function HeroStats() {
+  const concluidas = useCounter<HTMLSpanElement>(7, { prefix: "+", suffix: " mil" });
+  const andamento = useCounter<HTMLSpanElement>(15, { prefix: "+", suffix: " mil" });
+  const valorizacao = useCounter<HTMLSpanElement>(150, { prefix: "+", suffix: "%" });
+  const desde = useCounter<HTMLSpanElement>(2005);
+
+  return (
+    <dl className="hero-stats mt-14 grid max-w-3xl grid-cols-2 gap-6 opacity-0 sm:grid-cols-4">
+      <div>
+        <dt className="text-xs uppercase tracking-wider text-brand-cream/50">Concluídas</dt>
+        <dd className="mt-1 font-display text-2xl text-brand-orange sm:text-3xl">
+          <span ref={concluidas}>0</span>
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wider text-brand-cream/50">Em andamento</dt>
+        <dd className="mt-1 font-display text-2xl text-brand-orange sm:text-3xl">
+          <span ref={andamento}>0</span>
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wider text-brand-cream/50">Valorização</dt>
+        <dd className="mt-1 font-display text-2xl text-brand-orange sm:text-3xl">
+          <span ref={valorizacao}>0</span>
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wider text-brand-cream/50">Desde</dt>
+        <dd className="mt-1 font-display text-2xl text-brand-orange sm:text-3xl">
+          <span ref={desde}>0</span>
+        </dd>
+      </div>
+    </dl>
   );
 }

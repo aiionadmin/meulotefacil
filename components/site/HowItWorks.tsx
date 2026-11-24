@@ -1,30 +1,35 @@
 "use client";
 
 import { useRef } from "react";
-import { MapPin, Calculator, Bookmark, PenLine } from "lucide-react";
+import { Search, Map, DraftingCompass, BadgeCheck, Landmark } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
 
 const steps = [
   {
-    icon: MapPin,
-    title: "Escolha o lote",
-    text: "Explore empreendimentos e encontre o terreno ideal no mapa.",
+    icon: Search,
+    title: "Diagnóstico",
+    text: "Diagnóstico da área e dos moradores para entender o núcleo e definir o plano.",
   },
   {
-    icon: Calculator,
-    title: "Simule",
-    text: "Ajuste entrada e parcelas e veja valores claros, sem surpresa.",
+    icon: Map,
+    title: "Planta de perímetro",
+    text: "Planta aprovada e publicada no Diário Oficial, delimitando a área.",
   },
   {
-    icon: Bookmark,
-    title: "Reserve online",
-    text: "Garanta seu lote com poucos cliques e acompanhamento humano.",
+    icon: DraftingCompass,
+    title: "Projetos e estudos",
+    text: "Projetos e estudos técnicos exigidos para a regularização.",
   },
   {
-    icon: PenLine,
-    title: "Assine e construa",
-    text: "Documentação em dia para você começar a construir do seu jeito.",
+    icon: BadgeCheck,
+    title: "Aprovação e CRF",
+    text: "Aprovação pela prefeitura com emissão da Certidão de Regularização Fundiária.",
+  },
+  {
+    icon: Landmark,
+    title: "Registro em cartório",
+    text: "Registro no Cartório de Registro de Imóveis e matrícula individual de cada lote.",
   },
 ];
 
@@ -50,7 +55,7 @@ export function HowItWorks() {
             scrollTrigger: {
               trigger: root,
               start: "top top",
-              end: "+=180%",
+              end: "+=160%",
               scrub: 0.6,
               pin: true,
             },
@@ -67,8 +72,8 @@ export function HowItWorks() {
               ease: "power2.out",
               scrollTrigger: {
                 trigger: root,
-                start: `top+=${i * 20}% top`,
-                end: `top+=${(i + 1) * 25}% top`,
+                start: `top+=${i * 16}% top`,
+                end: `top+=${(i + 1) * 20}% top`,
                 scrub: true,
               },
             }
@@ -105,8 +110,11 @@ export function HowItWorks() {
             Como funciona
           </p>
           <h2 className="font-display mt-3 text-3xl text-brand-navy sm:text-5xl">
-            Do sonho ao lote em 4 passos
+            Do diagnóstico ao registro
           </h2>
+          <p className="mt-4 text-muted-foreground">
+            Sequência sugerida a partir dos projetos publicados — validação final com a equipe.
+          </p>
         </div>
 
         <div className="relative mt-14">
@@ -118,26 +126,26 @@ export function HowItWorks() {
           >
             <path
               className="how-path"
-              d="M40 60 C200 10, 300 90, 440 50 S700 10, 840 55 1080 90, 1160 40"
+              d="M40 60 C160 10, 240 90, 360 50 S560 10, 700 55 900 90, 1160 40"
               stroke="currentColor"
               strokeWidth="4"
               strokeLinecap="round"
             />
           </svg>
 
-          <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
             {steps.map((step, i) => (
               <li
                 key={step.title}
-                className="how-card rounded-2xl border border-brand-navy/8 bg-white p-6 shadow-sm"
+                className="how-card rounded-2xl border border-brand-navy/8 bg-white p-5 shadow-sm"
               >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-navy text-brand-orange">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-navy text-brand-orange">
                   <step.icon className="h-5 w-5" />
                 </div>
                 <p className="text-xs font-bold uppercase tracking-wider text-brand-orange">
-                  Passo {i + 1}
+                  Etapa {i + 1}
                 </p>
-                <h3 className="mt-2 text-xl font-bold text-brand-navy">{step.title}</h3>
+                <h3 className="mt-2 text-lg font-bold text-brand-navy">{step.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {step.text}
                 </p>

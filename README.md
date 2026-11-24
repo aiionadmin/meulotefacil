@@ -1,84 +1,58 @@
-# Meu Lote Fácil
+# Meu Lote Fácil — Regularização Fundiária
 
-Site institucional animado + casca do sistema (área logada) para venda de lotes/terrenos.
+Site institucional animado + sistema de acompanhamento de processos (REURB-S / REURB-E) para Campinas e região, desde 2005.
+
+> **Importante:** a Meu Lote Fácil **não vende lotes** — regulariza loteamentos, núcleos residenciais e condomínios.
 
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript
-- Tailwind CSS v4 + componentes no estilo shadcn (tokens da marca)
-- GSAP 3 (`ScrollTrigger`, `SplitText`, `DrawSVGPlugin`, `MorphSVGPlugin`, `Flip`) + Lenis
+- Tailwind CSS v4 + UI no estilo shadcn (tokens da marca)
+- GSAP 3 + Lenis
 - Supabase Auth (`@supabase/ssr`) com **modo demo** se `.env` estiver vazio
-- react-hook-form + zod, Recharts, TanStack Table, dnd-kit
 
 ## Como rodar
 
 ```bash
 npm install
-cp .env.example .env.local   # opcional — sem vars = modo demo
+cp .env.example .env.local
 npm run dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000).
 
-Área logada: [http://localhost:3000/auth/login](http://localhost:3000/auth/login) → **Entrar em modo demo**.
+WhatsApp principal: **(19) 99146-1834**  
+Acompanhar processo: `/auth/login` → **Entrar em modo demo**.
 
-```bash
-npm run build
-npm start
-```
+## Conteúdo
 
-## Marca
-
-- Logos raster em `public/brand/` (`logo-laranja.png`, `logo-azul.jpg`)
-- Logo SVG animável: `components/brand/Logo.tsx` (variantes `full` | `symbol` | `mono`)
-- Tokens CSS em `app/globals.css` (`--brand-navy`, `--brand-orange`, etc.)
-- Tipografia: **Jost** via `next/font`
-
-## Onde trocar textos e imagens
+Fonte: `conteudo-novo-site.md` (store do projeto).
 
 | Conteúdo | Arquivo |
 |---|---|
-| Empreendimentos | `lib/data/empreendimentos.ts` |
-| Lotes / mapa | `lib/data/lotes.ts` |
-| Clientes, propostas, financeiro | `lib/data/clientes.ts` |
-| Placeholders visuais | `public/placeholders/` |
-| Copy das seções da landing | `components/site/*` |
-| Depoimentos | `components/site/Testimonials.tsx` (`// TODO: substituir por depoimentos reais`) |
-| Fórmula do simulador | `lib/simulador.ts` |
+| Dados institucionais / WhatsApp | `lib/institutional.ts` |
+| Núcleos (portfólio) | `lib/data/nucleos.ts` |
+| Processos / protocolo mocks | `lib/data/processos.ts` |
+| Copy das seções | `components/site/*` |
+
+## Estrutura do site
+
+- `/` — Home (hero, serviços, etapas, portfólio, mapa, consulta de bairro, FAQ)
+- `/regularizacoes` — Portfólio de núcleos
+- `/consulta` — “Meu bairro está sendo regularizado?”
+- `/servicos` — Consultoria municipal + planos/projetos
+- `/sobre` · `/contato` (unidades + WhatsApp)
+
+## Sistema (`/auth` → área logada)
+
+Painel, processos (núcleo/fase/docs), núcleos, documentos do morador, consulta de protocolo, configurações.
 
 ## Ligar o Supabase
 
-1. Crie um projeto no [Supabase](https://supabase.com).
-2. Rode `supabase/schema.sql` no SQL Editor.
-3. Preencha `.env.local`:
+1. Rode `supabase/schema.sql` (ajuste tabelas para processos/núcleos conforme evoluir).
+2. Preencha `.env.local` com URL e anon key.
+3. Sem vars = modo demo continua funcionando.
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-```
+## Lacunas (conteúdo)
 
-4. (Opcional) Ative Google OAuth no painel Auth → Providers.
-5. Reinicie o `npm run dev`. Com as vars presentes, o login real e o botão Google aparecem; sem elas, o app continua em modo demo.
-
-Os módulos da área logada ainda usam mocks tipados — procure `// TODO: plugar Supabase` nos arquivos de página.
-
-## Estrutura
-
-```
-app/(site)/     → landing + páginas institucionais
-app/auth/       → login, cadastro, recuperação
-app/(app)/      → shell do sistema (dashboard, lotes, …)
-components/     → brand, site, auth, app, ui, motion
-lib/            → gsap, supabase, data, simulador
-supabase/       → schema.sql
-```
-
-## Animações
-
-- Plugins registrados em `lib/gsap.ts`
-- `prefers-reduced-motion`: desliga Lenis, scrub e parallax
-- Mobile: `gsap.matchMedia()` com versões mais leves (ex.: “Como funciona” sem pin)
-
-## Licença
-
-Privado — Meu Lote Fácil.
+Ver lista no final de `conteudo-novo-site.md` (e-mail/CNPJ, números divergentes FAQ vs home, depoimentos reais, LGPD, etc.).
