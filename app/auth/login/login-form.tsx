@@ -96,7 +96,7 @@ export function LoginForm() {
 
       {!configured && (
         <p className="mt-4 rounded-lg bg-orange-50 px-3 py-2 text-xs text-brand-navy">
-          Supabase não configurado — use o <strong>modo demo</strong> para
+          Supabase não configurado, use o <strong>modo demo</strong> para
           explorar o sistema.
         </p>
       )}

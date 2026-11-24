@@ -13,11 +13,11 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   metadataBase: new URL("https://meulotefacil.com.br"),
   title: {
-    default: `${INSTITUTIONAL.fullName} — ${INSTITUTIONAL.slogan}`,
-    template: `%s · ${INSTITUTIONAL.name}`,
+    default: `${INSTITUTIONAL.fullName}, ${INSTITUTIONAL.slogan}`,
+    template: `%s, ${INSTITUTIONAL.name}`,
   },
   description:
-    "Regularização fundiária de ponta a ponta — do diagnóstico ao registro em cartório — em Campinas e região, desde 2005. REURB-S e REURB-E.",
+    "Regularização fundiária de ponta a ponta, do diagnóstico ao registro em cartório, em Campinas e região, desde 2005. REURB-S e REURB-E.",
   openGraph: {
     type: "website",
     locale: "pt_BR",

@@ -11,13 +11,13 @@ export const metadata: Metadata = {
 
 const timeline = [
   { year: "2005", text: "Fundação em Campinas-SP" },
-  { year: "—", text: "Primeiros núcleos em Hortolândia" },
-  { year: "2023", text: "Jardim Uruguai — 1.148 lotes" },
+  { year: "n/d", text: "Primeiros núcleos em Hortolândia" },
+  { year: "2023", text: "Jardim Uruguai, 1.148 lotes" },
   { year: "2025", text: "Vila Paula" },
   { year: "2026", text: "Atuação em Amparo" },
 ];
 
-/** Conteúdo legado de /sobre — redesign editorial na etapa Quem somos. */
+/** Conteúdo legado de /sobre, redesign editorial na etapa Quem somos. */
 export default function QuemSomosPage() {
   return (
     <div className="bg-paper pt-24">
@@ -63,7 +63,7 @@ export default function QuemSomosPage() {
         <div className="pt-8">
           <SectionHeading number="01" title="Linha do tempo" />
           <p className="mt-2 font-mono-label text-[11px] text-muted-foreground">
-            Sugestão — confirmar datas e marcos com o cliente.
+            Sugestão, confirmar datas e marcos com o cliente.
           </p>
           <ol className="mt-6 space-y-4 border-l border-brand-accent/40 pl-6">
             {timeline.map((t) => (
@@ -78,7 +78,7 @@ export default function QuemSomosPage() {
         </div>
 
         <p className="pt-4 text-sm text-muted-foreground">
-          Atuação: {INSTITUTIONAL.atuacao.join(", ")} (SP) — áreas urbanas e rurais.
+          Atuação: {INSTITUTIONAL.atuacao.join(", ")} (SP), áreas urbanas e rurais.
         </p>
       </section>
     </div>

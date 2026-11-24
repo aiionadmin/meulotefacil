@@ -89,7 +89,7 @@ export function LoteMap({ mode = "site", onStatusChange, className }: LoteMapPro
             opacity="0.25"
           />
           <text x="30" y="40" fill="#1E1856" fontSize="14" fontWeight="700">
-            Residencial Horizonte — mapa ilustrado
+            Residencial Horizonte, mapa ilustrado
           </text>
           {items.map((lote) => (
             <polygon
@@ -148,10 +148,10 @@ export function LoteMap({ mode = "site", onStatusChange, className }: LoteMapPro
             style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
           >
             <p className="font-semibold">
-              Quadra {hover.quadra} · Lote {hover.numero}
+              Quadra {hover.quadra}, Lote {hover.numero}
             </p>
             <p>
-              {hover.metragem} m² · {formatCurrency(hover.valor)}
+              {hover.metragem} m², {formatCurrency(hover.valor)}
             </p>
             <p className="text-brand-orange">{loteStatusLabel[hover.status]}</p>
           </div>
@@ -160,7 +160,7 @@ export function LoteMap({ mode = "site", onStatusChange, className }: LoteMapPro
 
       {mode === "gestao" && (
         <p className="mt-3 text-xs text-muted-foreground">
-          Clique em um lote para alternar o status (modo gestão · mock).
+          Clique em um lote para alternar o status (modo gestão, mock).
         </p>
       )}
 
@@ -170,7 +170,7 @@ export function LoteMap({ mode = "site", onStatusChange, className }: LoteMapPro
             <>
               <SheetHeader>
                 <SheetTitle>
-                  Quadra {selected.quadra} · Lote {selected.numero}
+                  Quadra {selected.quadra}, Lote {selected.numero}
                 </SheetTitle>
               </SheetHeader>
               <div className="mt-6 space-y-3 text-sm">

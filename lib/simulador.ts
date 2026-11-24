@@ -1,5 +1,5 @@
 /**
- * Simulador de parcelas — Meu Lote Fácil
+ * Simulador de parcelas, Meu Lote Fácil
  *
  * AVISO: Esta é uma simulação educativa, sem valor de proposta comercial.
  * Os valores não constituem oferta vinculante. Consulte um consultor para
@@ -67,7 +67,7 @@ export function buildWhatsAppSimulacaoUrl(
     `Valor do lote: R$ ${resultado.valorLote.toLocaleString("pt-BR")}`,
     `Entrada: R$ ${resultado.entrada.toLocaleString("pt-BR")}`,
     `Parcelas: ${resultado.parcelas}x de R$ ${Math.round(resultado.parcela).toLocaleString("pt-BR")}`,
-    "(Simulação ilustrativa — sem valor de proposta)",
+    "(Simulação ilustrativa, sem valor de proposta)",
   ].join("\n");
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;

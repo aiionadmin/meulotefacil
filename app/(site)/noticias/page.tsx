@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Atualizações sobre regularização fundiária, núcleos e a atuação da Meu Lote Fácil.",
 };
 
-/** Stub de listagem — MDX na etapa Notícias. */
+/** Stub de listagem, MDX na etapa Notícias. */
 export default function NoticiasPage() {
   return (
     <div className="bg-paper pt-24">

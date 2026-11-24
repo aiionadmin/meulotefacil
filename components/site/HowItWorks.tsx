@@ -110,7 +110,7 @@ export function HowItWorks() {
           number="02"
           eyebrow="Método"
           title="Do diagnóstico ao registro"
-          subtitle="Sequência sugerida a partir dos projetos publicados — validação final com a equipe."
+          subtitle="Sequência sugerida a partir dos projetos publicados, validação final com a equipe."
         />
 
         <div className="relative mt-14">

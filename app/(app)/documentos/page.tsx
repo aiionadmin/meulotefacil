@@ -33,7 +33,7 @@ export default function DocumentosPage() {
           Documentos do morador
         </h1>
         <p className="text-sm text-muted-foreground">
-          Checklist por processo · {/* TODO: plugar Supabase Storage */}
+          Checklist por processo, {/* TODO: plugar Supabase Storage */}
         </p>
       </div>
 
@@ -90,7 +90,7 @@ export default function DocumentosPage() {
                 return (
                   <tr key={d.id} className="border-b border-border/60">
                     <td className="px-3 py-3 font-medium">{d.nome}</td>
-                    <td className="px-3 py-3">{proc?.protocolo ?? "—"}</td>
+                    <td className="px-3 py-3">{proc?.protocolo ?? "n/d"}</td>
                     <td className="px-3 py-3">
                       <Badge
                         variant={

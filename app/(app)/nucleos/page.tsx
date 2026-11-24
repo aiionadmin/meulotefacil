@@ -14,7 +14,7 @@ export default function NucleosPage() {
           Núcleos
         </h1>
         <p className="text-sm text-muted-foreground">
-          Portfólio operacional · {/* TODO: plugar Supabase */}
+          Portfólio operacional, {/* TODO: plugar Supabase */}
         </p>
       </div>
 

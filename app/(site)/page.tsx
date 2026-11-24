@@ -19,7 +19,7 @@ export default function HomePage() {
         <RegularizacoesGrid
           limit={6}
           title="Regularizações em destaque"
-          subtitle="Concluídas, em registro e em andamento — veja o portfólio completo."
+          subtitle="Concluídas, em registro e em andamento, veja o portfólio completo."
           sectionNumber="03"
         />
         <NucleosMapSection />

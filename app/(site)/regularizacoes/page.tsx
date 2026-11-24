@@ -4,7 +4,7 @@ import { RegularizacoesGrid } from "@/components/site/RegularizacoesGrid";
 export const metadata: Metadata = {
   title: "Regularizações",
   description:
-    "Portfólio de núcleos regularizados e em andamento — Campinas, Hortolândia, Valinhos e Amparo.",
+    "Portfólio de núcleos regularizados e em andamento, Campinas, Hortolândia, Valinhos e Amparo.",
 };
 
 export default function RegularizacoesPage() {

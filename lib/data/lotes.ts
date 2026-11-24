@@ -1,6 +1,6 @@
 import type { Lote } from "./types";
 
-/** Mapa ilustrado — grade 4x5 de lotes com polígonos SVG */
+/** Mapa ilustrado, grade 4x5 de lotes com polígonos SVG */
 export const lotes: Lote[] = [
   // Quadra A
   { id: "l-a1", empreendimentoId: "emp-1", empreendimentoSlug: "residencial-horizonte", quadra: "A", numero: "01", metragem: 220, valor: 98000, status: "disponivel", points: "40,60 110,60 110,120 40,120" },

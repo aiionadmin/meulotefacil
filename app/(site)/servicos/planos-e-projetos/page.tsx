@@ -6,7 +6,7 @@ import { whatsappUrl } from "@/lib/institutional";
 export const metadata: Metadata = {
   title: "Planos e projetos de regularização",
   description:
-    "Do diagnóstico aos projetos técnicos e acompanhamento até o registro — REURB-S e REURB-E.",
+    "Do diagnóstico aos projetos técnicos e acompanhamento até o registro, REURB-S e REURB-E.",
 };
 
 export default function PlanosProjetosPage() {

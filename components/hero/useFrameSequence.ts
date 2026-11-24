@@ -78,7 +78,7 @@ export type FrameSequenceApi = {
 };
 
 /**
- * Sequência de frames no canvas — sem setState por frame.
+ * Sequência de frames no canvas, sem setState por frame.
  * Pré-carrega os primeiros N; resto via requestIdleCallback.
  */
 export function useFrameSequence(

@@ -5,7 +5,7 @@ import { SectionHeading } from "@/components/site/SectionHeading";
 export const metadata: Metadata = {
   title: "Regularização",
   description:
-    "REURB-S e REURB-E — do diagnóstico ao registro em cartório. Núcleos em Campinas, Hortolândia, Valinhos e Amparo.",
+    "REURB-S e REURB-E, do diagnóstico ao registro em cartório. Núcleos em Campinas, Hortolândia, Valinhos e Amparo.",
 };
 
 /**

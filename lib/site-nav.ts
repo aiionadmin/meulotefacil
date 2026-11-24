@@ -1,4 +1,4 @@
-/** Navegação institucional — 6 páginas (plano corporativo). */
+/** Navegação institucional, 6 páginas (plano corporativo). */
 
 export const SITE_NAV = [
   { href: "/", label: "Home" },
@@ -9,7 +9,7 @@ export const SITE_NAV = [
   { href: "/contato", label: "Contato" },
 ] as const;
 
-/** CTA público — sem links para /auth. */
+/** CTA público, sem links para /auth. */
 export const SITE_NAV_CTA = {
   talk: { label: "Falar com a equipe" },
 } as const;

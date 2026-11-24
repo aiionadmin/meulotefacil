@@ -99,7 +99,7 @@ export function NucleosMap({ className }: { className?: string }) {
             opacity="0.2"
           />
           <text x="24" y="36" fill="#1E1856" fontSize="14" fontWeight="700">
-            Núcleos atendidos — Campinas e região
+            Núcleos atendidos, Campinas e região
           </text>
           {Object.entries(cityPos).map(([city, pos]) => (
             <text
@@ -145,7 +145,7 @@ export function NucleosMap({ className }: { className?: string }) {
           <div className="pointer-events-none absolute bottom-6 left-6 right-6 rounded-lg bg-brand-navy px-3 py-2 text-xs text-brand-cream shadow-lg sm:left-auto sm:right-6 sm:w-64">
             <p className="font-semibold">{hover.nome}</p>
             <p>
-              {hover.cidade} · {lotesLabel(hover)}
+              {hover.cidade}, {lotesLabel(hover)}
             </p>
             <p className="text-brand-orange">{statusNucleoLabel[hover.status]}</p>
           </div>

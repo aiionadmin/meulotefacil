@@ -148,13 +148,13 @@ export function ScrollHero() {
         id="hero-scroll"
         ref={sectionRef}
         className="relative h-[400vh] bg-ink md:h-[550vh]"
-        aria-label="Hero imersivo — regularização fundiária"
+        aria-label="Hero imersivo, regularização fundiária"
       >
         <div
           ref={stickyRef}
           className="sticky top-0 h-[100svh] w-full overflow-hidden bg-ink"
         >
-          {/* LCP poster — visível até o canvas ter frames (parent relative p/ next/image fill) */}
+          {/* LCP poster, visível até o canvas ter frames (parent relative p/ next/image fill) */}
           <div className="absolute inset-0">
             <Image
               src={HERO_FRAME_CONFIG.desktop.poster}
@@ -229,7 +229,7 @@ export function ScrollHero() {
         </div>
       </section>
 
-      {/* Bridge for next section radius / lift — consumed via CSS vars on sibling */}
+      {/* Bridge for next section radius / lift, consumed via CSS vars on sibling */}
       <div
         ref={nextClipRef}
         id="hero-scroll-exit"
@@ -299,7 +299,7 @@ function ReducedHero({ wa }: { wa: string }) {
     <section
       id="hero-scroll"
       className="relative min-h-[100svh] bg-ink pt-24 text-paper"
-      aria-label="Hero — regularização fundiária"
+      aria-label="Hero, regularização fundiária"
     >
       <div className="absolute inset-0">
         <Image
@@ -316,7 +316,7 @@ function ReducedHero({ wa }: { wa: string }) {
         {HERO_STEPS.map((step) => (
           <div key={step.id} className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-widest text-brand-accent">
-              {step.marker} · {step.eyebrow}
+              {step.marker}, {step.eyebrow}
             </p>
             <h2 className="font-display mt-2 text-2xl sm:text-4xl">{step.title}</h2>
             <p className="mt-3 text-paper/75">{step.body}</p>

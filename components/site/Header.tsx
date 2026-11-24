@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Floating navbar shell (estilo aceternity floating-navbar).
- * Registry 21st exigiu auth — composição própria adaptada a ink/paper/accent.
+ * Registry 21st exigiu auth, composição própria adaptada a ink/paper/accent.
  */
 export function Header() {
   const pathname = usePathname();
@@ -57,7 +57,7 @@ export function Header() {
           )}
         >
           <div className="flex h-14 items-center justify-between gap-4 sm:h-16">
-            <Link href="/" className="relative z-10 shrink-0" aria-label="Meu Lote Fácil — Home">
+            <Link href="/" className="relative z-10 shrink-0" aria-label="Meu Lote Fácil, Home">
               <Logo
                 variant="full"
                 className={cn(

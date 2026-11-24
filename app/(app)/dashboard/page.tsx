@@ -38,7 +38,7 @@ export default function DashboardPage() {
           Painel de processos
         </h1>
         <p className="text-sm text-muted-foreground">
-          Acompanhamento de regularização · {/* TODO: plugar Supabase */}
+          Acompanhamento de regularização, {/* TODO: plugar Supabase */}
         </p>
       </div>
 
@@ -64,7 +64,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm font-medium">{p.protocolo}</p>
                   <p className="text-xs text-muted-foreground">
-                    {p.nucleoNome} · {p.moradorNome}
+                    {p.nucleoNome}, {p.moradorNome}
                   </p>
                 </div>
                 <Badge variant="secondary">{statusProcessoLabel[p.status]}</Badge>

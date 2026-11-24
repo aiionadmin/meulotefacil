@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!n) return { title: "Núcleo" };
   return {
     title: n.nome,
-    description: `${n.nome} · ${n.cidade} · ${n.modalidade} · ${lotesLabel(n)}`,
+    description: `${n.nome}, ${n.cidade}, ${n.modalidade}, ${lotesLabel(n)}`,
   };
 }
 
@@ -67,7 +67,7 @@ export default async function NucleoPage({ params }: Props) {
               {n.nome}
             </h1>
             <p className="mt-2 text-brand-cream/75">
-              {n.cidade}/{n.estado} · {n.modalidade} · {n.tipo} · {lotesLabel(n)}
+              {n.cidade}/{n.estado}, {n.modalidade}, {n.tipo}, {lotesLabel(n)}
             </p>
           </div>
         </div>
@@ -86,7 +86,7 @@ export default async function NucleoPage({ params }: Props) {
             <Stat label="Modalidade" value={n.modalidade} />
             <Stat
               label="Fase"
-              value={n.fase ? faseLabel[n.fase] : "—"}
+              value={n.fase ? faseLabel[n.fase] : "n/d"}
             />
           </div>
           {n.aprovacao && (

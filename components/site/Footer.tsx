@@ -6,7 +6,7 @@ import { INSTITUTIONAL } from "@/lib/institutional";
 import { FOOTER_COLS, SITE_NAV } from "@/lib/site-nav";
 
 /**
- * Site footer — Ridgeline Dither Footer (21st) adaptado a ink/paper/Montserrat.
+ * Site footer, Ridgeline Dither Footer (21st) adaptado a ink/paper/Montserrat.
  * Sem links /auth.
  */
 export function Footer() {

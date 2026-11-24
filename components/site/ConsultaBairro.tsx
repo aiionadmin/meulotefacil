@@ -42,7 +42,7 @@ export function ConsultaBairro({ embedded = false }: { embedded?: boolean }) {
             Não encontramos esse bairro na lista pública.
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Fale conosco — podemos verificar se há processo em curso ou orientar o início.
+            Fale conosco, podemos verificar se há processo em curso ou orientar o início.
           </p>
           <Button asChild className="mt-4">
             <a href={wa} target="_blank" rel="noopener noreferrer">
@@ -64,7 +64,7 @@ export function ConsultaBairro({ embedded = false }: { embedded?: boolean }) {
                   {n.nome}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {n.cidade} · {n.modalidade} · {lotesLabel(n)}
+                  {n.cidade}, {n.modalidade}, {lotesLabel(n)}
                 </p>
                 {n.faseLabel && (
                   <p className="mt-1 text-xs text-muted-foreground">{n.faseLabel}</p>

@@ -97,7 +97,7 @@ export function RegularizacoesGrid({
               <div className="space-y-2 p-5">
                 <h3 className="text-xl font-bold">{n.nome}</h3>
                 <p className="text-sm text-brand-cream/60">
-                  {n.cidade}/{n.estado} · {n.modalidade} · {n.tipo}
+                  {n.cidade}/{n.estado}, {n.modalidade}, {n.tipo}
                 </p>
                 <p className="text-sm text-brand-orange">
                   <strong>{lotesLabel(n)}</strong>

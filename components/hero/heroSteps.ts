@@ -25,7 +25,7 @@ export type HeroStep = {
 };
 
 /**
- * Textos por progresso do scroll — REURB + batida do vídeo do cliente.
+ * Textos por progresso do scroll, REURB + batida do vídeo do cliente.
  * Troque os textos aqui sem tocar no ScrollHero.
  */
 export const HERO_STEPS: HeroStep[] = [
@@ -54,7 +54,7 @@ export const HERO_STEPS: HeroStep[] = [
     marker: "Infra",
     eyebrow: "Vias e redes",
     title: "Ruas, drenagem e o plano do bairro",
-    body: "Infraestrutura que ninguém vê — e todo mundo sente — abre caminho para a aprovação e a CRF.",
+    body: "Infraestrutura que ninguém vê, e todo mundo sente, abre caminho para a aprovação e a CRF.",
   },
   {
     id: "moradias",
@@ -72,7 +72,7 @@ export const HERO_STEPS: HeroStep[] = [
     marker: "Bairro",
     eyebrow: "Registro em cartório",
     title: "Seu lote. Sua casa. Com escritura.",
-    body: "Transformando vidas, realizando sonhos — do diagnóstico ao registro, com atendimento humano em Campinas e região.",
+    body: "Transformando vidas, realizando sonhos, do diagnóstico ao registro, com atendimento humano em Campinas e região.",
     showCtas: true,
     showStats: true,
   },

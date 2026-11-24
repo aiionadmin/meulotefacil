@@ -1,8 +1,8 @@
-/** Dados institucionais — fonte: conteudo-novo-site.md */
+/** Dados institucionais, fonte: conteudo-novo-site.md */
 
 export const INSTITUTIONAL = {
   name: "Meu Lote Fácil",
-  fullName: "Meu Lote Fácil — Regularização Fundiária",
+  fullName: "Meu Lote Fácil, Regularização Fundiária",
   slogan: "Transformando vidas, realizando sonhos!",
   sloganSecondary: "Seu lote, sua casa!",
   founded: 2005,

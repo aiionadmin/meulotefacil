@@ -14,7 +14,7 @@ export default function ProcessosPage() {
           Processos
         </h1>
         <p className="text-sm text-muted-foreground">
-          Núcleo, fase e documentos · {/* TODO: plugar Supabase */}
+          Núcleo, fase e documentos, {/* TODO: plugar Supabase */}
         </p>
       </div>
 

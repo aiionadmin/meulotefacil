@@ -16,7 +16,7 @@ export default function ConfiguracoesPage() {
           Configurações
         </h1>
         <p className="text-sm text-muted-foreground">
-          Placeholders · {/* TODO: plugar Supabase */}
+          Placeholders, {/* TODO: plugar Supabase */}
         </p>
       </div>
 
@@ -115,7 +115,7 @@ export default function ConfiguracoesPage() {
                 <div>
                   <p className="font-medium">Supabase</p>
                   <p className="text-sm text-muted-foreground">
-                    Auth + Postgres — configure via .env
+                    Auth + Postgres, configure via .env
                   </p>
                 </div>
                 <Switch disabled />

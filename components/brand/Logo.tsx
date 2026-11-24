@@ -12,7 +12,7 @@ type LogoProps = {
 };
 
 /**
- * Logo Meu Lote Fácil — traço (stroke) para animação DrawSVG.
+ * Logo Meu Lote Fácil, traço (stroke) para animação DrawSVG.
  * Casa externa → casa interna + janela → arcos concêntricos.
  */
 export function Logo({

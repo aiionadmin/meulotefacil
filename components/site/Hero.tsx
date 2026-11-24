@@ -119,7 +119,7 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
         <p className="mb-6 text-sm font-semibold uppercase tracking-widest text-brand-orange">
-          Regularização fundiária · desde 2005
+          Regularização fundiária, desde 2005
         </p>
 
         <h1
@@ -131,8 +131,8 @@ export function Hero() {
         </h1>
 
         <p className="hero-sub mt-6 max-w-2xl text-base text-brand-cream/75 opacity-0 sm:text-lg">
-          Regularização fundiária de ponta a ponta — do diagnóstico ao registro
-          em cartório — para que cada família tenha a escritura do próprio lote.
+          Regularização fundiária de ponta a ponta, do diagnóstico ao registro
+          em cartório, para que cada família tenha a escritura do próprio lote.
         </p>
 
         <div ref={ctaRef} className="hero-cta mt-10 flex flex-wrap gap-4 opacity-0">

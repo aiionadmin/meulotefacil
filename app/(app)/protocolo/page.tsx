@@ -28,7 +28,7 @@ export default function ProtocoloPage() {
           Consultar protocolo
         </h1>
         <p className="text-sm text-muted-foreground">
-          Informe o número do protocolo · {/* TODO: plugar Supabase */}
+          Informe o número do protocolo, {/* TODO: plugar Supabase */}
         </p>
       </div>
 
