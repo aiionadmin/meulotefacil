@@ -66,9 +66,8 @@ export function HowItWorks() {
         cards.forEach((card, i) => {
           gsap.fromTo(
             card,
-            { opacity: 0.25, y: 40 },
+            { y: 28 },
             {
-              opacity: 1,
               y: 0,
               ease: "power2.out",
               scrollTrigger: {
@@ -115,7 +114,7 @@ export function HowItWorks() {
 
         <div className="relative mt-14">
           <svg
-            className="pointer-events-none absolute left-0 top-16 hidden h-24 w-full text-mata/40 lg:block"
+            className="pointer-events-none absolute left-0 top-16 z-0 hidden h-24 w-full text-mata/15 lg:block"
             viewBox="0 0 1200 100"
             fill="none"
             aria-hidden
@@ -129,20 +128,20 @@ export function HowItWorks() {
             />
           </svg>
 
-          <ol className="grid gap-0 border border-linha sm:grid-cols-2 lg:grid-cols-5">
+          <ol className="relative z-10 grid gap-0 border border-linha sm:grid-cols-2 lg:grid-cols-5">
             {steps.map((step, i) => (
               <li
                 key={step.title}
                 className="how-card border-b border-linha bg-card p-5 last:border-b-0 sm:border-b lg:border-b-0 lg:border-r lg:last:border-r-0"
               >
-                <p className="font-mono-label text-xs text-mata">
+                <p className="font-mono-label text-xs text-ink/65">
                   {String(i + 1).padStart(2, "0")}
                 </p>
-                <div className="mt-4 mb-3 text-mata">
+                <div className="mt-4 mb-3 text-ink/80">
                   <step.icon className="h-5 w-5" />
                 </div>
                 <h3 className="font-display text-xl text-brand-navy">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-2 text-sm leading-relaxed text-ink/75">
                   {step.text}
                 </p>
               </li>

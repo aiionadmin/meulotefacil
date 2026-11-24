@@ -13,6 +13,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
+    <div className="[&_.rdf-bar]:relative [&_.rdf-bar]:z-[3] [&_.rdf-bar]:bg-gradient-to-b [&_.rdf-bar]:from-[#f3f1ec] [&_.rdf-bar]:via-[#f3f1ec]/92 [&_.rdf-bar]:to-transparent [&_.rdf-bar]:pb-10 [&_.rdf-tag]:text-[#3f4743] [&_.rdf-col-title]:text-ink">
     <RidgelineDitherFooter
       name={INSTITUTIONAL.name}
       brandHref="/"
@@ -52,7 +53,7 @@ export function Footer() {
       palette={{
         paper: "#f3f1ec",
         ink: "#111614",
-        muted: "#5a605c",
+        muted: "#3f4743",
         line: "#d6d1c7",
         heart: "#a8502a",
         tones: [
@@ -67,12 +68,13 @@ export function Footer() {
       }}
       seed={26}
       ridges={6}
-      mist={0.75}
+      mist={0.55}
       maxWidth="82.5rem"
       fontFamily='var(--font-montserrat), ui-sans-serif, system-ui, sans-serif'
       monoFamily='var(--font-montserrat), ui-sans-serif, system-ui, sans-serif'
       height="640px"
-      sceneMinHeight="240px"
+      sceneMinHeight="280px"
     />
+    </div>
   );
 }

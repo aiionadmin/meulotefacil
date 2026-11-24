@@ -38,10 +38,10 @@ export function ServicosCards() {
                 i === 0 ? "border-b border-linha lg:border-b-0 lg:border-r" : ""
               }`}
             >
-              <div className="mb-5 flex h-10 w-10 items-center justify-center border border-linha text-mata">
+              <div className="mb-5 flex h-10 w-10 items-center justify-center border border-linha text-ink/80">
                 <s.icon className="h-5 w-5" />
               </div>
-              <p className="font-mono-label text-xs text-mata">{s.audience}</p>
+              <p className="font-mono-label text-xs text-ink/70">{s.audience}</p>
               <h3 className="font-display mt-2 text-2xl text-brand-navy">
                 {s.title}
               </h3>

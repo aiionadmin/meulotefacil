@@ -96,10 +96,10 @@ export function RegularizacoesGrid({
               </div>
               <div className="space-y-2 p-5">
                 <h3 className="text-xl font-bold">{n.nome}</h3>
-                <p className="text-sm text-brand-cream/60">
+                <p className="text-sm text-brand-cream/85">
                   {n.cidade}/{n.estado}, {n.modalidade}, {n.tipo}
                 </p>
-                <p className="text-sm text-brand-orange">
+                <p className="text-sm font-medium text-orange-300">
                   <strong>{lotesLabel(n)}</strong>
                 </p>
               </div>
@@ -111,7 +111,7 @@ export function RegularizacoesGrid({
           <div className="mt-10 text-center">
             <Link
               href="/regularizacoes"
-              className="inline-flex font-semibold text-brand-orange hover:underline"
+              className="inline-flex font-semibold text-orange-300 hover:text-orange-200 hover:underline"
             >
               Ver todas as regularizações →
             </Link>

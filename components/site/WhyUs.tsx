@@ -66,12 +66,12 @@ export function WhyUs() {
               key={p.title}
               className="pilar-card border-b border-brand-cream/15 p-6 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
             >
-              <p className="font-mono-label text-xs text-brand-cream/50">
+              <p className="font-mono-label text-xs text-brand-cream/80">
                 {String(i + 1).padStart(2, "0")}
               </p>
-              <p.icon className="mt-4 mb-3 h-5 w-5 text-mata" />
+              <p.icon className="mt-4 mb-3 h-5 w-5 text-orange-300" />
               <h3 className="font-display text-xl">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-brand-cream/65">
+              <p className="mt-2 text-sm leading-relaxed text-brand-cream/90">
                 {p.text}
               </p>
             </article>

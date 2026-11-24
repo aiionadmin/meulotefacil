@@ -179,12 +179,13 @@ export function ScrollHero() {
             aria-hidden
           />
 
-          {/* Gradient + vignette */}
+          {/* Gradient + vignette — scrim forte sob o texto para contraste */}
           <div
             ref={overlayRef}
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(17,22,20,0.35)_70%,rgba(17,22,20,0.75)_100%)]"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(17,22,20,0.45)_55%,rgba(17,22,20,0.82)_100%)]"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink via-ink/20 to-ink/50" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-ink/40" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-ink/95 via-ink/50 to-transparent" />
 
           {/* Text layer */}
           <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 pb-28 pt-28 sm:px-6 lg:px-8">
@@ -209,7 +210,7 @@ export function ScrollHero() {
                   <span
                     className={cn(
                       "hidden text-[10px] font-semibold uppercase tracking-wider sm:inline",
-                      active ? "text-brand-orange" : "text-brand-cream/50"
+                      active ? "text-orange-300" : "text-brand-cream/80"
                     )}
                   >
                     {m.label}
@@ -221,9 +222,11 @@ export function ScrollHero() {
 
           <div
             ref={hintRef}
-            className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1 text-brand-cream/70 transition-opacity duration-300"
+            className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1 text-brand-cream/90 transition-opacity duration-300"
           >
-            <span className="text-xs uppercase tracking-widest">Role para descobrir</span>
+            <span className="text-xs uppercase tracking-widest drop-shadow-[0_1px_8px_rgba(0,0,0,0.55)]">
+              Role para descobrir
+            </span>
             <ChevronDown className="h-4 w-4 animate-bounce" />
           </div>
         </div>
@@ -250,27 +253,27 @@ function StepCopy({ step, wa }: { step: HeroStep; wa: string }) {
   return (
     <div
       key={step.id}
-      className="max-w-2xl text-brand-cream transition-all duration-500"
+      className="max-w-2xl text-brand-cream transition-all duration-500 [text-shadow:0_1px_18px_rgba(0,0,0,0.45)]"
       style={{
         animation: "heroStepIn 0.55s ease forwards",
       }}
     >
-      <p className="text-sm font-semibold uppercase tracking-widest text-brand-orange">
+      <p className="text-sm font-semibold uppercase tracking-widest text-orange-300">
         {step.eyebrow}
       </p>
       <h1 className="font-display mt-3 text-3xl leading-[1.08] sm:text-5xl lg:text-6xl">
         {step.title}
       </h1>
-      <p className="mt-4 max-w-xl text-base text-brand-cream/80 sm:text-lg">{step.body}</p>
+      <p className="mt-4 max-w-xl text-base text-brand-cream/95 sm:text-lg">{step.body}</p>
 
       {step.showStats && (
         <dl className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {HERO_STATS_DISPLAY.map((s) => (
             <div key={s.label}>
-              <dt className="text-[10px] uppercase tracking-wider text-brand-cream/50">
+              <dt className="text-[10px] uppercase tracking-wider text-brand-cream/85">
                 {s.label}
               </dt>
-              <dd className="font-display text-xl text-brand-orange sm:text-2xl">
+              <dd className="font-display text-xl text-orange-300 sm:text-2xl">
                 {s.value}
               </dd>
             </div>
@@ -279,8 +282,8 @@ function StepCopy({ step, wa }: { step: HeroStep; wa: string }) {
       )}
 
       {step.showCtas && (
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Button asChild size="lg">
+        <div className="mt-8 flex flex-wrap gap-3 [text-shadow:none]">
+          <Button asChild size="lg" variant="cream">
             <a href={wa} target="_blank" rel="noopener noreferrer">
               Falar no WhatsApp
             </a>
@@ -315,14 +318,14 @@ function ReducedHero({ wa }: { wa: string }) {
       <div className="relative z-10 mx-auto flex max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 lg:px-8">
         {HERO_STEPS.map((step) => (
           <div key={step.id} className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-widest text-brand-accent">
+            <p className="text-sm font-semibold uppercase tracking-widest text-orange-300">
               {step.marker}, {step.eyebrow}
             </p>
             <h2 className="font-display mt-2 text-2xl sm:text-4xl">{step.title}</h2>
-            <p className="mt-3 text-paper/75">{step.body}</p>
+            <p className="mt-3 text-paper/95">{step.body}</p>
             {step.showCtas && (
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild size="lg">
+                <Button asChild size="lg" variant="cream">
                   <a href={wa} target="_blank" rel="noopener noreferrer">
                     Falar no WhatsApp
                   </a>

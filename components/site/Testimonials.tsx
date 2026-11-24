@@ -39,7 +39,7 @@ export function Testimonials() {
               <p className="font-display text-lg leading-snug text-brand-ink">
                 &ldquo;{t.quote}&rdquo;
               </p>
-              <footer className="font-mono-label mt-6 text-xs text-mata">
+              <footer className="font-mono-label mt-6 text-xs text-muted-foreground">
                 {t.author}
               </footer>
             </blockquote>

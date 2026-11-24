@@ -38,7 +38,7 @@ export function SectionHeading({
         <span
           className={cn(
             "font-mono-label text-xs tabular-nums",
-            dark ? "text-paper/50" : "text-mata"
+            dark ? "text-paper/75" : "text-ink/70"
           )}
         >
           {number}
@@ -47,7 +47,7 @@ export function SectionHeading({
           <span
             className={cn(
               "font-mono-label text-xs",
-              dark ? "text-paper/65" : "text-muted-foreground"
+              dark ? "text-paper/80" : "text-muted-foreground"
             )}
           >
             {eyebrow}
@@ -67,7 +67,7 @@ export function SectionHeading({
           className={cn(
             "mt-4 max-w-xl text-base leading-relaxed sm:text-lg",
             align === "center" && "mx-auto",
-            dark ? "text-paper/70" : "text-muted-foreground"
+            dark ? "text-paper/90" : "text-muted-foreground"
           )}
         >
           {subtitle}

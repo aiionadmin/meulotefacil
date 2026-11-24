@@ -59,10 +59,10 @@ export function Header() {
           <div className="flex h-14 items-center justify-between gap-4 sm:h-16">
             <Link href="/" className="relative z-10 shrink-0" aria-label="Meu Lote Fácil, Home">
               <Logo
-                variant="full"
+                variant={solid ? "full" : "mono"}
                 className={cn(
                   "scale-90 transition-opacity sm:scale-100",
-                  solid ? "opacity-100" : "opacity-95"
+                  solid ? "opacity-100 text-ink" : "opacity-100 text-paper drop-shadow-[0_1px_10px_rgba(0,0,0,0.45)]"
                 )}
               />
             </Link>
@@ -85,10 +85,10 @@ export function Header() {
                       solid
                         ? active
                           ? "text-ink"
-                          : "text-ink/65 hover:text-ink"
+                          : "text-ink/75 hover:text-ink"
                         : active
-                          ? "text-paper"
-                          : "text-paper/75 hover:text-paper"
+                          ? "text-paper drop-shadow-[0_1px_8px_rgba(0,0,0,0.4)]"
+                          : "text-paper/90 hover:text-paper drop-shadow-[0_1px_8px_rgba(0,0,0,0.4)]"
                     )}
                   >
                     {l.label}
