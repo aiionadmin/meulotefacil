@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { INSTITUTIONAL, whatsappUrl } from "@/lib/institutional";
+import { FOOTER_COLS } from "@/lib/site-nav";
 
 function IconIg(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -12,56 +13,36 @@ function IconIg(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-const cols = [
-  {
-    title: "Navegação",
-    links: [
-      { href: "/regularizacoes", label: "Regularizações" },
-      { href: "/consulta", label: "Meu bairro" },
-      { href: "/servicos", label: "Serviços" },
-      { href: "/sobre", label: "Quem somos" },
-      { href: "/contato", label: "Contato" },
-    ],
-  },
-  {
-    title: "Processo",
-    links: [
-      { href: "/auth/login", label: "Acompanhar processo" },
-      { href: "/auth/cadastro", label: "Criar conta" },
-      { href: "/servicos/consultoria", label: "Consultoria municipal" },
-      { href: "/servicos/planos-e-projetos", label: "Planos e projetos" },
-    ],
-  },
-];
-
+/**
+ * Footer técnico corporativo (fallback do aceternity/footer — registry 21st auth).
+ */
 export function Footer() {
   const wa = whatsappUrl();
 
   return (
-    <footer className="relative overflow-hidden bg-brand-navy-deep text-brand-cream">
-      <svg
-        className="pointer-events-none absolute -bottom-8 left-0 h-40 w-full text-mata/15"
-        viewBox="0 0 1200 160"
-        preserveAspectRatio="none"
+    <footer className="relative overflow-hidden border-t border-linha/20 bg-ink-deep text-paper">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-accent/50 to-transparent"
         aria-hidden
-      >
-        <path d="M0 80 Q300 20 600 80 T1200 80" fill="none" stroke="currentColor" strokeWidth="24" />
-        <path d="M0 110 Q300 50 600 110 T1200 110" fill="none" stroke="currentColor" strokeWidth="18" />
-        <path d="M0 140 Q300 80 600 140 T1200 140" fill="none" stroke="currentColor" strokeWidth="12" />
-      </svg>
+      />
 
-      <div className="site-container relative grid gap-10 py-16 lg:grid-cols-4">
-        <div className="lg:col-span-2">
-          <Logo variant="mono" className="text-brand-cream" />
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-cream/70">
+      <div className="site-container relative grid gap-12 py-16 lg:grid-cols-12">
+        <div className="lg:col-span-5">
+          <Logo variant="mono" className="text-paper" />
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-paper/65">
             Regularização fundiária de ponta a ponta — do diagnóstico ao registro
             em cartório — em Campinas e região, desde {INSTITUTIONAL.founded}.
           </p>
-          <p className="mt-3 text-sm text-brand-cream/60">
+          <p className="mt-4 font-mono-label text-[11px] text-paper/45">
             {INSTITUTIONAL.sede.address}
           </p>
-          <p className="mt-1 text-sm">
-            <a href={wa} className="text-brand-orange hover:underline" target="_blank" rel="noopener noreferrer">
+          <p className="mt-2 text-sm">
+            <a
+              href={wa}
+              className="text-brand-accent transition-colors hover:text-paper"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               WhatsApp {INSTITUTIONAL.whatsappPrimary.display}
             </a>
           </p>
@@ -71,20 +52,25 @@ export function Footer() {
               aria-label="Instagram"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full border border-brand-cream/20 p-2 hover:border-brand-orange hover:text-brand-orange"
+              className="rounded-sm border border-paper/15 p-2 text-paper/70 transition-colors hover:border-brand-accent hover:text-brand-accent"
             >
               <IconIg className="h-4 w-4" />
             </a>
           </div>
         </div>
 
-        {cols.map((col) => (
-          <div key={col.title}>
-            <h3 className="font-display text-sm text-brand-orange">{col.title}</h3>
-            <ul className="mt-4 space-y-2">
+        {FOOTER_COLS.map((col) => (
+          <div key={col.title} className="lg:col-span-3 lg:col-start-auto">
+            <h3 className="font-mono-label text-[11px] text-brand-accent">
+              {col.title}
+            </h3>
+            <ul className="mt-4 space-y-2.5">
               {col.links.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="text-sm text-brand-cream/75 hover:text-brand-orange">
+                  <Link
+                    href={l.href}
+                    className="text-sm text-paper/70 transition-colors hover:text-paper"
+                  >
                     {l.label}
                   </Link>
                 </li>
@@ -94,13 +80,16 @@ export function Footer() {
         ))}
       </div>
 
-      <div className="relative border-t border-brand-cream/10 px-4 py-6 text-center text-xs text-brand-cream/50 sm:px-6 lg:px-8">
-        <p>
-          © {new Date().getFullYear()} {INSTITUTIONAL.fullName}. Todos os direitos reservados.
-        </p>
-        <p className="mt-1">
-          {INSTITUTIONAL.slogan} · {INSTITUTIONAL.valores.join(" · ")}
-        </p>
+      <div className="relative border-t border-paper/10">
+        <div className="site-container flex flex-col gap-2 py-6 text-xs text-paper/45 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © {new Date().getFullYear()} {INSTITUTIONAL.fullName}. Todos os direitos
+            reservados.
+          </p>
+          <p className="font-mono-label text-[10px]">
+            {INSTITUTIONAL.valores.join(" · ")}
+          </p>
+        </div>
       </div>
     </footer>
   );

@@ -5,12 +5,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://meulotefacil.com.br";
   const staticRoutes = [
     "",
-    "/regularizacoes",
-    "/consulta",
+    "/quem-somos",
+    "/regularizacao",
     "/servicos",
     "/servicos/consultoria",
     "/servicos/planos-e-projetos",
-    "/sobre",
+    "/noticias",
     "/contato",
   ].map((path) => ({
     url: `${base}${path}`,

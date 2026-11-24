@@ -1,27 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
-import { gsap } from "@/lib/gsap";
-import { cn, prefersReducedMotion } from "@/lib/utils";
+import { SITE_NAV, SITE_NAV_CTA } from "@/lib/site-nav";
 import { whatsappUrl } from "@/lib/institutional";
+import { cn } from "@/lib/utils";
 
-const links = [
-  { href: "/regularizacoes", label: "Regularizações" },
-  { href: "/consulta", label: "Meu bairro" },
-  { href: "/servicos", label: "Serviços" },
-  { href: "/sobre", label: "Quem somos" },
-  { href: "/contato", label: "Contato" },
-];
-
+/**
+ * Floating navbar shell (estilo aceternity floating-navbar).
+ * Registry 21st exigiu auth — composição própria adaptada a ink/paper/accent.
+ */
 export function Header() {
-  const headerRef = useRef<HTMLElement>(null);
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const lastY = useRef(0);
   const wa = whatsappUrl();
 
   useEffect(() => {
@@ -29,23 +25,9 @@ export function Header() {
       const y = window.scrollY;
       const insideHero =
         document.documentElement.dataset.heroScroll === "inside";
-      // Transparente no hero sticky; sólido+blur ao sair (ou após scroll curto em páginas sem hero)
-      setScrolled(!insideHero && y > 40);
-      const header = headerRef.current;
-      if (!header || prefersReducedMotion()) return;
-      // Não esconder o header enquanto o usuário scruba o hero
-      if (insideHero) {
-        gsap.to(header, { yPercent: 0, duration: 0.25, ease: "power2.out" });
-        lastY.current = y;
-        return;
-      }
-      if (y > lastY.current && y > 120) {
-        gsap.to(header, { yPercent: -100, duration: 0.35, ease: "power2.out" });
-      } else {
-        gsap.to(header, { yPercent: 0, duration: 0.35, ease: "power2.out" });
-      }
-      lastY.current = y;
+      setScrolled(!insideHero && y > 24);
     };
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -58,99 +40,133 @@ export function Header() {
   }, [open]);
 
   useEffect(() => {
-    if (!open || prefersReducedMotion()) return;
-    gsap.fromTo(
-      ".mobile-nav-link",
-      { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, stagger: 0.06, duration: 0.5, ease: "power3.out" }
-    );
-  }, [open]);
+    setOpen(false);
+  }, [pathname]);
+
+  const solid = scrolled || open;
 
   return (
     <>
-      <header
-        ref={headerRef}
-        className={cn(
-          "site-header fixed inset-x-0 top-0 z-50 border-b border-transparent transition-colors duration-300",
-          scrolled
-            ? "border-brand-cream/10 bg-brand-navy/95 text-brand-cream backdrop-blur-sm"
-            : "bg-transparent text-brand-cream"
-        )}
-      >
-        <div className="site-container flex h-16 items-center justify-between sm:h-20">
-          <Link href="/" className="relative z-10">
-            <Logo variant="full" className="scale-90 sm:scale-100" />
-          </Link>
-
-          <nav className="hidden items-center gap-7 lg:flex">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="text-sm font-medium text-brand-cream/85 transition-colors hover:text-brand-cream"
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="hidden items-center gap-3 lg:flex">
-            <Link
-              href="/auth/login"
-              className="text-sm font-medium text-brand-cream/85 hover:text-brand-cream"
-            >
-              Acompanhar processo
+      <header className="site-header pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4">
+        <div
+          className={cn(
+            "pointer-events-auto site-container transition-[max-width,padding,background-color,border-color,box-shadow] duration-300",
+            solid
+              ? "rounded-sm border border-linha/80 bg-paper/95 text-ink shadow-[0_8px_28px_-18px_rgba(17,22,20,0.45)] backdrop-blur-md"
+              : "rounded-sm border border-transparent bg-transparent text-paper"
+          )}
+        >
+          <div className="flex h-14 items-center justify-between gap-4 sm:h-16">
+            <Link href="/" className="relative z-10 shrink-0" aria-label="Meu Lote Fácil — Home">
+              <Logo
+                variant="full"
+                className={cn(
+                  "scale-90 transition-opacity sm:scale-100",
+                  solid ? "opacity-100" : "opacity-95"
+                )}
+              />
             </Link>
-            <Button asChild size="sm" variant="cream">
-              <a href={wa} target="_blank" rel="noopener noreferrer">
-                Falar no WhatsApp
-              </a>
-            </Button>
-          </div>
 
-          <button
-            type="button"
-            className="relative z-10 rounded-lg p-2 text-brand-cream lg:hidden"
-            aria-label={open ? "Fechar menu" : "Abrir menu"}
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+            <nav
+              className="hidden items-center gap-1 xl:flex"
+              aria-label="Principal"
+            >
+              {SITE_NAV.map((l) => {
+                const active =
+                  l.href === "/"
+                    ? pathname === "/"
+                    : pathname === l.href || pathname.startsWith(`${l.href}/`);
+                return (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className={cn(
+                      "rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
+                      solid
+                        ? active
+                          ? "text-ink"
+                          : "text-ink/65 hover:text-ink"
+                        : active
+                          ? "text-paper"
+                          : "text-paper/75 hover:text-paper"
+                    )}
+                  >
+                    {l.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="hidden items-center gap-2 lg:flex">
+              <Link
+                href={SITE_NAV_CTA.accompany.href}
+                className={cn(
+                  "text-sm font-medium transition-colors",
+                  solid
+                    ? "text-ink/70 hover:text-ink"
+                    : "text-paper/80 hover:text-paper"
+                )}
+              >
+                {SITE_NAV_CTA.accompany.label}
+              </Link>
+              <Button
+                asChild
+                size="sm"
+                variant={solid ? "default" : "cream"}
+              >
+                <a href={wa} target="_blank" rel="noopener noreferrer">
+                  {SITE_NAV_CTA.talk.label}
+                </a>
+              </Button>
+            </div>
+
+            <button
+              type="button"
+              className={cn(
+                "relative z-10 rounded-sm p-2 lg:hidden",
+                solid ? "text-ink" : "text-paper"
+              )}
+              aria-label={open ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
       </header>
 
       {open && (
-        <div className="fixed inset-0 z-40 bg-brand-navy lg:hidden">
-          <svg
-            className="pointer-events-none absolute inset-0 h-full w-full text-mata/20"
-            viewBox="0 0 400 800"
-            aria-hidden
+        <div className="fixed inset-0 z-40 bg-ink text-paper lg:hidden">
+          <nav
+            className="site-container flex h-full flex-col justify-center gap-5 pt-16"
+            aria-label="Mobile"
           >
-            <path d="M-40 500 Q200 350 440 500" fill="none" stroke="currentColor" strokeWidth="40" />
-            <path d="M-40 580 Q200 420 440 580" fill="none" stroke="currentColor" strokeWidth="32" />
-            <path d="M-40 660 Q200 490 440 660" fill="none" stroke="currentColor" strokeWidth="24" />
-          </svg>
-          <nav className="relative flex h-full flex-col items-center justify-center gap-6 px-6 pt-16">
-            {links.map((l) => (
+            {SITE_NAV.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className="mobile-nav-link font-display text-3xl text-brand-cream"
+                className="font-display text-3xl text-paper"
                 onClick={() => setOpen(false)}
               >
                 {l.label}
               </Link>
             ))}
             <Link
-              href="/auth/login"
-              className="mobile-nav-link mt-4 text-lg text-brand-cream/80"
+              href={SITE_NAV_CTA.accompany.href}
+              className="mt-4 font-mono-label text-sm text-paper/70"
               onClick={() => setOpen(false)}
             >
-              Acompanhar processo
+              {SITE_NAV_CTA.accompany.label}
             </Link>
-            <Button asChild size="lg" className="mobile-nav-link mt-2">
-              <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
-                Falar no WhatsApp
+            <Button asChild size="lg" variant="cream" className="mt-2 w-fit">
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+              >
+                {SITE_NAV_CTA.talk.label}
               </a>
             </Button>
           </nav>

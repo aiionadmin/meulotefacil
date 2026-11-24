@@ -11,7 +11,7 @@ type SectionHeadingProps = {
 };
 
 /**
- * Cabeçalho de seção corporativo: número mono + título Newsreader.
+ * Cabeçalho de seção: número IBM Plex Mono + título Newsreader.
  */
 export function SectionHeading({
   number,
@@ -37,8 +37,8 @@ export function SectionHeading({
       >
         <span
           className={cn(
-            "font-mono-label text-xs",
-            dark ? "text-brand-cream/55" : "text-mata"
+            "font-mono-label text-xs tabular-nums",
+            dark ? "text-paper/50" : "text-mata"
           )}
         >
           {number}
@@ -47,7 +47,7 @@ export function SectionHeading({
           <span
             className={cn(
               "font-mono-label text-xs",
-              dark ? "text-brand-cream/70" : "text-muted-foreground"
+              dark ? "text-paper/65" : "text-muted-foreground"
             )}
           >
             {eyebrow}
@@ -57,7 +57,7 @@ export function SectionHeading({
       <h2
         className={cn(
           "font-display mt-3 text-3xl leading-[1.15] sm:text-4xl lg:text-[2.75rem]",
-          dark ? "text-brand-cream" : "text-brand-navy"
+          dark ? "text-paper" : "text-ink"
         )}
       >
         {title}
@@ -67,7 +67,7 @@ export function SectionHeading({
           className={cn(
             "mt-4 max-w-xl text-base leading-relaxed sm:text-lg",
             align === "center" && "mx-auto",
-            dark ? "text-brand-cream/75" : "text-muted-foreground"
+            dark ? "text-paper/70" : "text-muted-foreground"
           )}
         >
           {subtitle}

@@ -22,9 +22,9 @@ export function Logo({
   animated = false,
 }: LogoProps) {
   const stroke =
-    variant === "mono" ? "currentColor" : "var(--brand-orange, #F7821E)";
+    variant === "mono" ? "currentColor" : "var(--accent, #a8502a)";
   const textFill =
-    variant === "mono" ? "currentColor" : "var(--brand-orange, #F7821E)";
+    variant === "mono" ? "currentColor" : "var(--accent, #a8502a)";
 
   return (
     <div

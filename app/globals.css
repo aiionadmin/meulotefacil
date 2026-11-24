@@ -2,30 +2,38 @@
 
 /*
   Design system — consultoria corporativa (etapa 1)
-  Paleta: grafite / papel / latossolo / mata
+  Semântica: ink / paper / accent (+ mata, linha)
   Tipografia: Newsreader (display) + IBM Plex Sans + IBM Plex Mono
-  Aliases brand-* mantidos para não quebrar rotas/auth/demo.
+  Aliases grafite/papel/latossolo e brand-* mantidos p/ auth/demo.
 */
 
 :root {
-  /* Core */
-  --grafite: #111614;
-  --grafite-deep: #0a0d0c;
-  --papel: #f3f1ec;
-  --papel-muted: #e8e4db;
-  --latossolo: #a8502a;
-  --latossolo-strong: #8c4020;
+  /* Core semântico */
+  --ink: #111614;
+  --ink-deep: #0a0d0c;
+  --paper: #f3f1ec;
+  --paper-muted: #e8e4db;
+  --accent: #a8502a;
+  --accent-strong: #8c4020;
   --mata: #3e5a4b;
   --mata-muted: #5a7366;
   --linha: #d6d1c7;
 
+  /* Nomes de marca (PT) */
+  --grafite: var(--ink);
+  --grafite-deep: var(--ink-deep);
+  --papel: var(--paper);
+  --papel-muted: var(--paper-muted);
+  --latossolo: var(--accent);
+  --latossolo-strong: var(--accent-strong);
+
   /* Aliases legados → nova direção */
-  --brand-navy: var(--grafite);
-  --brand-navy-deep: var(--grafite-deep);
-  --brand-orange: var(--latossolo);
-  --brand-orange-strong: var(--latossolo-strong);
-  --brand-cream: var(--papel);
-  --brand-ink: var(--grafite);
+  --brand-navy: var(--ink);
+  --brand-navy-deep: var(--ink-deep);
+  --brand-orange: var(--accent);
+  --brand-orange-strong: var(--accent-strong);
+  --brand-cream: var(--paper);
+  --brand-ink: var(--ink);
   --brand-mata: var(--mata);
 
   --navy-50: #f4f5f4;
@@ -52,20 +60,21 @@
   --orange-900: #4c2615;
   --orange-950: #2a130a;
 
-  --background: var(--papel);
-  --foreground: var(--grafite);
+  --background: var(--paper);
+  --foreground: var(--ink);
   --card: #fffcf7;
-  --card-foreground: var(--grafite);
+  --card-foreground: var(--ink);
   --popover: #fffcf7;
-  --popover-foreground: var(--grafite);
-  --primary: var(--grafite);
-  --primary-foreground: var(--papel);
-  --secondary: var(--papel-muted);
-  --secondary-foreground: var(--grafite);
-  --muted: var(--papel-muted);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--paper-muted);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-muted);
   --muted-foreground: #5a605c;
-  --accent: color-mix(in srgb, var(--mata) 12%, var(--papel));
-  --accent-foreground: var(--grafite);
+  /* shadcn “accent” surface (mata soft) — distinto de --accent latossolo */
+  --surface-accent: color-mix(in srgb, var(--mata) 12%, var(--paper));
+  --surface-accent-foreground: var(--ink);
   --destructive: #b42318;
   --destructive-foreground: #ffffff;
   --border: var(--linha);
@@ -73,29 +82,29 @@
   --ring: var(--mata);
   --radius: 0.25rem;
 
-  --sidebar: var(--grafite);
-  --sidebar-foreground: var(--papel);
+  --sidebar: var(--ink);
+  --sidebar-foreground: var(--paper);
   --sidebar-accent: #1c221f;
   --sidebar-border: rgba(243, 241, 236, 0.1);
 
-  --site-max: 82.5rem; /* 1320px */
+  --site-max: 82.5rem; /* 1320px = site-container */
 }
 
 .dark {
-  --background: var(--grafite-deep);
-  --foreground: var(--papel);
-  --card: var(--grafite);
-  --card-foreground: var(--papel);
-  --popover: var(--grafite);
-  --popover-foreground: var(--papel);
-  --primary: var(--papel);
-  --primary-foreground: var(--grafite);
+  --background: var(--ink-deep);
+  --foreground: var(--paper);
+  --card: var(--ink);
+  --card-foreground: var(--paper);
+  --popover: var(--ink);
+  --popover-foreground: var(--paper);
+  --primary: var(--paper);
+  --primary-foreground: var(--ink);
   --secondary: var(--navy-700);
-  --secondary-foreground: var(--papel);
+  --secondary-foreground: var(--paper);
   --muted: var(--navy-800);
   --muted-foreground: var(--navy-200);
-  --accent: var(--navy-700);
-  --accent-foreground: var(--papel);
+  --surface-accent: var(--navy-700);
+  --surface-accent-foreground: var(--paper);
   --border: rgba(243, 241, 236, 0.12);
   --input: rgba(243, 241, 236, 0.12);
   --ring: var(--mata-muted);
@@ -114,8 +123,14 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--surface-accent);
+  --color-accent-foreground: var(--surface-accent-foreground);
+  --color-ink: var(--ink);
+  --color-ink-deep: var(--ink-deep);
+  --color-paper: var(--paper);
+  --color-paper-muted: var(--paper-muted);
+  --color-brand-accent: var(--accent);
+  --color-brand-accent-strong: var(--accent-strong);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
