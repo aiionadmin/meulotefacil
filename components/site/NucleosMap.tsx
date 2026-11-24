@@ -10,6 +10,7 @@ import {
   type StatusNucleo,
 } from "@/lib/data/nucleos";
 import { Button } from "@/components/ui/button";
+import MapVisual from "@/components/ui/map";
 import { SectionHeading } from "@/components/site/SectionHeading";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { gsap, useGSAP } from "@/lib/gsap";
@@ -198,17 +199,29 @@ export function NucleosMap({ className }: { className?: string }) {
 
 export function NucleosMapSection() {
   return (
-    <section className="border-b border-linha bg-brand-cream py-20 lg:py-28">
+    <section className="border-b border-linha bg-paper py-20 lg:py-28">
       <div className="site-container">
         <SectionHeading
           number="04"
           eyebrow="Mapa"
           title="Onde estamos regularizando"
-          subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades."
+          subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades. Passe o mouse no mapa para ver os marcadores."
         />
-        <div className="mx-auto mt-12 max-w-3xl border border-linha bg-card p-2 sm:p-4">
-          <NucleosMap />
+        <div className="relative mx-auto mt-12 h-[400px] w-full max-w-[600px] overflow-hidden border border-linha bg-paper">
+          <MapVisual />
         </div>
+        <ul className="mx-auto mt-8 flex max-w-[600px] flex-wrap justify-center gap-5 text-sm text-ink">
+          {(Object.keys(statusNucleoLabel) as StatusNucleo[]).map((s) => (
+            <li key={s} className="inline-flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ background: statusColor[s] }}
+                aria-hidden
+              />
+              {statusNucleoLabel[s]}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
