@@ -53,6 +53,24 @@ Painel, processos (núcleo/fase/docs), núcleos, documentos do morador, consulta
 2. Preencha `.env.local` com URL e anon key.
 3. Sem vars = modo demo continua funcionando.
 
+## Hero scroll (frames)
+
+O topo da home usa `components/hero/ScrollHero.tsx`: o scroll scruba uma sequência WebP (não autoplay).
+
+| Trocar… | Onde |
+|---|---|
+| Textos / etapas / CTAs | `components/hero/heroSteps.ts` |
+| Prompt do vídeo definitivo | `docs/prompt-video-hero.md` |
+| Frames | `public/hero-frames/` (+ `mobile/`) |
+
+```bash
+# Baixe o MP4 gerado (Veo/Sora/…) e extraia:
+chmod +x scripts/extract-frames.sh
+./scripts/extract-frames.sh caminho/para/hero.mp4
+```
+
+A11y: `prefers-reduced-motion` mostra o último frame + textos empilhados. Conexões lentas / `saveData` usam 30 frames amostrados.
+
 ## Lacunas (conteúdo)
 
 Ver lista no final de `conteudo-novo-site.md` (e-mail/CNPJ, números divergentes FAQ vs home, depoimentos reais, LGPD, etc.).

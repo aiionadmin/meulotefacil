@@ -1,4 +1,4 @@
-import { Hero } from "@/components/site/Hero";
+import { ScrollHero } from "@/components/hero/ScrollHero";
 import { Marquee } from "@/components/site/Marquee";
 import { HowItWorks } from "@/components/site/HowItWorks";
 import { ServicosCards } from "@/components/site/ServicosCards";
@@ -14,22 +14,24 @@ import { NucleosMapSection } from "@/components/site/NucleosMap";
 export default function HomePage() {
   return (
     <>
-      <Hero />
-      <Marquee />
-      <ServicosCards />
-      <HowItWorks />
-      <ArcDivider from="cream" />
-      <RegularizacoesGrid
-        limit={6}
-        title="Regularizações em destaque"
-        subtitle="Concluídas, em registro e em andamento — veja o portfólio completo."
-      />
-      <NucleosMapSection />
-      <ConsultaBairro />
-      <WhyUs />
-      <Testimonials />
-      <FAQ />
-      <FinalCTA />
+      <ScrollHero />
+      <div className="after-scroll-hero bg-brand-cream">
+        <Marquee />
+        <ServicosCards />
+        <HowItWorks />
+        <ArcDivider from="cream" />
+        <RegularizacoesGrid
+          limit={6}
+          title="Regularizações em destaque"
+          subtitle="Concluídas, em registro e em andamento — veja o portfólio completo."
+        />
+        <NucleosMapSection />
+        <ConsultaBairro />
+        <WhyUs />
+        <Testimonials />
+        <FAQ />
+        <FinalCTA />
+      </div>
     </>
   );
 }

@@ -27,9 +27,18 @@ export function Header() {
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
-      setScrolled(y > 40);
+      const insideHero =
+        document.documentElement.dataset.heroScroll === "inside";
+      // Transparente no hero sticky; sólido+blur ao sair (ou após scroll curto em páginas sem hero)
+      setScrolled(!insideHero && y > 40);
       const header = headerRef.current;
       if (!header || prefersReducedMotion()) return;
+      // Não esconder o header enquanto o usuário scruba o hero
+      if (insideHero) {
+        gsap.to(header, { yPercent: 0, duration: 0.25, ease: "power2.out" });
+        lastY.current = y;
+        return;
+      }
       if (y > lastY.current && y > 120) {
         gsap.to(header, { yPercent: -100, duration: 0.35, ease: "power2.out" });
       } else {
