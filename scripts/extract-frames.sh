@@ -11,8 +11,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IN="${1:-}"
-DESKTOP_FRAMES="${HERO_FRAMES:-150}"
-MOBILE_FRAMES="${HERO_MOBILE_FRAMES:-90}"
+# Defaults denser for morph-heavy client video (~15s); override via env.
+DESKTOP_FRAMES="${HERO_FRAMES:-240}"
+MOBILE_FRAMES="${HERO_MOBILE_FRAMES:-144}"
 OUT_DESKTOP="$ROOT/public/hero-frames"
 OUT_MOBILE="$OUT_DESKTOP/mobile"
 

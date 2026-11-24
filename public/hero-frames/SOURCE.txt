@@ -1,1 +1,3 @@
-Placeholder Mixkit frames for 4-stage hero (Terreno→Pronto). Replace via scripts/extract-frames.sh — see docs/prompt-video-hero.md
+Frames from client video docs/brand/hero-user.mp4 (15s, 1920×1080, HEVC stylized 3D).
+Extract: HERO_FRAMES=240 HERO_MOBILE_FRAMES=144 ./scripts/extract-frames.sh docs/brand/hero-user.mp4
+Desktop WebP q≈70 @ 1920×1080; mobile q≈65 @ 960×540. Source MP4 is gitignored (≈68MB).

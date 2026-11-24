@@ -1,6 +1,15 @@
 import { STATS } from "@/lib/institutional";
 
-export type HeroStepId = "terreno" | "infra" | "construcao" | "pronto";
+/**
+ * 5 bandas alinhadas ao vídeo do cliente (15s, 3D estilizado):
+ * 1 paisagem → 2 topografia/terraplenagem → 3 vias/infra → 4 paisagismo/moradias → 5 bairro ao entardecer
+ */
+export type HeroStepId =
+  | "paisagem"
+  | "topografia"
+  | "infra"
+  | "moradias"
+  | "bairro";
 
 export type HeroStep = {
   id: HeroStepId;
@@ -16,43 +25,51 @@ export type HeroStep = {
 };
 
 /**
- * Textos por progresso do scroll — copy REURB adaptada aos 4 estágios
- * do vídeo (terreno → ruas/lotes → construção → lar).
+ * Textos por progresso do scroll — REURB + batida do vídeo do cliente.
  * Troque os textos aqui sem tocar no ScrollHero.
  */
 export const HERO_STEPS: HeroStep[] = [
   {
-    id: "terreno",
+    id: "paisagem",
     start: 0,
-    end: 0.2,
-    marker: "Terreno",
+    end: 0.18,
+    marker: "Terra",
     eyebrow: "Regularização fundiária",
-    title: "Do chão irregular ao patrimônio com escritura",
-    body: "Cada núcleo começa como terra sem segurança jurídica. A Meu Lote Fácil transforma essa realidade desde 2005.",
+    title: "Tudo começa com a terra",
+    body: "Cada núcleo nasce como chão sem segurança jurídica. A Meu Lote Fácil transforma essa realidade desde 2005.",
   },
   {
-    id: "infra",
-    start: 0.22,
-    end: 0.45,
-    marker: "Infraestrutura",
-    eyebrow: "Diagnóstico e projetos",
-    title: "Ruas, lotes e o plano do bairro",
+    id: "topografia",
+    start: 0.2,
+    end: 0.38,
+    marker: "Projeto",
+    eyebrow: "Diagnóstico e topografia",
+    title: "Levantamento antes do primeiro passo",
     body: "Mapeamos o perímetro, publicamos a planta e estruturamos os projetos técnicos exigidos pela lei.",
   },
   {
-    id: "construcao",
-    start: 0.47,
-    end: 0.72,
-    marker: "Construção",
-    eyebrow: "Aprovação e CRF",
-    title: "O bairro ganha forma — e a cidade, ordem",
+    id: "infra",
+    start: 0.4,
+    end: 0.58,
+    marker: "Infra",
+    eyebrow: "Vias e redes",
+    title: "Ruas, drenagem e o plano do bairro",
+    body: "Infraestrutura que ninguém vê — e todo mundo sente — abre caminho para a aprovação e a CRF.",
+  },
+  {
+    id: "moradias",
+    start: 0.6,
+    end: 0.78,
+    marker: "Moradias",
+    eyebrow: "Lotes e construção",
+    title: "Do lote demarcado à casa de verdade",
     body: "Com a Certidão de Regularização Fundiária, o processo avança até o cartório. Famílias deixam a informalidade para trás.",
   },
   {
-    id: "pronto",
-    start: 0.75,
+    id: "bairro",
+    start: 0.8,
     end: 1,
-    marker: "Pronto",
+    marker: "Bairro",
     eyebrow: "Registro em cartório",
     title: "Seu lote. Sua casa. Com escritura.",
     body: "Transformando vidas, realizando sonhos — do diagnóstico ao registro, com atendimento humano em Campinas e região.",
@@ -69,24 +86,24 @@ export const HERO_MARKERS = HERO_STEPS.map((s) => ({
 
 export const HERO_FRAME_CONFIG = {
   desktop: {
-    count: 150,
+    count: 240,
     path: (i: number) =>
       `/hero-frames/frame_${String(i).padStart(4, "0")}.webp`,
     poster: "/hero-frames/poster.webp",
   },
   mobile: {
-    count: 90,
+    count: 144,
     path: (i: number) =>
       `/hero-frames/mobile/frame_${String(i).padStart(4, "0")}.webp`,
     poster: "/hero-frames/mobile/frame_0001.webp",
   },
   lowBandwidth: {
-    count: 30,
+    count: 48,
     /** Usa a sequência desktop amostrada (1 a cada N) */
     sampleEvery: 5,
   },
-  preloadFirst: 20,
-  lerp: 0.1,
+  preloadFirst: 30,
+  lerp: 0.12,
 } as const;
 
 export const HERO_STATS_DISPLAY = [
@@ -99,7 +116,9 @@ export const HERO_STATS_DISPLAY = [
 export function stepForProgress(p: number): HeroStep | null {
   const step = HERO_STEPS.find((s) => p >= s.start && p < s.end);
   if (step) return step;
-  if (p >= 0.75) return HERO_STEPS[HERO_STEPS.length - 1];
+  if (p >= HERO_STEPS[HERO_STEPS.length - 1].start) {
+    return HERO_STEPS[HERO_STEPS.length - 1];
+  }
   // gaps between steps: hold previous
   for (let i = HERO_STEPS.length - 1; i >= 0; i--) {
     if (p >= HERO_STEPS[i].start) return HERO_STEPS[i];

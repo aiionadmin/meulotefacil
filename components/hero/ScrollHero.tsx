@@ -145,7 +145,7 @@ export function ScrollHero() {
       <section
         id="hero-scroll"
         ref={sectionRef}
-        className="relative h-[300vh] bg-brand-navy md:h-[400vh]"
+        className="relative h-[400vh] bg-brand-navy md:h-[550vh]"
         aria-label="Hero imersivo — regularização fundiária"
       >
         <div

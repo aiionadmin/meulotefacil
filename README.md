@@ -61,8 +61,8 @@ O topo da home usa `components/hero/ScrollHero.tsx`: o scroll scruba uma sequên
 |---|---|
 | Textos / etapas / CTAs | `components/hero/heroSteps.ts` |
 | Prompt do vídeo | `docs/prompt-video-hero.md` |
-| Frames | `public/hero-frames/` (+ `mobile/`) — 150 desktop / 90 mobile |
-| Extração | `./scripts/extract-frames.sh video.mp4` |
+| Frames | `public/hero-frames/` (+ `mobile/`) — 240 desktop / 144 mobile (vídeo do cliente) |
+| Extração | `HERO_FRAMES=240 HERO_MOBILE_FRAMES=144 ./scripts/extract-frames.sh docs/brand/hero-user.mp4` |
 
 ```bash
 chmod +x scripts/extract-frames.sh
