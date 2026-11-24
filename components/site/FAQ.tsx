@@ -6,6 +6,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { SectionHeading } from "@/components/site/SectionHeading";
 
 const faqs = [
   {
@@ -32,7 +33,6 @@ const faqs = [
     q: "Qual é o diferencial da Meu Lote Fácil?",
     a: "Somos a maior empresa de regularização fundiária de Campinas e região, com mais de 7 mil regularizações concluídas desde 2005.",
   },
-  // Novas — a confirmar com o cliente
   {
     q: "Qual a diferença entre REURB-S e REURB-E?",
     a: "Resposta a confirmar com o cliente. Em linhas gerais, REURB-S atende interesse social e REURB-E interesse específico.",
@@ -49,20 +49,15 @@ const faqs = [
 
 export function FAQ() {
   return (
-    <section className="bg-brand-cream py-20 lg:py-28">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-orange">
-            FAQ
-          </p>
-          <h2 className="font-display mt-3 text-3xl text-brand-navy sm:text-5xl">
-            Perguntas frequentes
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            Ainda com dúvida? Fale conosco pelo WhatsApp.
-          </p>
-        </div>
-        <Accordion type="single" collapsible className="w-full">
+    <section className="border-b border-linha bg-brand-cream py-20 lg:py-28">
+      <div className="site-container grid gap-10 lg:grid-cols-2">
+        <SectionHeading
+          number="08"
+          eyebrow="FAQ"
+          title="Perguntas frequentes"
+          subtitle="Ainda com dúvida? Fale conosco pelo WhatsApp."
+        />
+        <Accordion type="single" collapsible className="w-full border-t border-linha">
           {faqs.map((f, i) => (
             <AccordionItem key={f.q} value={`item-${i}`}>
               <AccordionTrigger>{f.q}</AccordionTrigger>

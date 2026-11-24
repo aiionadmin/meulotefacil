@@ -71,13 +71,13 @@ export function Header() {
       <header
         ref={headerRef}
         className={cn(
-          "site-header fixed inset-x-0 top-0 z-50 transition-colors duration-300",
+          "site-header fixed inset-x-0 top-0 z-50 border-b border-transparent transition-colors duration-300",
           scrolled
-            ? "bg-brand-navy/90 text-brand-cream shadow-lg backdrop-blur-[12px]"
+            ? "border-brand-cream/10 bg-brand-navy/95 text-brand-cream backdrop-blur-sm"
             : "bg-transparent text-brand-cream"
         )}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:h-20 sm:px-6 lg:px-8">
+        <div className="site-container flex h-16 items-center justify-between sm:h-20">
           <Link href="/" className="relative z-10">
             <Logo variant="full" className="scale-90 sm:scale-100" />
           </Link>
@@ -87,7 +87,7 @@ export function Header() {
               <Link
                 key={l.href}
                 href={l.href}
-                className="text-sm font-medium text-brand-cream/85 transition-colors hover:text-brand-orange"
+                className="text-sm font-medium text-brand-cream/85 transition-colors hover:text-brand-cream"
               >
                 {l.label}
               </Link>
@@ -97,11 +97,11 @@ export function Header() {
           <div className="hidden items-center gap-3 lg:flex">
             <Link
               href="/auth/login"
-              className="text-sm font-medium text-brand-cream/85 hover:text-brand-orange"
+              className="text-sm font-medium text-brand-cream/85 hover:text-brand-cream"
             >
               Acompanhar processo
             </Link>
-            <Button asChild size="sm">
+            <Button asChild size="sm" variant="cream">
               <a href={wa} target="_blank" rel="noopener noreferrer">
                 Falar no WhatsApp
               </a>
@@ -122,7 +122,7 @@ export function Header() {
       {open && (
         <div className="fixed inset-0 z-40 bg-brand-navy lg:hidden">
           <svg
-            className="pointer-events-none absolute inset-0 h-full w-full text-brand-orange/15"
+            className="pointer-events-none absolute inset-0 h-full w-full text-mata/20"
             viewBox="0 0 400 800"
             aria-hidden
           >

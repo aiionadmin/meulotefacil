@@ -11,6 +11,7 @@ import {
   statusNucleoLabel,
   lotesLabel,
 } from "@/lib/data/nucleos";
+import { SectionHeading } from "@/components/site/SectionHeading";
 import { whatsappUrl } from "@/lib/institutional";
 
 export function ConsultaBairro({ embedded = false }: { embedded?: boolean }) {
@@ -25,7 +26,7 @@ export function ConsultaBairro({ embedded = false }: { embedded?: boolean }) {
   const body = (
     <div className="space-y-6">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-orange" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mata" />
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -95,20 +96,15 @@ export function ConsultaBairro({ embedded = false }: { embedded?: boolean }) {
   if (embedded) return body;
 
   return (
-    <section className="bg-brand-cream py-20 lg:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-orange">
-            Consulta
-          </p>
-          <h2 className="font-display mt-3 text-3xl text-brand-navy sm:text-5xl">
-            Meu bairro está sendo regularizado?
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            Busque pelo nome do núcleo ou cidade e veja o status do processo.
-          </p>
-        </div>
-        <div className="mx-auto mt-12 max-w-2xl rounded-2xl border border-brand-navy/8 bg-white p-6 shadow-sm sm:p-8">
+    <section className="border-b border-linha bg-brand-cream py-20 lg:py-28">
+      <div className="site-container">
+        <SectionHeading
+          number="05"
+          eyebrow="Consulta"
+          title="Meu bairro está sendo regularizado?"
+          subtitle="Busque pelo nome do núcleo ou cidade e veja o status do processo."
+        />
+        <div className="mx-auto mt-12 max-w-2xl border border-linha bg-card p-6 sm:p-8">
           {body}
         </div>
       </div>

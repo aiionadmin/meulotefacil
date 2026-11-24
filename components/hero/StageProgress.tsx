@@ -41,9 +41,9 @@ export function StageProgress({
             >
               <span
                 className={cn(
-                  "max-w-[9rem] text-[10px] font-semibold uppercase tracking-wider transition-opacity",
+                  "font-mono-label max-w-[9rem] text-[10px] transition-opacity",
                   active
-                    ? "text-brand-orange opacity-100"
+                    ? "text-brand-cream opacity-100"
                     : "text-brand-cream/50 opacity-0 group-hover:opacity-100"
                 )}
               >
@@ -51,9 +51,9 @@ export function StageProgress({
               </span>
               <span
                 className={cn(
-                  "h-2 w-2 shrink-0 rounded-full transition-all",
+                  "h-1.5 w-1.5 shrink-0 rounded-full transition-all",
                   active
-                    ? "scale-125 bg-brand-orange shadow-[0_0_0_3px_rgba(247,130,30,0.35)]"
+                    ? "bg-latossolo ring-1 ring-latossolo/50 ring-offset-1 ring-offset-transparent"
                     : "bg-brand-cream/35 group-hover:bg-brand-cream/70"
                 )}
               />
@@ -76,7 +76,7 @@ export function StageProgress({
               onClick={() => onSelect(i)}
               className={cn(
                 "h-1.5 rounded-full transition-all",
-                active ? "w-5 bg-brand-orange" : "w-1.5 bg-brand-cream/40"
+                active ? "w-5 bg-latossolo" : "w-1.5 bg-brand-cream/40"
               )}
               aria-label={`Etapa ${s.id}: ${s.kicker}`}
               aria-current={active ? "step" : undefined}

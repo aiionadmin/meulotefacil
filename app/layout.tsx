@@ -1,12 +1,26 @@
 import type { Metadata } from "next";
-import { Jost } from "next/font/google";
+import { Newsreader, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { INSTITUTIONAL } from "@/lib/institutional";
 import "./globals.css";
 
-const jost = Jost({
+const newsreader = Newsreader({
   subsets: ["latin"],
-  variable: "--font-jost",
-  weight: ["400", "500", "700", "800"],
+  variable: "--font-newsreader",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  variable: "--font-plex-sans",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  variable: "--font-plex-mono",
+  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -42,29 +56,32 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${jost.variable} font-sans antialiased`}>
+      <body
+        className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable} font-sans antialiased`}
+      >
         {children}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "Organization",
+              "@type": "ProfessionalService",
               name: INSTITUTIONAL.fullName,
+              description: INSTITUTIONAL.slogan,
               url: "https://meulotefacil.com.br",
-              logo: "https://meulotefacil.com.br/brand/logo-laranja.png",
-              description:
-                "Especialistas em regularização fundiária (REURB-S e REURB-E) em Campinas e região desde 2005.",
-              foundingDate: "2005",
+              telephone: INSTITUTIONAL.sede.phone,
               address: {
                 "@type": "PostalAddress",
-                streetAddress: "Rua Baguaçu, 26, Sala 313F",
+                streetAddress: INSTITUTIONAL.sede.address,
                 addressLocality: "Campinas",
                 addressRegion: "SP",
                 addressCountry: "BR",
               },
-              telephone: INSTITUTIONAL.whatsappPrimary.display,
-              sameAs: [INSTITUTIONAL.instagramUrl],
+              foundingDate: String(INSTITUTIONAL.founded),
+              areaServed: INSTITUTIONAL.atuacao.map((c) => ({
+                "@type": "City",
+                name: c,
+              })),
             }),
           }}
         />

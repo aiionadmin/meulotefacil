@@ -40,7 +40,7 @@ export function Footer() {
   return (
     <footer className="relative overflow-hidden bg-brand-navy-deep text-brand-cream">
       <svg
-        className="pointer-events-none absolute -bottom-8 left-0 h-40 w-full text-brand-orange/10"
+        className="pointer-events-none absolute -bottom-8 left-0 h-40 w-full text-mata/15"
         viewBox="0 0 1200 160"
         preserveAspectRatio="none"
         aria-hidden
@@ -50,7 +50,7 @@ export function Footer() {
         <path d="M0 140 Q300 80 600 140 T1200 140" fill="none" stroke="currentColor" strokeWidth="12" />
       </svg>
 
-      <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-4 lg:px-8">
+      <div className="site-container relative grid gap-10 py-16 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <Logo variant="mono" className="text-brand-cream" />
           <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-cream/70">

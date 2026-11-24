@@ -1,82 +1,104 @@
 @import "tailwindcss";
 
+/*
+  Design system — consultoria corporativa (etapa 1)
+  Paleta: grafite / papel / latossolo / mata
+  Tipografia: Newsreader (display) + IBM Plex Sans + IBM Plex Mono
+  Aliases brand-* mantidos para não quebrar rotas/auth/demo.
+*/
+
 :root {
-  --brand-navy: #1e1856;
-  --brand-navy-deep: #141247;
-  --brand-orange: #f7821e;
-  --brand-orange-strong: #ed8600;
-  --brand-cream: #fff6ec;
-  --brand-ink: #0f0d2e;
+  /* Core */
+  --grafite: #111614;
+  --grafite-deep: #0a0d0c;
+  --papel: #f3f1ec;
+  --papel-muted: #e8e4db;
+  --latossolo: #a8502a;
+  --latossolo-strong: #8c4020;
+  --mata: #3e5a4b;
+  --mata-muted: #5a7366;
+  --linha: #d6d1c7;
 
-  --navy-50: #f0eff8;
-  --navy-100: #dddbeb;
-  --navy-200: #b8b4d6;
-  --navy-300: #8f89bc;
-  --navy-400: #6a62a3;
-  --navy-500: #4a4388;
-  --navy-600: #352f6e;
-  --navy-700: #1e1856;
-  --navy-800: #141247;
-  --navy-900: #0f0d2e;
-  --navy-950: #08071a;
+  /* Aliases legados → nova direção */
+  --brand-navy: var(--grafite);
+  --brand-navy-deep: var(--grafite-deep);
+  --brand-orange: var(--latossolo);
+  --brand-orange-strong: var(--latossolo-strong);
+  --brand-cream: var(--papel);
+  --brand-ink: var(--grafite);
+  --brand-mata: var(--mata);
 
-  --orange-50: #fff7ed;
-  --orange-100: #ffedd5;
-  --orange-200: #fed7aa;
-  --orange-300: #fdba74;
-  --orange-400: #fb923c;
-  --orange-500: #f7821e;
-  --orange-600: #ed8600;
-  --orange-700: #c2410c;
-  --orange-800: #9a3412;
-  --orange-900: #7c2d12;
-  --orange-950: #431407;
+  --navy-50: #f4f5f4;
+  --navy-100: #e6e8e6;
+  --navy-200: #c8cdc9;
+  --navy-300: #9aa39c;
+  --navy-400: #6b756e;
+  --navy-500: #4a554e;
+  --navy-600: #323a36;
+  --navy-700: #1c221f;
+  --navy-800: #141914;
+  --navy-900: #111614;
+  --navy-950: #0a0d0c;
 
-  --background: var(--brand-cream);
-  --foreground: var(--brand-ink);
-  --card: #ffffff;
-  --card-foreground: var(--brand-ink);
-  --popover: #ffffff;
-  --popover-foreground: var(--brand-ink);
-  --primary: var(--brand-orange);
-  --primary-foreground: #ffffff;
-  --secondary: var(--navy-100);
-  --secondary-foreground: var(--brand-navy);
-  --muted: #f5efe6;
-  --muted-foreground: #5c5878;
-  --accent: var(--orange-100);
-  --accent-foreground: var(--brand-navy);
-  --destructive: #dc2626;
+  --orange-50: #faf3ef;
+  --orange-100: #f2e2d8;
+  --orange-200: #e4c0ad;
+  --orange-300: #d09472;
+  --orange-400: #bc6d48;
+  --orange-500: #a8502a;
+  --orange-600: #8c4020;
+  --orange-700: #713418;
+  --orange-800: #5c2c16;
+  --orange-900: #4c2615;
+  --orange-950: #2a130a;
+
+  --background: var(--papel);
+  --foreground: var(--grafite);
+  --card: #fffcf7;
+  --card-foreground: var(--grafite);
+  --popover: #fffcf7;
+  --popover-foreground: var(--grafite);
+  --primary: var(--grafite);
+  --primary-foreground: var(--papel);
+  --secondary: var(--papel-muted);
+  --secondary-foreground: var(--grafite);
+  --muted: var(--papel-muted);
+  --muted-foreground: #5a605c;
+  --accent: color-mix(in srgb, var(--mata) 12%, var(--papel));
+  --accent-foreground: var(--grafite);
+  --destructive: #b42318;
   --destructive-foreground: #ffffff;
-  --border: #e8dfd2;
-  --input: #e8dfd2;
-  --ring: var(--brand-orange);
-  --radius: 0.75rem;
+  --border: var(--linha);
+  --input: var(--linha);
+  --ring: var(--mata);
+  --radius: 0.25rem;
 
-  --sidebar: var(--brand-navy-deep);
-  --sidebar-foreground: var(--brand-cream);
-  --sidebar-accent: var(--brand-navy);
-  --sidebar-border: rgba(255, 246, 236, 0.08);
+  --sidebar: var(--grafite);
+  --sidebar-foreground: var(--papel);
+  --sidebar-accent: #1c221f;
+  --sidebar-border: rgba(243, 241, 236, 0.1);
+
+  --site-max: 82.5rem; /* 1320px */
 }
 
 .dark {
-  --background: var(--brand-navy-deep);
-  --foreground: var(--brand-cream);
-  --card: var(--brand-navy);
-  --card-foreground: var(--brand-cream);
-  --popover: var(--brand-navy);
-  --popover-foreground: var(--brand-cream);
-  --primary: var(--brand-orange);
-  --primary-foreground: #ffffff;
-  --secondary: var(--navy-600);
-  --secondary-foreground: var(--brand-cream);
+  --background: var(--grafite-deep);
+  --foreground: var(--papel);
+  --card: var(--grafite);
+  --card-foreground: var(--papel);
+  --popover: var(--grafite);
+  --popover-foreground: var(--papel);
+  --primary: var(--papel);
+  --primary-foreground: var(--grafite);
+  --secondary: var(--navy-700);
+  --secondary-foreground: var(--papel);
   --muted: var(--navy-800);
   --muted-foreground: var(--navy-200);
-  --accent: var(--navy-600);
-  --accent-foreground: var(--brand-cream);
-  --border: rgba(255, 246, 236, 0.12);
-  --input: rgba(255, 246, 236, 0.12);
-  --ring: var(--brand-orange);
+  --accent: var(--navy-700);
+  --accent-foreground: var(--papel);
+  --border: rgba(243, 241, 236, 0.12);
+  --input: rgba(243, 241, 236, 0.12);
+  --ring: var(--mata-muted);
 }
 
 @theme inline {
@@ -110,6 +132,13 @@
   --color-brand-orange-strong: var(--brand-orange-strong);
   --color-brand-cream: var(--brand-cream);
   --color-brand-ink: var(--brand-ink);
+  --color-brand-mata: var(--brand-mata);
+
+  --color-grafite: var(--grafite);
+  --color-papel: var(--papel);
+  --color-latossolo: var(--latossolo);
+  --color-mata: var(--mata);
+  --color-linha: var(--linha);
 
   --color-navy-50: var(--navy-50);
   --color-navy-100: var(--navy-100);
@@ -135,11 +164,13 @@
   --color-orange-900: var(--orange-900);
   --color-orange-950: var(--orange-950);
 
-  --font-sans: var(--font-jost);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --radius-sm: 0;
+  --radius-md: 2px;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: 0.35rem;
 }
 
 @layer base {
@@ -153,18 +184,18 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-jost), system-ui, sans-serif;
+    font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
   }
 
   :focus-visible {
-    outline: 2px solid var(--brand-orange);
+    outline: 1px solid var(--mata);
     outline-offset: 2px;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--brand-orange) 35%, transparent);
-    color: var(--brand-ink);
+    background: color-mix(in srgb, var(--mata) 28%, transparent);
+    color: var(--grafite);
   }
 }
 
@@ -173,10 +204,47 @@
     text-wrap: balance;
   }
 
+  /* Display: Newsreader — sem caixa alta */
   .font-display {
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    text-transform: uppercase;
+    font-family: var(--font-newsreader), ui-serif, Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    text-transform: none;
+    font-optical-sizing: auto;
+  }
+
+  .font-mono-label {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+  .site-container {
+    width: 100%;
+    max-width: var(--site-max);
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .site-container {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .site-container {
+      padding-inline: 2rem;
+    }
+  }
+
+  /* Painéis: borda 1px, sem sombra */
+  .panel {
+    border: 1px solid var(--linha);
+    background: var(--card);
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .arc-mask {
@@ -187,30 +255,25 @@
 @keyframes heroStepIn {
   from {
     opacity: 0;
-    transform: translateY(30px);
-    filter: blur(8px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
-/* Navbar transparente enquanto o hero scroll está ativo (Header.tsx lê data-hero-scroll) */
 html[data-hero-scroll="inside"] .site-header {
   background-color: transparent;
   backdrop-filter: none;
   border-color: transparent;
 }
 
-/* Próxima seção sobe com radius após o hero scroll */
 .after-scroll-hero {
   position: relative;
   z-index: 2;
   margin-top: calc(var(--hero-next-lift, 0px) * -1);
-  border-top-left-radius: var(--hero-next-radius, 0px);
-  border-top-right-radius: var(--hero-next-radius, 0px);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
   overflow: hidden;
-  transition: border-radius 0.05s linear;
 }

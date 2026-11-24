@@ -2,94 +2,37 @@
 
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { useMagnetic } from "@/components/motion/useMagnetic";
-import { gsap, useGSAP } from "@/lib/gsap";
-import { prefersReducedMotion } from "@/lib/utils";
+import { SectionHeading } from "@/components/site/SectionHeading";
 import { whatsappUrl } from "@/lib/institutional";
 
 export function FinalCTA() {
   const rootRef = useRef<HTMLElement>(null);
-  const btnWrap = useMagnetic<HTMLDivElement>(0.3);
   const wa = whatsappUrl();
-
-  useGSAP(
-    () => {
-      if (prefersReducedMotion()) return;
-      const paths = rootRef.current?.querySelectorAll(".cta-logo-path");
-      if (!paths?.length) return;
-      gsap.fromTo(
-        paths,
-        { drawSVG: "0%" },
-        {
-          drawSVG: "100%",
-          ease: "none",
-          scrollTrigger: {
-            trigger: rootRef.current,
-            start: "top 70%",
-            end: "bottom 40%",
-            scrub: 0.8,
-          },
-        }
-      );
-    },
-    { scope: rootRef }
-  );
 
   return (
     <section
       ref={rootRef}
-      className="relative overflow-hidden bg-brand-orange py-24 text-brand-navy"
+      className="relative border-t border-linha bg-brand-navy py-24 text-brand-cream"
     >
-      <svg
-        className="pointer-events-none absolute -right-10 top-1/2 h-[140%] w-auto -translate-y-1/2 text-brand-navy/15"
-        viewBox="0 0 120 120"
-        aria-hidden
-      >
-        <path
-          className="cta-logo-path"
-          d="M22 58 L60 22 L98 58 L98 98 L22 98 Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="6"
-          strokeLinejoin="round"
-        />
-        <path
-          className="cta-logo-path"
-          d="M42 98 L42 68 L60 52 L78 68 L78 98"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="5"
-          strokeLinejoin="round"
-        />
-        <path
-          className="cta-logo-path"
-          d="M18 108 Q60 88 102 108"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="4"
-        />
-        <path
-          className="cta-logo-path"
-          d="M10 114 Q60 96 110 114"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="4"
-        />
-      </svg>
-
-      <div className="relative z-10 mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
-        <h2 className="font-display text-3xl sm:text-5xl lg:text-6xl">
-          Seu imóvel está sem escritura?
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-brand-navy/80">
-          Fale com quem já regularizou milhares de lotes em Campinas e região.
-        </p>
-        <div ref={btnWrap} className="mt-10 inline-flex">
-          <Button asChild size="lg" variant="secondary">
-            <a href={wa} target="_blank" rel="noopener noreferrer">
-              Falar no WhatsApp
-            </a>
-          </Button>
+      <div className="site-container">
+        <div className="grid gap-10 border border-brand-cream/15 p-8 sm:p-12 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+          <SectionHeading
+            number="09"
+            eyebrow="Contato"
+            title="Seu imóvel está sem escritura?"
+            subtitle="Fale com quem já regularizou milhares de lotes em Campinas e região."
+            dark
+          />
+          <div className="flex flex-wrap gap-3 lg:justify-end">
+            <Button asChild size="lg" variant="cream">
+              <a href={wa} target="_blank" rel="noopener noreferrer">
+                Falar no WhatsApp
+              </a>
+            </Button>
+            <Button asChild size="lg" variant="ghost">
+              <a href="/consulta">Consultar bairro</a>
+            </Button>
+          </div>
         </div>
       </div>
     </section>

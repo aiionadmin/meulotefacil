@@ -174,8 +174,8 @@ export function ScrollHero() {
           aria-hidden
         />
 
-        <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(20,18,71,0.3)_65%,rgba(20,18,71,0.72)_100%)]" />
-        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-brand-navy via-brand-navy/25 to-brand-navy/55" />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(17,22,20,0.35)_65%,rgba(17,22,20,0.78)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-brand-navy via-brand-navy/30 to-brand-navy/50" />
 
         <div className="absolute inset-0 z-[2] flex flex-col justify-end px-4 pb-28 pt-24 sm:px-6 lg:justify-center lg:px-10 lg:pb-16">
           <div className="mx-auto w-full max-w-7xl lg:pr-40">
@@ -185,7 +185,7 @@ export function ScrollHero() {
 
         <StageProgress activeIndex={stageIndex} onSelect={scrollToStage} />
 
-        <p className="pointer-events-none absolute bottom-8 left-4 z-30 font-display text-sm tabular-nums text-brand-cream/80 sm:left-6 lg:bottom-10 lg:left-10">
+        <p className="pointer-events-none absolute bottom-8 left-4 z-30 font-mono-label text-sm text-brand-cream/80 sm:left-6 lg:bottom-10 lg:left-10">
           {String(stage.id).padStart(2, "0")}
           <span className="text-brand-cream/40"> / 12</span>
         </p>
@@ -194,16 +194,16 @@ export function ScrollHero() {
           ref={hintRef}
           className="absolute bottom-20 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-1 text-brand-cream/70 transition-opacity duration-300 lg:bottom-24"
         >
-          <span className="text-xs uppercase tracking-widest">
+          <span className="font-mono-label text-xs">
             Role para construir
           </span>
-          <ChevronDown className="h-4 w-4 animate-bounce" />
+          <ChevronDown className="h-4 w-4" />
         </p>
 
         <button
           type="button"
           onClick={skipHero}
-          className="absolute bottom-8 right-4 z-30 text-xs font-medium text-brand-cream/70 underline-offset-4 hover:text-brand-orange hover:underline sm:right-6 lg:bottom-10 lg:right-10"
+          className="absolute bottom-8 right-4 z-30 font-mono-label text-xs text-brand-cream/70 underline-offset-4 hover:text-brand-cream hover:underline sm:right-6 lg:bottom-10 lg:right-10"
         >
           Pular animação ↓
         </button>
@@ -220,7 +220,7 @@ function StageCopy({ stage, wa }: { stage: HeroStage; wa: string }) {
       className="max-w-2xl text-brand-cream"
       style={{ animation: "heroStepIn 0.55s ease forwards" }}
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-orange sm:text-sm">
+      <p className="font-mono-label text-xs text-latossolo sm:text-sm">
         {stage.kicker}
       </p>
       {stage.id === 1 ? (
@@ -240,10 +240,10 @@ function StageCopy({ stage, wa }: { stage: HeroStage; wa: string }) {
         <dl className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {HERO_FINAL_STATS.map((s) => (
             <div key={s.label}>
-              <dt className="text-[10px] uppercase tracking-wider text-brand-cream/50">
+              <dt className="font-mono-label text-[10px] text-brand-cream/50">
                 {s.label}
               </dt>
-              <dd className="font-display text-xl text-brand-orange sm:text-2xl">
+              <dd className="font-display text-xl text-latossolo sm:text-2xl">
                 {s.value}
               </dd>
             </div>
@@ -286,7 +286,7 @@ function ReducedTimeline({ wa }: { wa: string }) {
       <ol className="relative z-10 mx-auto flex max-w-3xl list-none flex-col gap-10 px-4 py-16 sm:px-6">
         {HERO_STAGES.map((s) => (
           <li key={s.id}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-orange">
+            <p className="font-mono-label text-xs text-latossolo">
               {String(s.id).padStart(2, "0")} · {s.kicker}
             </p>
             {s.id === 1 ? (

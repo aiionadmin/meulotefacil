@@ -1,9 +1,7 @@
 import { ScrollHero } from "@/components/hero/ScrollHero";
-import { Marquee } from "@/components/site/Marquee";
 import { HowItWorks } from "@/components/site/HowItWorks";
 import { ServicosCards } from "@/components/site/ServicosCards";
 import { RegularizacoesGrid } from "@/components/site/RegularizacoesGrid";
-import { ArcDivider } from "@/components/site/ArcDivider";
 import { ConsultaBairro } from "@/components/site/ConsultaBairro";
 import { WhyUs } from "@/components/site/WhyUs";
 import { Testimonials } from "@/components/site/Testimonials";
@@ -16,14 +14,13 @@ export default function HomePage() {
     <>
       <ScrollHero />
       <div className="after-scroll-hero bg-brand-cream">
-        <Marquee />
         <ServicosCards />
         <HowItWorks />
-        <ArcDivider from="cream" />
         <RegularizacoesGrid
           limit={6}
           title="Regularizações em destaque"
           subtitle="Concluídas, em registro e em andamento — veja o portfólio completo."
+          sectionNumber="03"
         />
         <NucleosMapSection />
         <ConsultaBairro />

@@ -120,7 +120,7 @@ export function useFrameSequence(
       canvas.height = Math.floor(h * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = "#1E1856";
+    ctx.fillStyle = "#111614";
     ctx.fillRect(0, 0, w, h);
 
     const img = idx >= 0 ? cacheRef.current[idx] : null;
@@ -143,7 +143,7 @@ export function useFrameSequence(
     }
 
     if (dimRef.current > 0) {
-      ctx.fillStyle = `rgba(20, 18, 71, ${dimRef.current})`;
+      ctx.fillStyle = `rgba(17, 22, 20, ${dimRef.current})`;
       ctx.fillRect(0, 0, w, h);
     }
   }, [canvasRef]);

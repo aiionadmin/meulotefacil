@@ -97,7 +97,7 @@ export function Preloader() {
       style={{ clipPath: "inset(0 0 0 0)" }}
       aria-hidden
     >
-      <Logo variant="full" animated className="scale-125 text-brand-orange" />
+      <Logo variant="full" animated className="scale-125 text-latossolo" />
     </div>
   );
 }

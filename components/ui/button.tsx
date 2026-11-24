@@ -4,27 +4,30 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-brand-orange text-white hover:bg-brand-orange-strong shadow-sm",
-        secondary:
           "bg-brand-navy text-brand-cream hover:bg-brand-navy-deep",
+        secondary:
+          "bg-transparent text-brand-navy border border-brand-navy/25 hover:border-brand-navy hover:bg-brand-navy/[0.04]",
         ghost:
-          "bg-transparent text-brand-cream border border-brand-cream/40 hover:bg-brand-cream/10",
+          "bg-transparent text-brand-cream border border-brand-cream/35 hover:bg-brand-cream/10",
         outline:
-          "border border-brand-navy/20 bg-transparent text-brand-ink hover:border-brand-orange hover:text-brand-orange",
+          "border border-brand-navy/20 bg-transparent text-brand-ink hover:border-mata hover:text-mata",
         cream:
-          "bg-brand-cream text-brand-navy hover:bg-white",
-        link: "text-brand-orange underline-offset-4 hover:underline",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-brand-cream text-brand-navy border border-brand-navy/10 hover:bg-white",
+        link: "text-latossolo underline-offset-4 hover:underline",
+        accent:
+          "bg-transparent text-latossolo border border-latossolo/40 hover:bg-latossolo/5",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
       },
       size: {
         default: "h-11 px-5 py-2",
-        sm: "h-9 rounded-md px-3 text-xs",
-        lg: "h-12 rounded-xl px-8 text-base",
+        sm: "h-9 rounded-sm px-3 text-xs",
+        lg: "h-12 rounded-sm px-8 text-base",
         icon: "h-10 w-10",
       },
     },

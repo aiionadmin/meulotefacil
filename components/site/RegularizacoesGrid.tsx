@@ -4,6 +4,7 @@ import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { SectionHeading } from "@/components/site/SectionHeading";
 import {
   nucleos,
   statusNucleoLabel,
@@ -24,11 +25,13 @@ export function RegularizacoesGrid({
   subtitle = "Núcleos concluídos, em registro e em andamento em Campinas e região.",
   limit,
   status,
+  sectionNumber = "03",
 }: {
   title?: string;
   subtitle?: string;
   limit?: number;
   status?: StatusNucleo | StatusNucleo[];
+  sectionNumber?: string;
 }) {
   const rootRef = useRef<HTMLElement>(null);
   let list = nucleos;
@@ -61,22 +64,22 @@ export function RegularizacoesGrid({
 
   return (
     <section ref={rootRef} className="bg-brand-navy py-20 text-brand-cream lg:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-orange">
-            Regularizações
-          </p>
-          <h2 className="font-display mt-3 text-3xl sm:text-5xl">{title}</h2>
-          <p className="mt-4 text-brand-cream/70">{subtitle}</p>
-        </div>
+      <div className="site-container">
+        <SectionHeading
+          number={sectionNumber}
+          eyebrow="Núcleos"
+          title={title}
+          subtitle={subtitle}
+          dark
+        />
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-0 border border-brand-cream/15 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((n) => (
             <Link
               key={n.id}
               href={`/regularizacoes/${n.slug}`}
               data-cursor="Ver"
-              className="reg-card group relative overflow-hidden rounded-2xl border border-transparent bg-brand-navy-deep transition-colors hover:border-brand-orange"
+              className="reg-card group relative overflow-hidden border-b border-r border-brand-cream/15 bg-brand-navy-deep transition-colors hover:bg-brand-navy"
             >
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image

@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { Search, Map, DraftingCompass, BadgeCheck, Landmark } from "lucide-react";
+import { SectionHeading } from "@/components/site/SectionHeading";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
 
@@ -103,23 +104,18 @@ export function HowItWorks() {
   );
 
   return (
-    <section ref={rootRef} className="relative bg-brand-cream py-20 lg:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-orange">
-            Como funciona
-          </p>
-          <h2 className="font-display mt-3 text-3xl text-brand-navy sm:text-5xl">
-            Do diagnóstico ao registro
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            Sequência sugerida a partir dos projetos publicados — validação final com a equipe.
-          </p>
-        </div>
+    <section ref={rootRef} className="relative border-b border-linha bg-brand-cream py-20 lg:py-28">
+      <div className="site-container">
+        <SectionHeading
+          number="02"
+          eyebrow="Método"
+          title="Do diagnóstico ao registro"
+          subtitle="Sequência sugerida a partir dos projetos publicados — validação final com a equipe."
+        />
 
         <div className="relative mt-14">
           <svg
-            className="pointer-events-none absolute left-0 top-16 hidden h-24 w-full text-brand-orange lg:block"
+            className="pointer-events-none absolute left-0 top-16 hidden h-24 w-full text-mata/40 lg:block"
             viewBox="0 0 1200 100"
             fill="none"
             aria-hidden
@@ -128,24 +124,24 @@ export function HowItWorks() {
               className="how-path"
               d="M40 60 C160 10, 240 90, 360 50 S560 10, 700 55 900 90, 1160 40"
               stroke="currentColor"
-              strokeWidth="4"
+              strokeWidth="1"
               strokeLinecap="round"
             />
           </svg>
 
-          <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+          <ol className="grid gap-0 border border-linha sm:grid-cols-2 lg:grid-cols-5">
             {steps.map((step, i) => (
               <li
                 key={step.title}
-                className="how-card rounded-2xl border border-brand-navy/8 bg-white p-5 shadow-sm"
+                className="how-card border-b border-linha bg-card p-5 last:border-b-0 sm:border-b lg:border-b-0 lg:border-r lg:last:border-r-0"
               >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-navy text-brand-orange">
+                <p className="font-mono-label text-xs text-mata">
+                  {String(i + 1).padStart(2, "0")}
+                </p>
+                <div className="mt-4 mb-3 text-mata">
                   <step.icon className="h-5 w-5" />
                 </div>
-                <p className="text-xs font-bold uppercase tracking-wider text-brand-orange">
-                  Etapa {i + 1}
-                </p>
-                <h3 className="mt-2 text-lg font-bold text-brand-navy">{step.title}</h3>
+                <h3 className="font-display text-xl text-brand-navy">{step.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {step.text}
                 </p>

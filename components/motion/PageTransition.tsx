@@ -36,7 +36,7 @@ export function PageTransition() {
       aria-hidden
     >
       <svg
-        className="absolute inset-x-0 bottom-0 h-40 w-full text-brand-orange/30"
+        className="absolute inset-x-0 bottom-0 h-40 w-full text-mata/25"
         viewBox="0 0 1200 200"
         preserveAspectRatio="none"
       >

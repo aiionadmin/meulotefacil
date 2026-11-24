@@ -10,14 +10,15 @@ import {
   type StatusNucleo,
 } from "@/lib/data/nucleos";
 import { Button } from "@/components/ui/button";
+import { SectionHeading } from "@/components/site/SectionHeading";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion, cn } from "@/lib/utils";
 
 const statusColor: Record<StatusNucleo, string> = {
-  concluido: "#22C55E",
-  em_registro: "#FBBF24",
-  em_andamento: "#F7821E",
+  concluido: "#3E5A4B",
+  em_registro: "#A8502A",
+  em_andamento: "#6B756E",
 };
 
 /** Posições ilustrativas por cidade no mapa regional */
@@ -197,20 +198,15 @@ export function NucleosMap({ className }: { className?: string }) {
 
 export function NucleosMapSection() {
   return (
-    <section className="bg-brand-cream py-20 lg:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-orange">
-            Mapa de núcleos
-          </p>
-          <h2 className="font-display mt-3 text-3xl text-brand-navy sm:text-5xl">
-            Onde estamos regularizando
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades.
-          </p>
-        </div>
-        <div className="mx-auto mt-12 max-w-3xl">
+    <section className="border-b border-linha bg-brand-cream py-20 lg:py-28">
+      <div className="site-container">
+        <SectionHeading
+          number="04"
+          eyebrow="Mapa"
+          title="Onde estamos regularizando"
+          subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades."
+        />
+        <div className="mx-auto mt-12 max-w-3xl border border-linha bg-card p-2 sm:p-4">
           <NucleosMap />
         </div>
       </div>
