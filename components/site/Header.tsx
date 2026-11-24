@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { SITE_NAV, SITE_NAV_CTA } from "@/lib/site-nav";
@@ -81,7 +81,7 @@ export function Header() {
                     key={l.href}
                     href={l.href}
                     className={cn(
-                      "rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
+                      "inline-flex items-center gap-1 rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
                       solid
                         ? active
                           ? "text-ink"
@@ -92,6 +92,7 @@ export function Header() {
                     )}
                   >
                     {l.label}
+                    <ArrowRight className="size-3.5 opacity-70" aria-hidden />
                   </Link>
                 );
               })}
@@ -135,10 +136,11 @@ export function Header() {
               <Link
                 key={l.href}
                 href={l.href}
-                className="font-display text-3xl text-paper"
+                className="inline-flex items-center gap-3 font-display text-3xl text-paper"
                 onClick={() => setOpen(false)}
               >
                 {l.label}
+                <ArrowRight className="size-6 opacity-80" aria-hidden />
               </Link>
             ))}
             <Button asChild size="lg" variant="cream" className="mt-6 w-fit">

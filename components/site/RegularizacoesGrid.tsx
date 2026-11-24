@@ -102,6 +102,9 @@ export function RegularizacoesGrid({
                 <p className="text-sm font-medium text-orange-300">
                   <strong>{lotesLabel(n)}</strong>
                 </p>
+                <p className="pt-1 text-sm font-medium text-brand-cream/90 transition-colors group-hover:text-orange-300">
+                  Ver detalhes →
+                </p>
               </div>
             </Link>
           ))}
