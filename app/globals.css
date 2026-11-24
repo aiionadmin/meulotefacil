@@ -255,11 +255,13 @@
 @keyframes heroStepIn {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(30px);
+    filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+    filter: blur(0);
   }
 }
 
@@ -273,7 +275,8 @@ html[data-hero-scroll="inside"] .site-header {
   position: relative;
   z-index: 2;
   margin-top: calc(var(--hero-next-lift, 0px) * -1);
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  border-top-left-radius: var(--hero-next-radius, 0px);
+  border-top-right-radius: var(--hero-next-radius, 0px);
   overflow: hidden;
+  transition: border-radius 0.05s linear;
 }

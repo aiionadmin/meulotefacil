@@ -53,24 +53,23 @@ Painel, processos (núcleo/fase/docs), núcleos, documentos do morador, consulta
 2. Preencha `.env.local` com URL e anon key.
 3. Sem vars = modo demo continua funcionando.
 
-## Hero scroll — Da terra ao lar (12 etapas)
+## Hero scroll (Terreno → Pronto)
 
 O topo da home usa `components/hero/ScrollHero.tsx`: o scroll scruba uma sequência WebP (não autoplay).
 
 | Trocar… | Onde |
 |---|---|
-| Frames (paths / contagens) | `components/hero/heroConfig.ts` + `public/hero-frames/desktop\|mobile/` |
-| Textos / 12 etapas / CTAs | `components/hero/heroStages.ts` |
-| Contadores da etapa final | `HERO_FINAL_STATS` em `heroStages.ts` |
-| Prompt do vídeo definitivo | `docs/video-hero-da-terra-ao-lar.md` |
-| Extração | `./scripts/extract-frames.sh video.mp4` (300 desktop / 180 mobile) |
+| Textos / etapas / CTAs | `components/hero/heroSteps.ts` |
+| Prompt do vídeo | `docs/prompt-video-hero.md` |
+| Frames | `public/hero-frames/` (+ `mobile/`) — 150 desktop / 90 mobile |
+| Extração | `./scripts/extract-frames.sh video.mp4` |
 
 ```bash
 chmod +x scripts/extract-frames.sh
 ./scripts/extract-frames.sh caminho/para/hero.mp4
 ```
 
-A11y: `prefers-reduced-motion` mostra timeline das 12 etapas. Conexões lentas / `saveData` usam 1 a cada 4 frames.
+A11y: `prefers-reduced-motion` mostra o último frame + textos empilhados. Conexões lentas / `saveData` usam 30 frames amostrados.
 
 ## Lacunas (conteúdo)
 

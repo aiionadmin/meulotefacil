@@ -1,1 +1,1 @@
-Placeholder frames from Mixkit 42349. Replace via scripts/extract-frames.sh — see docs/video-hero-da-terra-ao-lar.md
+Placeholder Mixkit frames for 4-stage hero (Terreno→Pronto). Replace via scripts/extract-frames.sh — see docs/prompt-video-hero.md

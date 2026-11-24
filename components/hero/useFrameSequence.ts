@@ -1,47 +1,47 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { HERO_CONFIG, type HeroFrameMode } from "./heroConfig";
+import { HERO_FRAME_CONFIG } from "./heroSteps";
+
+export type FrameMode = "desktop" | "mobile" | "low";
 
 type FrameCache = (HTMLImageElement | ImageBitmap | null)[];
 
 function isSlowConnection() {
   if (typeof navigator === "undefined") return false;
-  const c = (
-    navigator as Navigator & {
-      connection?: { saveData?: boolean; effectiveType?: string };
-    }
-  ).connection;
+  const c = (navigator as Navigator & {
+    connection?: { saveData?: boolean; effectiveType?: string };
+  }).connection;
   if (!c) return false;
   if (c.saveData) return true;
   const t = c.effectiveType;
   return t === "slow-2g" || t === "2g" || t === "3g";
 }
 
-function resolveMode(): HeroFrameMode {
+function resolveMode(): FrameMode {
   if (typeof window === "undefined") return "desktop";
   if (isSlowConnection()) return "low";
   if (window.matchMedia("(max-width: 768px)").matches) return "mobile";
   return "desktop";
 }
 
-function frameCount(mode: HeroFrameMode) {
-  if (mode === "mobile") return HERO_CONFIG.mobile.count;
-  if (mode === "low") return HERO_CONFIG.lowBandwidth.count;
-  return HERO_CONFIG.desktop.count;
-}
-
-function frameUrl(mode: HeroFrameMode, index1: number) {
-  if (mode === "mobile") return HERO_CONFIG.mobile.path(index1);
+function frameUrl(mode: FrameMode, index1: number) {
+  if (mode === "mobile") return HERO_FRAME_CONFIG.mobile.path(index1);
   if (mode === "low") {
-    const every = HERO_CONFIG.lowBandwidth.sampleEvery;
+    const every = HERO_FRAME_CONFIG.lowBandwidth.sampleEvery;
     const mapped = Math.min(
-      HERO_CONFIG.desktop.count,
+      HERO_FRAME_CONFIG.desktop.count,
       Math.max(1, (index1 - 1) * every + 1)
     );
-    return HERO_CONFIG.desktop.path(mapped);
+    return HERO_FRAME_CONFIG.desktop.path(mapped);
   }
-  return HERO_CONFIG.desktop.path(index1);
+  return HERO_FRAME_CONFIG.desktop.path(index1);
+}
+
+function frameCount(mode: FrameMode) {
+  if (mode === "mobile") return HERO_FRAME_CONFIG.mobile.count;
+  if (mode === "low") return HERO_FRAME_CONFIG.lowBandwidth.count;
+  return HERO_FRAME_CONFIG.desktop.count;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -65,35 +65,35 @@ function drawCover(
   const scale = Math.max(cw / iw, ch / ih);
   const dw = iw * scale;
   const dh = ih * scale;
-  ctx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+  const dx = (cw - dw) / 2;
+  const dy = (ch - dh) / 2;
+  ctx.drawImage(img, dx, dy, dw, dh);
 }
 
-function nearestLoaded(cache: FrameCache, idx: number): number {
-  if (cache[idx]) return idx;
-  for (let d = 1; d < cache.length; d++) {
-    if (idx - d >= 0 && cache[idx - d]) return idx - d;
-    if (idx + d < cache.length && cache[idx + d]) return idx + d;
-  }
-  return -1;
-}
+export type FrameSequenceApi = {
+  setProgress: (p: number) => void;
+  resize: () => void;
+  mode: FrameMode;
+  ready: boolean;
+};
 
 /**
- * Sequência de frames no canvas — refs only, sem setState por frame.
- * Preload 1–30; resto em lotes de 20 via requestIdleCallback; prioriza próximos ao progresso.
+ * Sequência de frames no canvas — sem setState por frame.
+ * Pré-carrega os primeiros N; resto via requestIdleCallback.
  */
 export function useFrameSequence(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   opts?: { reducedMotion?: boolean; enabled?: boolean }
 ) {
   const cacheRef = useRef<FrameCache>([]);
-  const modeRef = useRef<HeroFrameMode>("desktop");
+  const modeRef = useRef<FrameMode>("desktop");
   const targetRef = useRef(0);
   const currentRef = useRef(0);
   const rafRef = useRef(0);
   const readyRef = useRef(false);
   const zoomRef = useRef(1);
   const dimRef = useRef(0);
-  const loadingAroundRef = useRef(false);
+  const apiRef = useRef<FrameSequenceApi | null>(null);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -102,28 +102,24 @@ export function useFrameSequence(
     if (!ctx) return;
 
     const count = frameCount(modeRef.current);
-    const ideal = Math.min(
+    const idx = Math.min(
       count - 1,
       Math.max(0, Math.round(currentRef.current * (count - 1)))
     );
-    const idx = nearestLoaded(cacheRef.current, ideal);
-    const dpr = Math.min(window.devicePixelRatio || 1, HERO_CONFIG.maxDpr);
+    const img = cacheRef.current[idx];
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     if (w === 0 || h === 0) return;
 
-    if (
-      canvas.width !== Math.floor(w * dpr) ||
-      canvas.height !== Math.floor(h * dpr)
-    ) {
+    if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = "#111614";
+    ctx.fillStyle = "#1E1856";
     ctx.fillRect(0, 0, w, h);
 
-    const img = idx >= 0 ? cacheRef.current[idx] : null;
     if (img) {
       ctx.save();
       const z = zoomRef.current;
@@ -143,39 +139,15 @@ export function useFrameSequence(
     }
 
     if (dimRef.current > 0) {
-      ctx.fillStyle = `rgba(17, 22, 20, ${dimRef.current})`;
+      ctx.fillStyle = `rgba(20, 18, 71, ${dimRef.current})`;
       ctx.fillRect(0, 0, w, h);
     }
   }, [canvasRef]);
 
-  const prioritizeAround = useCallback(
-    async (progress: number, mode: HeroFrameMode) => {
-      if (loadingAroundRef.current) return;
-      loadingAroundRef.current = true;
-      const count = frameCount(mode);
-      const center = Math.round(progress * (count - 1));
-      const radius = HERO_CONFIG.batchSize;
-      const jobs: Promise<void>[] = [];
-      for (let i = center; i < Math.min(count, center + radius); i++) {
-        if (cacheRef.current[i]) continue;
-        jobs.push(
-          loadImage(frameUrl(mode, i + 1))
-            .then((img) => {
-              cacheRef.current[i] = img;
-            })
-            .catch(() => undefined)
-        );
-      }
-      await Promise.all(jobs);
-      loadingAroundRef.current = false;
-    },
-    []
-  );
-
   const tick = useCallback(() => {
-    const lerp = HERO_CONFIG.lerp;
+    const lerp = HERO_FRAME_CONFIG.lerp;
     currentRef.current += (targetRef.current - currentRef.current) * lerp;
-    if (Math.abs(targetRef.current - currentRef.current) < 0.0004) {
+    if (Math.abs(targetRef.current - currentRef.current) < 0.0005) {
       currentRef.current = targetRef.current;
     }
     paint();
@@ -193,16 +165,9 @@ export function useFrameSequence(
     let cancelled = false;
     const idleIds: number[] = [];
 
-    const scheduleIdle = (fn: () => void) => {
-      if ("requestIdleCallback" in window) {
-        const id = window.requestIdleCallback(fn, { timeout: 1500 });
-        idleIds.push(id);
-      } else {
-        setTimeout(fn, 20);
-      }
-    };
-
     const preload = async () => {
+      const first = Math.min(HERO_FRAME_CONFIG.preloadFirst, count);
+      // Prefer last frame when reduced motion
       if (opts?.reducedMotion) {
         try {
           const img = await loadImage(frameUrl(mode, count));
@@ -219,55 +184,49 @@ export function useFrameSequence(
         return;
       }
 
-      const first = Math.min(HERO_CONFIG.preloadFirst, count);
       await Promise.all(
         Array.from({ length: first }, async (_, i) => {
           try {
             const img = await loadImage(frameUrl(mode, i + 1));
             if (!cancelled) cacheRef.current[i] = img;
           } catch {
-            /* skip */
+            /* skip broken frame */
           }
         })
       );
+
       if (cancelled) return;
       readyRef.current = true;
       paint();
 
-      // Rest in batches of 20
-      const loadBatch = (start: number) => {
+      const loadRest = (start: number) => {
         if (cancelled || start >= count) return;
-        scheduleIdle(() => {
+        const run = () => {
           void (async () => {
-            const end = Math.min(count, start + HERO_CONFIG.batchSize);
-            await Promise.all(
-              Array.from({ length: end - start }, async (_, j) => {
-                const i = start + j;
-                if (cacheRef.current[i]) return;
-                try {
-                  const img = await loadImage(frameUrl(mode, i + 1));
-                  if (!cancelled) cacheRef.current[i] = img;
-                } catch {
-                  /* ignore */
-                }
-              })
-            );
-            loadBatch(end);
+            try {
+              const img = await loadImage(frameUrl(mode, start + 1));
+              if (!cancelled) cacheRef.current[start] = img;
+            } catch {
+              /* ignore */
+            }
+            loadRest(start + 1);
           })();
-        });
+        };
+        if ("requestIdleCallback" in window) {
+          const id = window.requestIdleCallback(run, { timeout: 1200 });
+          idleIds.push(id);
+        } else {
+          setTimeout(run, 16);
+        }
       };
-      loadBatch(first);
+      loadRest(first);
     };
 
     void preload();
     rafRef.current = requestAnimationFrame(tick);
 
-    const onResize = () => {
-      modeRef.current = opts?.reducedMotion ? "desktop" : resolveMode();
-      paint();
-    };
+    const onResize = () => paint();
     window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
 
     return () => {
       cancelled = true;
@@ -276,13 +235,12 @@ export function useFrameSequence(
         if ("cancelIdleCallback" in window) window.cancelIdleCallback(id);
       });
       window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
       cacheRef.current.forEach((img) => {
         if (img && "close" in img && typeof img.close === "function") {
           try {
             img.close();
           } catch {
-            /* */
+            /* ImageBitmap */
           }
         }
       });
@@ -290,18 +248,21 @@ export function useFrameSequence(
     };
   }, [opts?.enabled, opts?.reducedMotion, paint, tick]);
 
-  const setProgress = useCallback(
-    (p: number) => {
-      targetRef.current = Math.min(1, Math.max(0, p));
-      void prioritizeAround(targetRef.current, modeRef.current);
-    },
-    [prioritizeAround]
-  );
+  const setProgress = useCallback((p: number) => {
+    targetRef.current = Math.min(1, Math.max(0, p));
+  }, []);
 
   const setExitEffects = useCallback((zoom: number, dim: number) => {
     zoomRef.current = zoom;
     dimRef.current = dim;
   }, []);
+
+  apiRef.current = {
+    setProgress,
+    resize: paint,
+    mode: modeRef.current,
+    ready: readyRef.current,
+  };
 
   return { setProgress, setExitEffects, modeRef, readyRef };
 }
