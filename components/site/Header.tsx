@@ -71,9 +71,9 @@ export function Header() {
       <header
         ref={headerRef}
         className={cn(
-          "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
+          "site-header fixed inset-x-0 top-0 z-50 transition-colors duration-300",
           scrolled
-            ? "bg-brand-navy/90 text-brand-cream shadow-lg backdrop-blur-md"
+            ? "bg-brand-navy/90 text-brand-cream shadow-lg backdrop-blur-[12px]"
             : "bg-transparent text-brand-cream"
         )}
       >

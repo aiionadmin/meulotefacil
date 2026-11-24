@@ -1,1 +1,1 @@
-Placeholder frames from Mixkit video 42349 (aerial). Replace via scripts/extract-frames.sh
+Placeholder frames from Mixkit 42349. Replace via scripts/extract-frames.sh — see docs/video-hero-da-terra-ao-lar.md

@@ -187,14 +187,21 @@
 @keyframes heroStepIn {
   from {
     opacity: 0;
-    transform: translateY(18px);
-    filter: blur(6px);
+    transform: translateY(30px);
+    filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
     filter: blur(0);
   }
+}
+
+/* Navbar transparente enquanto o hero scroll está ativo (Header.tsx lê data-hero-scroll) */
+html[data-hero-scroll="inside"] .site-header {
+  background-color: transparent;
+  backdrop-filter: none;
+  border-color: transparent;
 }
 
 /* Próxima seção sobe com radius após o hero scroll */
