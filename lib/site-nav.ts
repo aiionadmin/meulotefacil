@@ -9,8 +9,8 @@ export const SITE_NAV = [
   { href: "/contato", label: "Contato" },
 ] as const;
 
+/** CTA público — sem links para /auth. */
 export const SITE_NAV_CTA = {
-  accompany: { href: "/auth/login", label: "Acompanhar processo" },
   talk: { label: "Falar com a equipe" },
 } as const;
 
@@ -20,12 +20,12 @@ export const FOOTER_COLS = [
     links: SITE_NAV.map(({ href, label }) => ({ href, label })),
   },
   {
-    title: "Processo",
+    title: "Serviços",
     links: [
-      { href: "/auth/login", label: "Acompanhar processo" },
-      { href: "/auth/cadastro", label: "Criar conta" },
       { href: "/servicos/consultoria", label: "Consultoria municipal" },
       { href: "/servicos/planos-e-projetos", label: "Planos e projetos" },
+      { href: "/regularizacao", label: "Regularização" },
+      { href: "/contato", label: "Contato" },
     ],
   },
 ] as const;

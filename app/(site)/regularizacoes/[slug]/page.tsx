@@ -98,7 +98,7 @@ export default async function NucleoPage({ params }: Props) {
         <aside className="h-fit rounded-2xl border border-brand-navy/10 bg-white p-6 shadow-sm">
           <h3 className="font-bold text-brand-navy">Quer saber mais?</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Fale com a equipe ou acompanhe o processo na área logada.
+            Fale com a equipe ou consulte se o seu bairro está em regularização.
           </p>
           <div className="mt-6 flex flex-col gap-3">
             <Button asChild>
@@ -107,10 +107,7 @@ export default async function NucleoPage({ params }: Props) {
               </a>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/consulta">Consultar meu bairro</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/auth/login">Acompanhar processo</Link>
+              <Link href="/regularizacao">Consultar meu bairro</Link>
             </Button>
           </div>
         </aside>

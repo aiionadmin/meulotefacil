@@ -22,7 +22,7 @@ npm run dev
 Abra [http://localhost:3000](http://localhost:3000).
 
 WhatsApp principal: **(19) 99146-1834**  
-Acompanhar processo: `/auth/login` → **Entrar em modo demo**.
+Área `/auth` existe no código, mas **não aparece** na navegação pública do site.
 
 ## Conteúdo
 

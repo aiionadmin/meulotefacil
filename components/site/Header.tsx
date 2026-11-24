@@ -98,17 +98,6 @@ export function Header() {
             </nav>
 
             <div className="hidden items-center gap-2 lg:flex">
-              <Link
-                href={SITE_NAV_CTA.accompany.href}
-                className={cn(
-                  "text-sm font-medium transition-colors",
-                  solid
-                    ? "text-ink/70 hover:text-ink"
-                    : "text-paper/80 hover:text-paper"
-                )}
-              >
-                {SITE_NAV_CTA.accompany.label}
-              </Link>
               <Button
                 asChild
                 size="sm"
@@ -152,14 +141,7 @@ export function Header() {
                 {l.label}
               </Link>
             ))}
-            <Link
-              href={SITE_NAV_CTA.accompany.href}
-              className="mt-4 font-mono-label text-sm text-paper/70"
-              onClick={() => setOpen(false)}
-            >
-              {SITE_NAV_CTA.accompany.label}
-            </Link>
-            <Button asChild size="lg" variant="cream" className="mt-2 w-fit">
+            <Button asChild size="lg" variant="cream" className="mt-6 w-fit">
               <a
                 href={wa}
                 target="_blank"
