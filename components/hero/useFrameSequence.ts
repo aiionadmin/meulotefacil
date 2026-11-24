@@ -83,7 +83,11 @@ export type FrameSequenceApi = {
  */
 export function useFrameSequence(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
-  opts?: { reducedMotion?: boolean; enabled?: boolean }
+  opts?: {
+    reducedMotion?: boolean;
+    enabled?: boolean;
+    onReady?: () => void;
+  }
 ) {
   const cacheRef = useRef<FrameCache>([]);
   const modeRef = useRef<FrameMode>("desktop");
@@ -94,6 +98,8 @@ export function useFrameSequence(
   const zoomRef = useRef(1);
   const dimRef = useRef(0);
   const apiRef = useRef<FrameSequenceApi | null>(null);
+  const onReadyRef = useRef(opts?.onReady);
+  onReadyRef.current = opts?.onReady;
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -117,7 +123,7 @@ export function useFrameSequence(
       canvas.height = Math.floor(h * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = "#1E1856";
+    ctx.fillStyle = "#111614";
     ctx.fillRect(0, 0, w, h);
 
     if (img) {
@@ -139,7 +145,7 @@ export function useFrameSequence(
     }
 
     if (dimRef.current > 0) {
-      ctx.fillStyle = `rgba(20, 18, 71, ${dimRef.current})`;
+      ctx.fillStyle = `rgba(17, 22, 20, ${dimRef.current})`;
       ctx.fillRect(0, 0, w, h);
     }
   }, [canvasRef]);
@@ -168,6 +174,13 @@ export function useFrameSequence(
     const preload = async () => {
       const first = Math.min(HERO_FRAME_CONFIG.preloadFirst, count);
       // Prefer last frame when reduced motion
+      const markReady = () => {
+        if (cancelled || readyRef.current) return;
+        readyRef.current = true;
+        paint();
+        onReadyRef.current?.();
+      };
+
       if (opts?.reducedMotion) {
         try {
           const img = await loadImage(frameUrl(mode, count));
@@ -175,11 +188,10 @@ export function useFrameSequence(
             cacheRef.current[count - 1] = img;
             currentRef.current = 1;
             targetRef.current = 1;
-            readyRef.current = true;
-            paint();
+            markReady();
           }
         } catch {
-          /* ignore */
+          markReady();
         }
         return;
       }
@@ -196,8 +208,7 @@ export function useFrameSequence(
       );
 
       if (cancelled) return;
-      readyRef.current = true;
-      paint();
+      markReady();
 
       const loadRest = (start: number) => {
         if (cancelled || start >= count) return;

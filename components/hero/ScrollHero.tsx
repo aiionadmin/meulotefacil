@@ -32,6 +32,7 @@ export function ScrollHero() {
   const progressObj = useRef({ p: 0 });
   const [activeStep, setActiveStep] = useState<HeroStep>(HERO_STEPS[0]);
   const [reduced, setReduced] = useState(false);
+  const [framesReady, setFramesReady] = useState(false);
   const wa = whatsappUrl();
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export function ScrollHero() {
   const { setProgress, setExitEffects } = useFrameSequence(canvasRef, {
     reducedMotion: reduced,
     enabled: true,
+    onReady: () => setFramesReady(true),
   });
 
   useGSAP(
@@ -145,36 +147,44 @@ export function ScrollHero() {
       <section
         id="hero-scroll"
         ref={sectionRef}
-        className="relative h-[400vh] bg-brand-navy md:h-[550vh]"
+        className="relative h-[400vh] bg-ink md:h-[550vh]"
         aria-label="Hero imersivo — regularização fundiária"
       >
         <div
           ref={stickyRef}
-          className="sticky top-0 h-[100svh] w-full overflow-hidden"
+          className="sticky top-0 h-[100svh] w-full overflow-hidden bg-ink"
         >
-          {/* LCP poster */}
-          <Image
-            src={HERO_FRAME_CONFIG.desktop.poster}
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="pointer-events-none object-cover opacity-0"
-            aria-hidden
-          />
+          {/* LCP poster — visível até o canvas ter frames (parent relative p/ next/image fill) */}
+          <div className="absolute inset-0">
+            <Image
+              src={HERO_FRAME_CONFIG.desktop.poster}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className={cn(
+                "pointer-events-none object-cover transition-opacity duration-500",
+                framesReady ? "opacity-0" : "opacity-100"
+              )}
+              aria-hidden
+            />
+          </div>
 
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 h-full w-full"
+            className={cn(
+              "absolute inset-0 h-full w-full transition-opacity duration-500",
+              framesReady ? "opacity-100" : "opacity-0"
+            )}
             aria-hidden
           />
 
           {/* Gradient + vignette */}
           <div
             ref={overlayRef}
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(20,18,71,0.35)_70%,rgba(20,18,71,0.75)_100%)]"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(17,22,20,0.35)_70%,rgba(17,22,20,0.75)_100%)]"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/20 to-brand-navy/50" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink via-ink/20 to-ink/50" />
 
           {/* Text layer */}
           <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 pb-28 pt-28 sm:px-6 lg:px-8">
@@ -276,7 +286,7 @@ function StepCopy({ step, wa }: { step: HeroStep; wa: string }) {
             </a>
           </Button>
           <Button asChild size="lg" variant="ghost">
-            <Link href="/regularizacoes">Ver regularizações</Link>
+            <Link href="/regularizacao">Ver regularizações</Link>
           </Button>
         </div>
       )}
@@ -288,26 +298,28 @@ function ReducedHero({ wa }: { wa: string }) {
   return (
     <section
       id="hero-scroll"
-      className="relative min-h-[100svh] bg-brand-navy pt-24 text-brand-cream"
+      className="relative min-h-[100svh] bg-ink pt-24 text-paper"
       aria-label="Hero — regularização fundiária"
     >
-      <Image
-        src={HERO_FRAME_CONFIG.desktop.poster}
-        alt=""
-        fill
-        priority
-        className="object-cover opacity-40"
-        sizes="100vw"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/70 to-brand-navy/40" />
+      <div className="absolute inset-0">
+        <Image
+          src={HERO_FRAME_CONFIG.desktop.poster}
+          alt=""
+          fill
+          priority
+          className="object-cover opacity-40"
+          sizes="100vw"
+        />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/40" />
       <div className="relative z-10 mx-auto flex max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 lg:px-8">
         {HERO_STEPS.map((step) => (
           <div key={step.id} className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-widest text-brand-orange">
+            <p className="text-sm font-semibold uppercase tracking-widest text-brand-accent">
               {step.marker} · {step.eyebrow}
             </p>
             <h2 className="font-display mt-2 text-2xl sm:text-4xl">{step.title}</h2>
-            <p className="mt-3 text-brand-cream/75">{step.body}</p>
+            <p className="mt-3 text-paper/75">{step.body}</p>
             {step.showCtas && (
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button asChild size="lg">
@@ -316,7 +328,7 @@ function ReducedHero({ wa }: { wa: string }) {
                   </a>
                 </Button>
                 <Button asChild size="lg" variant="ghost">
-                  <Link href="/regularizacoes">Ver regularizações</Link>
+                  <Link href="/regularizacao">Ver regularizações</Link>
                 </Button>
               </div>
             )}
