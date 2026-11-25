@@ -13,7 +13,7 @@ export default function AuthLayout({
       <div className="flex flex-col bg-paper text-ink">
         <div className="flex items-center justify-between px-6 py-5 lg:hidden">
           <Link href="/">
-            <Logo variant="mono" className="scale-90 text-ink" />
+            <Logo variant="full" tone="ink" className="scale-90" />
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-8">

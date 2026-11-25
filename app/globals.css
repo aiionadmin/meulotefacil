@@ -13,8 +13,10 @@
   --ink-deep: #0a0d0c;
   --paper: #f3f1ec;
   --paper-muted: #e8e4db;
-  --accent: #a8502a;
-  --accent-strong: #8c4020;
+  /* Laranja oficial do logotipo MLF (#ED8600) */
+  --accent: #ed8600;
+  --accent-strong: #c96f00;
+  --logo-orange: #ed8600;
   --mata: #3e5a4b;
   --mata-muted: #5a7366;
   --linha: #d6d1c7;
@@ -48,17 +50,17 @@
   --navy-900: #111614;
   --navy-950: #0a0d0c;
 
-  --orange-50: #faf3ef;
-  --orange-100: #f2e2d8;
-  --orange-200: #e4c0ad;
-  --orange-300: #d09472;
-  --orange-400: #bc6d48;
-  --orange-500: #a8502a;
-  --orange-600: #8c4020;
-  --orange-700: #713418;
-  --orange-800: #5c2c16;
-  --orange-900: #4c2615;
-  --orange-950: #2a130a;
+  --orange-50: #fff7eb;
+  --orange-100: #ffecd0;
+  --orange-200: #ffd49a;
+  --orange-300: #ffb85c;
+  --orange-400: #f79a22;
+  --orange-500: #ed8600;
+  --orange-600: #c96f00;
+  --orange-700: #a05700;
+  --orange-800: #7a4300;
+  --orange-900: #5c3400;
+  --orange-950: #331c00;
 
   --background: var(--paper);
   --foreground: var(--ink);

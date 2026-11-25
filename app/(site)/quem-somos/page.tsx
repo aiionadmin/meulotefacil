@@ -23,7 +23,7 @@ export default function QuemSomosPage() {
     <div className="bg-paper pt-24">
       <section className="bg-ink px-4 py-20 text-paper sm:px-6 lg:px-8">
         <div className="site-container max-w-3xl text-center">
-          <Logo variant="full" className="mx-auto justify-center" />
+          <Logo variant="full" tone="orange" className="mx-auto justify-center" />
           <h1 className="font-display mt-8 text-3xl sm:text-5xl">
             {INSTITUTIONAL.slogan}
           </h1>

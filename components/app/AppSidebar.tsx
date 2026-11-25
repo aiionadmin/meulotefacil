@@ -104,9 +104,9 @@ export function AppSidebar({
       <div className="flex h-16 items-center justify-between gap-2 border-b border-sidebar-border px-4">
         <Link href="/dashboard" onClick={onNavigate} className="min-w-0">
           {collapsed && !mobile ? (
-            <Logo variant="symbol" symbolClassName="h-8 w-8 text-brand-cream" />
+            <Logo variant="symbol" tone="paper" symbolClassName="h-8 w-8" />
           ) : (
-            <Logo variant="mono" className="scale-90 text-brand-cream" />
+            <Logo variant="full" tone="paper" className="scale-90" />
           )}
         </Link>
         {!mobile && (

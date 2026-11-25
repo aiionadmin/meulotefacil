@@ -78,13 +78,9 @@ export function Header() {
               aria-label="Meu Lote Fácil, Home"
             >
               <Logo
-                variant={solid ? "full" : "mono"}
-                className={cn(
-                  "max-w-[min(100%,11rem)] scale-90 sm:max-w-none sm:scale-100",
-                  solid
-                    ? "text-ink"
-                    : "text-paper drop-shadow-[0_1px_10px_rgba(0,0,0,0.45)]"
-                )}
+                variant="full"
+                tone={solid ? "ink" : "paper"}
+                className="max-w-[min(100%,11rem)] scale-90 sm:max-w-none sm:scale-100"
               />
             </Link>
 
