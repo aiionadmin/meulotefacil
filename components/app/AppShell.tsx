@@ -16,14 +16,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Remove dark residual (toggle antigo) — o sistema fica em tema claro legível
+  // Mantém o sistema em tema claro legível (remove residual do toggle antigo)
   useEffect(() => {
-    document.documentElement.classList.remove("dark");
-    try {
-      localStorage.removeItem("theme");
-    } catch {
-      /* ignore */
-    }
+    const root = document.documentElement;
+    const stripDark = () => {
+      if (root.classList.contains("dark")) root.classList.remove("dark");
+      try {
+        localStorage.removeItem("theme");
+      } catch {
+        /* ignore */
+      }
+    };
+    stripDark();
+    const obs = new MutationObserver(stripDark);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
   }, []);
 
   return (
