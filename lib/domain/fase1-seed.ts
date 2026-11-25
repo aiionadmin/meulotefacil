@@ -143,6 +143,63 @@ export function seedFase1(): Fase1State {
     ],
     lookups: [
       {
+        id: "lk-motivos_perda",
+        codigo: "motivos_perda",
+        nome: "Motivos de perda",
+        itens: [
+        { codigo: "preco", nome: "Preço", ordem: 1, ativo: true },
+        { codigo: "concorrencia", nome: "Concorrência", ordem: 2, ativo: true },
+        { codigo: "sem_retorno", nome: "Sem retorno", ordem: 3, ativo: true }
+        ],
+      },
+
+      {
+        id: "lk-tipos_demanda",
+        codigo: "tipos_demanda",
+        nome: "Tipos de demanda",
+        itens: [
+        { codigo: "agua", nome: "Ligação de água", ordem: 1, ativo: true },
+        { codigo: "energia", nome: "Ligação de energia", ordem: 2, ativo: true },
+        { codigo: "marcacao", nome: "Marcação de lote", ordem: 3, ativo: true }
+        ],
+      },
+
+      {
+        id: "lk-tipos_retencao",
+        codigo: "tipos_retencao",
+        nome: "Tipos de retenção",
+        itens: [
+        { codigo: "inss", nome: "INSS", ordem: 1, ativo: true },
+        { codigo: "iss", nome: "ISS", ordem: 2, ativo: true },
+        { codigo: "irrf", nome: "IRRF", ordem: 3, ativo: true }
+        ],
+      },
+
+      {
+        id: "lk-unidades",
+        codigo: "unidades",
+        nome: "Unidades",
+        itens: [
+        { codigo: "un", nome: "UN", ordem: 1, ativo: true },
+        { codigo: "m2", nome: "m²", ordem: 2, ativo: true },
+        { codigo: "m3", nome: "m³", ordem: 3, ativo: true },
+        { codigo: "kg", nome: "kg", ordem: 4, ativo: true },
+        { codigo: "h", nome: "Hora", ordem: 5, ativo: true }
+        ],
+      },
+
+      {
+        id: "lk-tipos_obra",
+        codigo: "tipos_obra",
+        nome: "Tipos de obra",
+        itens: [
+        { codigo: "loteamento", nome: "Loteamento", ordem: 1, ativo: true },
+        { codigo: "construcao", nome: "Construção", ordem: 2, ativo: true },
+        { codigo: "regularizacao", nome: "Regularização", ordem: 3, ativo: true }
+        ],
+      },
+
+      {
         id: "l1",
         codigo: "status_lote",
         nome: "Status do lote",
@@ -251,10 +308,63 @@ export function seedFase1(): Fase1State {
       },
     ],
     approvalRules: [
-      { id: "ar1", tipo: "Ordem de compra", perfilNome: "Financeiro", valorMinimo: 5000, ativo: true },
-      { id: "ar2", tipo: "Estorno de recebimento", perfilNome: "Administrador", ativo: true },
-      { id: "ar3", tipo: "Desconto acima do limite", perfilNome: "Direção", valorMinimo: 5, ativo: true },
-      { id: "ar4", tipo: "Conciliação bancária", perfilNome: "Financeiro", ativo: true },
+      {
+        id: "ar1",
+        tipo: "Ordem de compra",
+        perfilNome: "Financeiro",
+        valorMinimo: 5000,
+        ativo: true,
+      },
+      {
+        id: "ar2",
+        tipo: "Estorno de recebimento",
+        perfilNome: "Administrador",
+        ativo: true,
+      },
+      {
+        id: "ar3",
+        tipo: "Desconto acima do limite",
+        perfilNome: "Direção",
+        valorMinimo: 5,
+        ativo: true,
+      },
+      {
+        id: "ar4",
+        tipo: "Conciliação bancária",
+        perfilNome: "Financeiro",
+        ativo: true,
+      },
+      {
+        id: "ar-rdo",
+        tipo: "RDO",
+        perfilNome: "Engenharia",
+        ativo: true,
+      },
+      {
+        id: "ar-rel-ger",
+        tipo: "Relatório Gerencial",
+        perfilNome: "Direção",
+        ativo: true,
+      },
+      {
+        id: "ar-sc",
+        tipo: "Solicitação de compra",
+        perfilNome: "Suprimentos",
+        valorMinimo: 5000,
+        ativo: true,
+      },
+      {
+        id: "ar-desconc",
+        tipo: "Desconciliar",
+        perfilNome: "Financeiro",
+        ativo: true,
+      },
+      {
+        id: "ar-card",
+        tipo: "Correção de avanço de card",
+        perfilNome: "Administrador",
+        ativo: true,
+      },
     ],
     permissions: profiles.flatMap((p) =>
       defaultPermissionsForProfile(p.codigo).map((row) => ({

@@ -170,12 +170,7 @@ export const APP_NAV: AppNavGroup[] = [
       { href: "/configuracoes/alcadas", label: "Alçadas" },
       { href: "/configuracoes/listas", label: "Listas de apoio" },
       { href: "/configuracoes/auditoria", label: "Auditoria" },
-      {
-        href: "/configuracoes",
-        label: "Parâmetros",
-        description: "Tela legada de toggles — substituída no Bloco J",
-        demoOnly: true,
-      },
+      { href: "/configuracoes", label: "Parâmetros", description: "Empresa, encargos, caixa, vendas…" },
     ],
   },
 ];
@@ -203,4 +198,9 @@ export const NOVO_ATALHOS = [
   { href: "/compras", label: "Solicitação de compra" },
   { href: "/compras/cotacoes", label: "Cotação" },
   { href: "/financeiro", label: "Lançamento a pagar" },
+  { href: "/financeiro/recebimentos", label: "Faturamento" },
+  { href: "/financeiro/transferencias", label: "Transferência" },
+  { href: "/compras/ordens", label: "Ordem de compra" },
+  { href: "/obras", label: "Obra" },
+  { href: "/obras/rdo", label: "RDO" },
 ] as const;
