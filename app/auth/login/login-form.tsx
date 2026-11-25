@@ -88,14 +88,14 @@ export function LoginForm() {
   };
 
   return (
-    <div className="rounded-2xl border border-brand-navy/8 bg-white p-6 shadow-sm sm:p-8">
-      <h1 className="font-display text-2xl text-brand-navy">Entrar</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Acompanhe seu processo de regularização fundiária.
+    <div className="rounded-sm border border-linha bg-white p-6 text-ink shadow-sm sm:p-8">
+      <h1 className="font-display text-2xl text-ink">Entrar</h1>
+      <p className="mt-1 text-sm text-ink/75">
+        Acesse o sistema unificado de regularização, carteira e gestão.
       </p>
 
       {!configured && (
-        <p className="mt-4 rounded-lg bg-orange-50 px-3 py-2 text-xs text-brand-navy">
+        <p className="mt-4 rounded-sm border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-ink">
           Supabase não configurado, use o <strong>modo demo</strong> para
           explorar o sistema.
         </p>
@@ -114,7 +114,7 @@ export function LoginForm() {
             <Label htmlFor="password">Senha</Label>
             <Link
               href="/auth/recuperar-senha"
-              className="text-xs text-brand-orange hover:underline"
+              className="text-xs font-semibold text-brand-accent-strong hover:underline"
             >
               Esqueci minha senha
             </Link>
@@ -156,9 +156,9 @@ export function LoginForm() {
         )}
       </div>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
+      <p className="mt-6 text-center text-sm text-ink/75">
         Não tem conta?{" "}
-        <Link href="/auth/cadastro" className="font-semibold text-brand-orange hover:underline">
+        <Link href="/auth/cadastro" className="font-semibold text-brand-accent-strong hover:underline">
           Cadastre-se
         </Link>
       </p>

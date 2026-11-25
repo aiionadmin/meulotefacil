@@ -54,9 +54,9 @@ export default function RedefinirSenhaPage() {
   };
 
   return (
-    <div className="rounded-2xl border border-brand-navy/8 bg-white p-6 shadow-sm sm:p-8">
-      <h1 className="font-display text-2xl text-brand-navy">Redefinir senha</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="rounded-sm border border-linha bg-white p-6 shadow-sm sm:p-8">
+      <h1 className="font-display text-2xl text-ink">Redefinir senha</h1>
+      <p className="mt-1 text-sm text-ink/75">
         Escolha uma nova senha para sua conta.
       </p>
 
@@ -85,7 +85,7 @@ export default function RedefinirSenhaPage() {
             {loading ? "Salvando…" : "Salvar nova senha"}
           </Button>
           <p className="text-center text-sm">
-            <Link href="/auth/login" className="text-brand-orange hover:underline">
+            <Link href="/auth/login" className="text-brand-accent-strong hover:underline">
               Voltar ao login
             </Link>
           </p>

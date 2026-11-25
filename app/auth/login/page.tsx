@@ -5,7 +5,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="rounded-2xl border border-brand-navy/8 bg-white p-8 text-sm text-muted-foreground">
+        <div className="rounded-sm border border-linha bg-white p-8 text-sm text-ink/75">
           Carregando…
         </div>
       }

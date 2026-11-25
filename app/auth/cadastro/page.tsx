@@ -125,9 +125,9 @@ export default function CadastroPage() {
   };
 
   return (
-    <div className="rounded-2xl border border-brand-navy/8 bg-white p-6 shadow-sm sm:p-8">
-      <h1 className="font-display text-2xl text-brand-navy">Criar conta</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="rounded-sm border border-linha bg-white p-6 shadow-sm sm:p-8">
+      <h1 className="font-display text-2xl text-ink">Criar conta</h1>
+      <p className="mt-1 text-sm text-ink/75">
         Cadastre-se para acompanhar lotes e propostas.
       </p>
 
@@ -181,7 +181,7 @@ export default function CadastroPage() {
             ))}
           </div>
           {password && (
-            <p className="mt-1 text-xs text-muted-foreground">Força: {strengthLabel}</p>
+            <p className="mt-1 text-xs text-ink/75">Força: {strengthLabel}</p>
           )}
           {errors.password && (
             <p className="mt-1 text-xs text-destructive">{errors.password.message}</p>
@@ -208,9 +208,9 @@ export default function CadastroPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
+      <p className="mt-6 text-center text-sm text-ink/75">
         Já tem conta?{" "}
-        <Link href="/auth/login" className="font-semibold text-brand-orange hover:underline">
+        <Link href="/auth/login" className="font-semibold text-brand-accent-strong hover:underline">
           Entrar
         </Link>
       </p>

@@ -39,9 +39,9 @@ export default function RecuperarSenhaPage() {
   };
 
   return (
-    <div className="rounded-2xl border border-brand-navy/8 bg-white p-6 shadow-sm sm:p-8">
-      <h1 className="font-display text-2xl text-brand-navy">Recuperar senha</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="rounded-sm border border-linha bg-white p-6 shadow-sm sm:p-8">
+      <h1 className="font-display text-2xl text-ink">Recuperar senha</h1>
+      <p className="mt-1 text-sm text-ink/75">
         Enviaremos um link para redefinir sua senha.
       </p>
 
@@ -68,7 +68,7 @@ export default function RecuperarSenhaPage() {
             {loading ? "Enviando…" : "Enviar link"}
           </Button>
           <p className="text-center text-sm">
-            <Link href="/auth/login" className="text-brand-orange hover:underline">
+            <Link href="/auth/login" className="text-brand-accent-strong hover:underline">
               Voltar ao login
             </Link>
           </p>
