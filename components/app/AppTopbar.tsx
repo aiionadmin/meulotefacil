@@ -34,24 +34,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { demoUser } from "@/lib/data/clientes";
 import { createClient } from "@/lib/supabase/client";
 import { clearDemoSession } from "@/lib/auth-demo";
+import { APP_FLAT_NAV } from "@/lib/app-nav";
 
-const crumbs: Record<string, string> = {
-  dashboard: "Painel",
-  processos: "Processos",
-  nucleos: "Núcleos",
-  documentos: "Documentos",
-  protocolo: "Protocolo",
-  configuracoes: "Configurações",
-};
+const crumbs: Record<string, string> = Object.fromEntries(
+  APP_FLAT_NAV.map((i) => [i.href.replace(/^\//, ""), i.label])
+);
 
-const commands = [
-  { href: "/dashboard", label: "Painel" },
-  { href: "/processos", label: "Processos" },
-  { href: "/nucleos", label: "Núcleos" },
-  { href: "/documentos", label: "Documentos" },
-  { href: "/protocolo", label: "Protocolo" },
-  { href: "/configuracoes", label: "Configurações" },
-];
+const commands = APP_FLAT_NAV.map((i) => ({
+  href: i.href,
+  label: `${i.label} · ${i.group}`,
+}));
 
 export function AppTopbar({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();

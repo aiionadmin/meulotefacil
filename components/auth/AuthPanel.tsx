@@ -34,9 +34,9 @@ export function AuthPanel() {
           Transformando vidas.{" "}
           <span className="text-brand-orange">Realizando sonhos.</span>
         </h1>
-        <p className="mt-4 text-brand-cream/70">
-          Acompanhe o processo de regularização: núcleo, fase, documentos e
-          protocolo, em um só lugar.
+        <p className="mt-4 text-brand-cream/90">
+          Sistema unificado: pessoas, empreendimentos, vendas, carteira,
+          boletos, obras, compras, financeiro, fiscal, REURB e relatórios.
         </p>
       </div>
 

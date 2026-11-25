@@ -1,38 +1,66 @@
 "use client";
 
+import Link from "next/link";
 import { demoUser } from "@/lib/data/clientes";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ModuleHeader } from "@/components/app/ModulePage";
+import { configGrupos } from "@/lib/data/sistema";
 
 export default function ConfiguracoesPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl text-brand-navy dark:text-brand-cream">
-          Configurações
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Placeholders, {/* TODO: plugar Supabase */}
-        </p>
-      </div>
+      <ModuleHeader
+        title="Configurações e parâmetros"
+        description="Empresa, encargos, caixa, vendas, boletos, reajuste, financeiro, compras, obras e aparência (~75 chaves do LoteWin a validar com o cliente)."
+      />
 
-      <Tabs defaultValue="perfil">
-        <TabsList>
+      <Tabs defaultValue="parametros">
+        <TabsList className="flex h-auto flex-wrap">
+          <TabsTrigger value="parametros">Parâmetros</TabsTrigger>
           <TabsTrigger value="perfil">Perfil</TabsTrigger>
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
-          <TabsTrigger value="usuarios">Usuários</TabsTrigger>
           <TabsTrigger value="integracoes">Integrações</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="parametros" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {configGrupos.map((g) => (
+              <Card key={g.grupo}>
+                <CardHeader>
+                  <CardTitle className="text-base">{g.grupo}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {g.itens.map((item) => (
+                    <label
+                      key={item}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
+                      <span>{item}</span>
+                      <Switch defaultChecked />
+                    </label>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
 
         <TabsContent value="perfil">
           <Card>
             <CardHeader>
               <CardTitle>Perfil</CardTitle>
-              <CardDescription>Dados do usuário logado (demo)</CardDescription>
+              <CardDescription>Usuário logado (demo)</CardDescription>
             </CardHeader>
             <CardContent className="grid max-w-lg gap-4">
               <div>
@@ -43,11 +71,9 @@ export default function ConfiguracoesPage() {
                 <Label>E-mail</Label>
                 <Input className="mt-1.5" defaultValue={demoUser.email} />
               </div>
-              <div>
-                <Label>Papel</Label>
-                <Input className="mt-1.5" defaultValue={demoUser.papel} disabled />
-              </div>
-              <Button className="w-fit">Salvar (placeholder)</Button>
+              <Button type="button" className="w-fit">
+                Salvar
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -56,50 +82,26 @@ export default function ConfiguracoesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Empresa</CardTitle>
-              <CardDescription>Dados institucionais</CardDescription>
+              <CardDescription>
+                Mais de um CNPJ na mesma conta, com seletor
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid max-w-lg gap-4">
               <div>
                 <Label>Razão social</Label>
-                <Input className="mt-1.5" defaultValue="Meu Lote Fácil Ltda." />
+                <Input className="mt-1.5" defaultValue="Meu Lote Fácil Ltda" />
               </div>
               <div>
                 <Label>CNPJ</Label>
-                <Input className="mt-1.5" defaultValue="00.000.000/0001-00" />
+                <Input className="mt-1.5" placeholder="00.000.000/0001-00" />
               </div>
               <div>
-                <Label>WhatsApp comercial</Label>
-                <Input className="mt-1.5" defaultValue="5511999999999" />
+                <Label>Advogado (OAB)</Label>
+                <Input className="mt-1.5" placeholder="Nome · CPF · OAB" />
               </div>
-              <Button className="w-fit">Salvar (placeholder)</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="usuarios">
-          <Card>
-            <CardHeader>
-              <CardTitle>Usuários e permissões</CardTitle>
-              <CardDescription>
-                Papéis: admin, corretor, cliente (tipagem + guard simples)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div>
-                  <p className="font-medium">Consultor Demo</p>
-                  <p className="text-muted-foreground">admin</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div>
-                  <p className="font-medium">Corretor Exemplo</p>
-                  <p className="text-muted-foreground">corretor</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Button variant="outline">Convidar usuário (placeholder)</Button>
+              <Button type="button" className="w-fit">
+                Salvar empresa
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -108,27 +110,29 @@ export default function ConfiguracoesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Integrações</CardTitle>
-              <CardDescription>Supabase, WhatsApp e outros</CardDescription>
+              <CardDescription>
+                Cada uma é projeto à parte (relatório §10)
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                <div>
-                  <p className="font-medium">Supabase</p>
-                  <p className="text-sm text-muted-foreground">
-                    Auth + Postgres, configure via .env
-                  </p>
+            <CardContent className="space-y-3 text-sm">
+              {[
+                "Open Finance / conciliação bancária",
+                "Remessa e retorno de boletos",
+                "NFe / NFSe + certificado digital",
+                "WhatsApp",
+                "Exportação contábil",
+                "DIMOB / SPED",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center justify-between border-b border-linha py-2 last:border-0"
+                >
+                  <span>{item}</span>
+                  <Button asChild variant="outline" size="sm" arrow={false}>
+                    <Link href="/configuracoes">Configurar</Link>
+                  </Button>
                 </div>
-                <Switch disabled />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                <div>
-                  <p className="font-medium">WhatsApp Business</p>
-                  <p className="text-sm text-muted-foreground">
-                    Link do simulador (query string)
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
