@@ -97,12 +97,12 @@ export function SimuladorWidget({ embedded = false }: { embedded?: boolean }) {
               {formatCurrency(resultado.parcela)}
             </span>
           </p>
-          <ul className="mt-6 space-y-2 text-sm text-brand-cream/70">
+          <ul className="mt-6 space-y-2 text-sm text-brand-cream/90">
             <li>Saldo financiado: {formatCurrency(resultado.saldo)}</li>
             <li>Total estimado: {formatCurrency(resultado.totalPago)}</li>
             <li>Entrada: {resultado.entradaPercentual.toFixed(0)}% do valor</li>
           </ul>
-          <p className="mt-6 text-xs leading-relaxed text-brand-cream/50">
+          <p className="mt-6 text-xs leading-relaxed text-brand-cream/80">
             Simulação ilustrativa sem valor de proposta. Taxa e condições reais
             sujeitas a análise. Consulte um consultor.
           </p>

@@ -81,7 +81,7 @@ export function Field({
 }
 
 export const fieldControlClass =
-  "flex h-11 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-ink shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange";
+  "flex h-11 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function DetailSheet({
   open,
@@ -102,11 +102,11 @@ export function DetailSheet({
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 flex-1 space-y-4 overflow-y-auto text-sm text-ink">
+        <div className="mt-4 flex-1 space-y-4 overflow-y-auto text-sm text-foreground">
           {children}
         </div>
         {footer ? (
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-linha pt-4">
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
             {footer}
           </div>
         ) : null}
@@ -123,9 +123,9 @@ export function DetailRow({
   value: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[7.5rem_1fr] gap-2 border-b border-linha/60 py-2 last:border-0">
+    <div className="grid grid-cols-[7.5rem_1fr] gap-2 border-b border-border/60 py-2 last:border-0">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-ink">{value}</span>
+      <span className="font-medium text-foreground">{value}</span>
     </div>
   );
 }
@@ -149,7 +149,7 @@ export function FormDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto bg-paper text-ink">
+      <DialogContent className="max-h-[90vh] overflow-y-auto bg-card text-card-foreground">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

@@ -1,58 +1,64 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
   StatusPill,
 } from "@/components/app/ModulePage";
 import {
-  DetailRow,
-  DetailSheet,
   Field,
   FilterBar,
   FormDialog,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { useDemoStore, type Tarefa } from "@/lib/store/demo-store";
+import { useFase1 } from "@/lib/store/fase1-store";
+import type { AppTask } from "@/lib/domain/fase1-types";
 
-const COLUNAS: Tarefa["status"][] = ["A fazer", "Em andamento", "Concluída"];
+const COLS: AppTask["status"][] = ["a_fazer", "em_andamento", "concluida"];
+const LABELS: Record<AppTask["status"], string> = {
+  a_fazer: "A fazer",
+  em_andamento: "Em andamento",
+  concluida: "Concluída",
+};
 
 export default function TarefasPage() {
-  const { state, addTarefa, moveTarefa } = useDemoStore();
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Carregando…</p>}>
+      <TarefasInner />
+    </Suspense>
+  );
+}
+
+function TarefasInner() {
+  const { state, addTask, moveTask } = useFase1();
+  const search = useSearchParams();
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Tarefa | null>(null);
+  const [open, setOpen] = useState(search.get("novo") === "1");
   const [form, setForm] = useState({
     titulo: "",
-    quadro: "Comercial",
-    responsavel: "Comercial",
+    prioridade: "media" as AppTask["prioridade"],
     prazo: "30/11/2026",
-    prioridade: "Média",
-    status: "A fazer" as Tarefa["status"],
   });
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return state.tarefas;
-    return state.tarefas.filter((t) =>
-      [t.titulo, t.quadro, t.responsavel, t.status]
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
+    if (!term) return state.tasks;
+    return state.tasks.filter((t) =>
+      [t.titulo, t.responsavelNome, t.status].join(" ").toLowerCase().includes(term)
     );
-  }, [state.tarefas, q]);
+  }, [state.tasks, q]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Tarefas e agenda"
-        description="Kanban por status, prioridade e responsáveis entre rotinas."
+        title="Minhas tarefas"
+        description="Tarefas do usuário logado, por prazo e prioridade."
         actions={
           <Button size="sm" onClick={() => setOpen(true)}>
             Nova tarefa
@@ -60,88 +66,52 @@ export default function TarefasPage() {
         }
       />
       <KpiGrid
-        items={[
-          { label: "Tarefas", value: state.tarefas.length },
-          {
-            label: "A fazer",
-            value: state.tarefas.filter((t) => t.status === "A fazer").length,
-          },
-          {
-            label: "Em andamento",
-            value: state.tarefas.filter((t) => t.status === "Em andamento")
-              .length,
-          },
-          {
-            label: "Concluídas",
-            value: state.tarefas.filter((t) => t.status === "Concluída").length,
-          },
-        ]}
+        items={COLS.map((c) => ({
+          label: LABELS[c],
+          value: state.tasks.filter((t) => t.status === c).length,
+        }))}
       />
       <FilterBar value={q} onChange={setQ} placeholder="Buscar tarefa…" />
-
       <div className="grid gap-4 lg:grid-cols-3">
-        {COLUNAS.map((col) => (
+        {COLS.map((col) => (
           <Card key={col}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">{col}</CardTitle>
+              <CardTitle className="text-base">{LABELS[col]}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {filtered
                 .filter((t) => t.status === col)
                 .map((t) => (
-                  <button
+                  <div
                     key={t.id}
-                    type="button"
-                    onClick={() => setSelected(t)}
-                    className="w-full rounded-sm border border-linha bg-white p-3 text-left hover:border-ink/30"
+                    className="rounded-sm border border-linha bg-white p-3"
                   >
                     <p className="text-sm font-medium text-ink">{t.titulo}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {t.quadro} · {t.responsavel} · {t.prazo}
+                      {t.responsavelNome} · {t.prazo}
                     </p>
-                  </button>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <StatusPill tone="info">{t.prioridade}</StatusPill>
+                      {COLS.filter((c) => c !== t.status).map((c) => (
+                        <Button
+                          key={c}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            moveTask(t.id, c);
+                            notify("Tarefa movida", LABELS[c]);
+                          }}
+                        >
+                          → {LABELS[c]}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              {!filtered.some((t) => t.status === col) ? (
-                <p className="py-4 text-center text-xs text-muted-foreground">
-                  Vazio
-                </p>
-              ) : null}
             </CardContent>
           </Card>
         ))}
       </div>
-
-      <DataTable
-        onRowClick={(i) => setSelected(filtered[i])}
-        columns={[
-          { key: "titulo", label: "Tarefa" },
-          { key: "quadro", label: "Quadro" },
-          { key: "responsavel", label: "Responsável" },
-          { key: "prazo", label: "Prazo" },
-          { key: "prioridade", label: "Prioridade" },
-          { key: "status", label: "Status" },
-        ]}
-        rows={filtered.map((t) => ({
-          titulo: <span className="font-medium">{t.titulo}</span>,
-          quadro: t.quadro,
-          responsavel: t.responsavel,
-          prazo: t.prazo,
-          prioridade: t.prioridade,
-          status: (
-            <StatusPill
-              tone={
-                t.status === "Concluída"
-                  ? "ok"
-                  : t.status === "Em andamento"
-                    ? "info"
-                    : "neutral"
-              }
-            >
-              {t.status}
-            </StatusPill>
-          ),
-        }))}
-      />
 
       <FormDialog
         open={open}
@@ -150,17 +120,15 @@ export default function TarefasPage() {
         submitLabel="Criar"
         onSubmit={() => {
           if (!form.titulo.trim()) return;
-          addTarefa(form);
-          notify("Tarefa criada", form.titulo);
-          setOpen(false);
-          setForm({
-            titulo: "",
-            quadro: "Comercial",
-            responsavel: "Comercial",
-            prazo: "30/11/2026",
-            prioridade: "Média",
-            status: "A fazer",
+          addTask({
+            titulo: form.titulo,
+            status: "a_fazer",
+            prioridade: form.prioridade,
+            prazo: form.prazo,
+            responsavelNome: "Admin Demo",
           });
+          notify("Tarefa criada");
+          setOpen(false);
         }}
       >
         <Field label="Título">
@@ -170,85 +138,29 @@ export default function TarefasPage() {
             required
           />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Quadro">
-            <select
-              className={fieldControlClass}
-              value={form.quadro}
-              onChange={(e) => setForm({ ...form, quadro: e.target.value })}
-            >
-              {["Compras", "Carteira", "Comercial", "Regularização", "Obras"].map(
-                (q) => (
-                  <option key={q}>{q}</option>
-                )
-              )}
-            </select>
-          </Field>
-          <Field label="Prioridade">
-            <select
-              className={fieldControlClass}
-              value={form.prioridade}
-              onChange={(e) => setForm({ ...form, prioridade: e.target.value })}
-            >
-              <option>Baixa</option>
-              <option>Média</option>
-              <option>Alta</option>
-            </select>
-          </Field>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Responsável">
-            <Input
-              value={form.responsavel}
-              onChange={(e) =>
-                setForm({ ...form, responsavel: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="Prazo">
-            <Input
-              value={form.prazo}
-              onChange={(e) => setForm({ ...form, prazo: e.target.value })}
-            />
-          </Field>
-        </div>
+        <Field label="Prioridade">
+          <select
+            className={fieldControlClass}
+            value={form.prioridade}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                prioridade: e.target.value as AppTask["prioridade"],
+              })
+            }
+          >
+            <option value="baixa">Baixa</option>
+            <option value="media">Média</option>
+            <option value="alta">Alta</option>
+          </select>
+        </Field>
+        <Field label="Prazo">
+          <Input
+            value={form.prazo}
+            onChange={(e) => setForm({ ...form, prazo: e.target.value })}
+          />
+        </Field>
       </FormDialog>
-
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelected(null)}
-        title={selected?.titulo ?? "Tarefa"}
-        footer={
-          selected ? (
-            <div className="flex flex-wrap gap-2">
-              {COLUNAS.filter((c) => c !== selected.status).map((c) => (
-                <Button
-                  key={c}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    moveTarefa(selected.id, c);
-                    setSelected({ ...selected, status: c });
-                    notify("Tarefa movida", c);
-                  }}
-                >
-                  → {c}
-                </Button>
-              ))}
-            </div>
-          ) : null
-        }
-      >
-        {selected ? (
-          <>
-            <DetailRow label="Quadro" value={selected.quadro} />
-            <DetailRow label="Responsável" value={selected.responsavel} />
-            <DetailRow label="Prazo" value={selected.prazo} />
-            <DetailRow label="Prioridade" value={selected.prioridade} />
-            <DetailRow label="Status" value={selected.status} />
-          </>
-        ) : null}
-      </DetailSheet>
     </div>
   );
 }

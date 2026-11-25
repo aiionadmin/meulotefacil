@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function RegularizacoesPage() {
   return (
-    <div className="pt-16 sm:pt-20">
+    <div className="pt-24">
       <RegularizacoesGrid
         title="Todas as regularizações"
         subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades."

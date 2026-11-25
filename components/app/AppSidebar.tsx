@@ -23,6 +23,7 @@ import {
   CheckSquare,
   Files,
   Settings,
+  Bell,
   ChevronLeft,
   ChevronRight,
   ArrowRight,
@@ -33,25 +34,49 @@ import { APP_NAV } from "@/lib/app-nav";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "/dashboard": LayoutDashboard,
+  "/notificacoes": Bell,
+  "/tarefas": CheckSquare,
+  "/quadros/jornada": FolderKanban,
+  "/quadros/cobranca": Wallet,
+  "/quadros/regularizacao": FolderKanban,
+  "/quadros/compras": ShoppingCart,
+  "/quadros/obras": HardHat,
+  "/quadros/tarefas": CheckSquare,
+  "/cadastros/pessoas": Users,
+  "/cadastros/clientes": Users,
+  "/cadastros/fornecedores": Users,
+  "/cadastros/profissionais": Users,
+  "/cadastros/corretores": Users,
   "/pessoas": Users,
   "/usuarios": Shield,
   "/empreendimentos": Building2,
+  "/empreendimentos/planta": Map,
+  "/contratos": FileSignature,
+  "/leads": Users,
   "/vendas": FileSignature,
+  "/cobranca": Wallet,
+  "/juridico": Shield,
   "/carteira": Wallet,
   "/boletos": Receipt,
   "/reajustes": RefreshCw,
   "/obras": HardHat,
   "/compras": ShoppingCart,
   "/financeiro": Landmark,
+  "/importacao": FolderOpen,
   "/fiscal": FileSpreadsheet,
   "/processos": FolderKanban,
   "/nucleos": Map,
   "/documentos": FolderOpen,
   "/protocolo": Hash,
   "/relatorios": BarChart3,
-  "/tarefas": CheckSquare,
   "/arquivos": Files,
   "/configuracoes": Settings,
+  "/configuracoes/empresa": Settings,
+  "/configuracoes/usuarios": Shield,
+  "/configuracoes/perfis": Shield,
+  "/configuracoes/alcadas": Shield,
+  "/configuracoes/listas": Files,
+  "/configuracoes/auditoria": Shield,
 };
 
 export function AppSidebar({
@@ -79,9 +104,9 @@ export function AppSidebar({
       <div className="flex h-16 items-center justify-between gap-2 border-b border-sidebar-border px-4">
         <Link href="/dashboard" onClick={onNavigate} className="min-w-0">
           {collapsed && !mobile ? (
-            <Logo variant="symbol" symbolClassName="h-8 w-8 text-brand-cream" />
+            <Logo variant="symbol" tone="paper" symbolClassName="h-8 w-8" />
           ) : (
-            <Logo variant="mono" className="scale-90 text-brand-cream" />
+            <Logo variant="full" tone="paper" className="scale-90" />
           )}
         </Link>
         {!mobile && (
@@ -104,7 +129,7 @@ export function AppSidebar({
         {APP_NAV.map((group) => (
           <div key={group.id}>
             {showLabels ? (
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-brand-cream/45">
+              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-brand-cream/70">
                 {group.label}
               </p>
             ) : null}
@@ -124,7 +149,7 @@ export function AppSidebar({
                       "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       active
                         ? "bg-brand-navy text-orange-300"
-                        : "text-brand-cream/80 hover:bg-brand-navy hover:text-brand-cream",
+                        : "text-brand-cream/90 hover:bg-brand-navy hover:text-brand-cream",
                       collapsed && !mobile && "justify-center px-2"
                     )}
                     title={item.description ?? item.label}

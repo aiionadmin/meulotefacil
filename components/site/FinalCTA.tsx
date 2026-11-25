@@ -29,7 +29,7 @@ export function FinalCTA() {
                 Falar no WhatsApp
               </a>
             </Button>
-            <Button asChild size="lg" variant="ghost">
+            <Button asChild size="lg" variant="ghostDark">
               <a href="/regularizacao">Ver regularizações</a>
             </Button>
           </div>

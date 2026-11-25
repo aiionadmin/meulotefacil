@@ -1,7 +1,7 @@
 # Proposta — Fase 1 (schema + pastas)
 
 Com base em `docs/especificacao.md` §1, §12 e §13.1.  
-**Aguardando aprovação antes de migrations, seeds e telas da Fase 1.**
+**Aprovado pelo cliente (2026-11-25). Em implementação.**
 
 ## Stack (proposta)
 

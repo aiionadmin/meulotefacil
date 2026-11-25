@@ -68,7 +68,7 @@ export function AuthPanel() {
       </svg>
 
       <div className="relative z-10">
-        <Logo variant="mono" className="text-paper" />
+        <Logo variant="full" tone="paper" />
       </div>
 
       <div className="relative z-10 max-w-md rounded-sm bg-ink/55 p-1 backdrop-blur-[2px]">

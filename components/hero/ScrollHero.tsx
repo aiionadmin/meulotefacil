@@ -45,6 +45,22 @@ export function ScrollHero() {
     onReady: () => setFramesReady(true),
   });
 
+  // Se o browser restaura o scroll no meio do hero, alinha o progresso já no mount
+  useEffect(() => {
+    if (reduced) return;
+    const section = sectionRef.current;
+    if (!section) return;
+    const rect = section.getBoundingClientRect();
+    const total = section.offsetHeight - window.innerHeight;
+    if (total <= 0) return;
+    const scrolled = Math.min(total, Math.max(0, -rect.top));
+    const p = scrolled / total;
+    progressObj.current.p = p;
+    setProgress(p);
+    document.documentElement.dataset.heroScroll =
+      p < 0.98 ? "inside" : "done";
+  }, [reduced, setProgress]);
+
   useGSAP(
     () => {
       const section = sectionRef.current;
@@ -291,7 +307,7 @@ function StepCopy({ step, wa }: { step: HeroStep; wa: string }) {
               Falar no WhatsApp
             </a>
           </Button>
-          <Button asChild size="lg" variant="ghost">
+          <Button asChild size="lg" variant="ghostDark">
             <Link href="/regularizacao">Ver regularizações</Link>
           </Button>
         </div>
@@ -333,7 +349,7 @@ function ReducedHero({ wa }: { wa: string }) {
                     Falar no WhatsApp
                   </a>
                 </Button>
-                <Button asChild size="lg" variant="ghost">
+                <Button asChild size="lg" variant="ghostDark">
                   <Link href="/regularizacao">Ver regularizações</Link>
                 </Button>
               </div>

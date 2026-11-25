@@ -38,7 +38,7 @@ export function SectionHeading({
         <span
           className={cn(
             "font-mono-label text-xs tabular-nums",
-            dark ? "text-paper/75" : "text-ink/70"
+            dark ? "text-paper/90" : "text-ink/80"
           )}
         >
           {number}
@@ -47,7 +47,7 @@ export function SectionHeading({
           <span
             className={cn(
               "font-mono-label text-xs",
-              dark ? "text-paper/80" : "text-muted-foreground"
+              dark ? "text-paper/90" : "text-muted-foreground"
             )}
           >
             {eyebrow}

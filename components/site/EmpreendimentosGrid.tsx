@@ -56,7 +56,7 @@ export function EmpreendimentosGrid({
             Onde construir
           </p>
           <h2 className="font-display mt-3 text-3xl sm:text-5xl">{title}</h2>
-          <p className="mt-4 text-brand-cream/70">{subtitle}</p>
+          <p className="mt-4 text-brand-cream/90">{subtitle}</p>
         </div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -82,7 +82,7 @@ export function EmpreendimentosGrid({
               </div>
               <div className="space-y-2 p-5">
                 <h3 className="text-xl font-bold">{emp.nome}</h3>
-                <p className="text-sm text-brand-cream/60">
+                <p className="text-sm text-brand-cream/85">
                   {emp.cidade}/{emp.estado}
                 </p>
                 <div className="flex flex-wrap gap-4 pt-2 text-sm">

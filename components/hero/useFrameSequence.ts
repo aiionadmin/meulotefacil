@@ -9,9 +9,11 @@ type FrameCache = (HTMLImageElement | ImageBitmap | null)[];
 
 function isSlowConnection() {
   if (typeof navigator === "undefined") return false;
-  const c = (navigator as Navigator & {
-    connection?: { saveData?: boolean; effectiveType?: string };
-  }).connection;
+  const c = (
+    navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }
+  ).connection;
   if (!c) return false;
   if (c.saveData) return true;
   const t = c.effectiveType;
@@ -44,14 +46,26 @@ function frameCount(mode: FrameMode) {
   return HERO_FRAME_CONFIG.desktop.count;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.decoding = "async";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
+async function loadImage(src: string, retries = 2): Promise<HTMLImageElement> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.decoding = "async";
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error(`frame failed: ${src}`));
+        el.src = src;
+      });
+      return img;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 180 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 function drawCover(
@@ -70,6 +84,20 @@ function drawCover(
   ctx.drawImage(img, dx, dy, dw, dh);
 }
 
+function nearestFrame(
+  cache: FrameCache,
+  idx: number
+): HTMLImageElement | ImageBitmap | null {
+  if (cache[idx]) return cache[idx];
+  for (let d = 1; d < cache.length; d++) {
+    const lo = idx - d;
+    const hi = idx + d;
+    if (lo >= 0 && cache[lo]) return cache[lo];
+    if (hi < cache.length && cache[hi]) return cache[hi];
+  }
+  return null;
+}
+
 export type FrameSequenceApi = {
   setProgress: (p: number) => void;
   resize: () => void;
@@ -79,7 +107,8 @@ export type FrameSequenceApi = {
 
 /**
  * Sequência de frames no canvas, sem setState por frame.
- * Pré-carrega os primeiros N; resto via requestIdleCallback.
+ * Prioriza o frame do progresso atual (scroll restore) e faz fallback
+ * para o vizinho mais próximo quando o alvo ainda não chegou.
  */
 export function useFrameSequence(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -87,6 +116,7 @@ export function useFrameSequence(
     reducedMotion?: boolean;
     enabled?: boolean;
     onReady?: () => void;
+    onFrameAvailable?: (index: number) => void;
   }
 ) {
   const cacheRef = useRef<FrameCache>([]);
@@ -97,9 +127,14 @@ export function useFrameSequence(
   const readyRef = useRef(false);
   const zoomRef = useRef(1);
   const dimRef = useRef(0);
+  const pendingPriorityRef = useRef<Set<number>>(new Set());
+  const loadingRef = useRef<Set<number>>(new Set());
+  const loadOneRef = useRef<(index0: number) => Promise<void>>(async () => {});
   const apiRef = useRef<FrameSequenceApi | null>(null);
   const onReadyRef = useRef(opts?.onReady);
+  const onFrameAvailableRef = useRef(opts?.onFrameAvailable);
   onReadyRef.current = opts?.onReady;
+  onFrameAvailableRef.current = opts?.onFrameAvailable;
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -112,13 +147,16 @@ export function useFrameSequence(
       count - 1,
       Math.max(0, Math.round(currentRef.current * (count - 1)))
     );
-    const img = cacheRef.current[idx];
+    const img = nearestFrame(cacheRef.current, idx);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     if (w === 0 || h === 0) return;
 
-    if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+    if (
+      canvas.width !== Math.floor(w * dpr) ||
+      canvas.height !== Math.floor(h * dpr)
+    ) {
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
     }
@@ -167,20 +205,62 @@ export function useFrameSequence(
     modeRef.current = mode;
     const count = frameCount(mode);
     cacheRef.current = new Array(count).fill(null);
+    readyRef.current = false;
+    pendingPriorityRef.current.clear();
+    loadingRef.current.clear();
 
     let cancelled = false;
     const idleIds: number[] = [];
 
-    const preload = async () => {
-      const first = Math.min(HERO_FRAME_CONFIG.preloadFirst, count);
-      // Prefer last frame when reduced motion
-      const markReady = () => {
-        if (cancelled || readyRef.current) return;
-        readyRef.current = true;
-        paint();
-        onReadyRef.current?.();
-      };
+    const storeFrame = (index0: number, img: HTMLImageElement) => {
+      if (cancelled) return;
+      cacheRef.current[index0] = img;
+      onFrameAvailableRef.current?.(index0);
+      paint();
+    };
 
+    const loadOne = async (index0: number) => {
+      if (
+        cancelled ||
+        index0 < 0 ||
+        index0 >= count ||
+        cacheRef.current[index0] ||
+        loadingRef.current.has(index0)
+      ) {
+        return;
+      }
+      loadingRef.current.add(index0);
+      try {
+        const img = await loadImage(frameUrl(mode, index0 + 1));
+        storeFrame(index0, img);
+      } catch {
+        /* skip broken frame — paint uses nearest */
+      } finally {
+        loadingRef.current.delete(index0);
+      }
+    };
+    loadOneRef.current = loadOne;
+
+    const markReady = () => {
+      if (cancelled || readyRef.current) return;
+      readyRef.current = true;
+      paint();
+      onReadyRef.current?.();
+    };
+
+    const progressFromScroll = () => {
+      const section = document.getElementById("hero-scroll");
+      if (!section) return targetRef.current;
+      const total = section.offsetHeight - window.innerHeight;
+      if (total <= 0) return 0;
+      const scrolled = Math.min(
+        total,
+        Math.max(0, -section.getBoundingClientRect().top)
+      );
+      return scrolled / total;
+    };
+
+    const preload = async () => {
       if (opts?.reducedMotion) {
         try {
           const img = await loadImage(frameUrl(mode, count));
@@ -196,41 +276,60 @@ export function useFrameSequence(
         return;
       }
 
-      await Promise.all(
-        Array.from({ length: first }, async (_, i) => {
-          try {
-            const img = await loadImage(frameUrl(mode, i + 1));
-            if (!cancelled) cacheRef.current[i] = img;
-          } catch {
-            /* skip broken frame */
-          }
-        })
+      // Sync to current scroll (handles browser restore mid-hero)
+      const bootP = progressFromScroll();
+      targetRef.current = bootP;
+      currentRef.current = bootP;
+      const bootIdx = Math.min(
+        count - 1,
+        Math.max(0, Math.round(bootP * (count - 1)))
       );
-
+      await loadOne(bootIdx);
       if (cancelled) return;
       markReady();
 
+      const first = Math.min(HERO_FRAME_CONFIG.preloadFirst, count);
+      const around = [
+        bootIdx,
+        ...Array.from({ length: 8 }, (_, i) => bootIdx - i - 1),
+        ...Array.from({ length: 8 }, (_, i) => bootIdx + i + 1),
+      ].filter((i) => i >= 0 && i < count);
+
+      await Promise.all(around.map((i) => loadOne(i)));
+      if (cancelled) return;
+
+      // Head of sequence (smooth start after jump-to-top)
+      await Promise.all(Array.from({ length: first }, (_, i) => loadOne(i)));
+      if (cancelled) return;
+
       const loadRest = (start: number) => {
         if (cancelled || start >= count) return;
+
+        // Drain priority queue first (scroll jumps)
+        const priority = pendingPriorityRef.current;
+        if (priority.size > 0) {
+          const next = priority.values().next().value as number;
+          priority.delete(next);
+          void loadOne(next).then(() => loadRest(start));
+          return;
+        }
+
+        if (cacheRef.current[start]) {
+          loadRest(start + 1);
+          return;
+        }
+
         const run = () => {
-          void (async () => {
-            try {
-              const img = await loadImage(frameUrl(mode, start + 1));
-              if (!cancelled) cacheRef.current[start] = img;
-            } catch {
-              /* ignore */
-            }
-            loadRest(start + 1);
-          })();
+          void loadOne(start).then(() => loadRest(start + 1));
         };
         if ("requestIdleCallback" in window) {
-          const id = window.requestIdleCallback(run, { timeout: 1200 });
+          const id = window.requestIdleCallback(run, { timeout: 900 });
           idleIds.push(id);
         } else {
-          setTimeout(run, 16);
+          setTimeout(run, 12);
         }
       };
-      loadRest(first);
+      loadRest(0);
     };
 
     void preload();
@@ -260,7 +359,18 @@ export function useFrameSequence(
   }, [opts?.enabled, opts?.reducedMotion, paint, tick]);
 
   const setProgress = useCallback((p: number) => {
-    targetRef.current = Math.min(1, Math.max(0, p));
+    const next = Math.min(1, Math.max(0, p));
+    targetRef.current = next;
+    const count = frameCount(modeRef.current);
+    if (count <= 0) return;
+    const idx = Math.min(count - 1, Math.max(0, Math.round(next * (count - 1))));
+    const want = [idx, idx - 1, idx + 1].filter((i) => i >= 0 && i < count);
+    for (const i of want) {
+      if (!cacheRef.current[i] && !loadingRef.current.has(i)) {
+        pendingPriorityRef.current.add(i);
+        void loadOneRef.current(i);
+      }
+    }
   }, []);
 
   const setExitEffects = useCallback((zoom: number, dim: number) => {

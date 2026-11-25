@@ -11,55 +11,184 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { brl } from "@/lib/data/sistema";
+import { formatBRL } from "@/lib/masks/br";
 import { useDemoStore } from "@/lib/store/demo-store";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { useCarteira } from "@/lib/store/carteira-store";
+import { useOperacoes } from "@/lib/store/operacoes-store";
 
 export default function DashboardPage() {
   const { state } = useDemoStore();
-  const abertoCarteira = state.parcelas
-    .filter((p) => p.status !== "Paga")
-    .reduce((a, p) => a + p.valor + p.encargos, 0);
+  const { state: f1, currentUser } = useFase1();
+  const { state: cart, saldoDevedor } = useCarteira();
+  const { state: ops } = useOperacoes();
+  const abertoCarteira = cart.installments
+    .filter((p) => p.status !== "paga" && p.status !== "cancelada")
+    .reduce(
+      (a, p) =>
+        a + p.valor + p.juros + p.multa + p.correcao + p.despesaBancaria - p.desconto,
+      0
+    );
   const nfeSem = state.fiscal.filter((n) => n.status === "Sem lançamento").length;
+  const pessoasAtivas = f1.people.filter((p) => p.status !== "excluido").length;
+  const notifUnread = f1.notifications.filter((n) => !n.lida).length;
+  const tarefasAbertas = f1.tasks.filter((t) => t.status !== "concluida").length;
+  const lotesDisp = cart.lots.filter((l) => l.status === "disponivel").length;
 
   return (
     <div className="space-y-8">
       <ModuleHeader
         title="Painel unificado"
-        description="Carteira, obras, financeiro e regularização fundiária em um só lugar. Dados demo persistentes no navegador."
+        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fases 1–10 ativas (acesso → carteira → operações → jornada/cobrança → fiscal).`}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
-              <Link href="/carteira">Abrir carteira</Link>
+              <Link href="/quadros/jornada">Jornada</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/vendas">Nova venda</Link>
+              <Link href="/leads">Novo lead</Link>
             </Button>
           </>
         }
       />
 
-      <ModuleSection title="Carteira">
+      <ModuleSection title="Operações (Fases 5–7)">
+        <KpiGrid
+          items={[
+            {
+              label: "Saldo contas",
+              value: formatBRL(
+                ops.accounts.reduce((a, c) => a + c.saldo, 0)
+              ),
+            },
+            {
+              label: "A pagar",
+              value: formatBRL(
+                ops.payables
+                  .filter((p) => p.status !== "pago")
+                  .reduce((a, p) => a + p.valor, 0)
+              ),
+            },
+            {
+              label: "Obras",
+              value: ops.works.length,
+              hint: `${ops.purchases.filter((p) => p.status === "em_aprovacao").length} SC em aprovação`,
+            },
+            {
+              label: "Import OK",
+              value: ops.importQueue.filter((e) => e.status === "ok").length,
+              hint: `${ops.importQueue.length} entidades`,
+            },
+          ]}
+        />
+      </ModuleSection>
+
+      <ModuleSection title="Carteira e estoque (Fases 2–4)">
         <KpiGrid
           items={[
             {
               label: "Empreendimentos",
-              value: state.empreendimentos.length,
+              value: cart.developments.length,
             },
             {
-              label: "Lotes (amostra)",
-              value: state.lotes.length,
-              hint: `${state.lotes.filter((l) => l.status === "Disponível").length} disponíveis`,
+              label: "Lotes disponíveis",
+              value: lotesDisp,
+              hint: `${cart.lots.length} no total`,
             },
             {
-              label: "Contratos",
-              value: state.contratos.length,
-              hint: `${state.contratos.filter((c) => c.status === "Ativo").length} ativos`,
+              label: "Contratos ativos",
+              value: cart.contracts.filter((c) => c.status === "ativo").length,
             },
             {
-              label: "A receber (amostra)",
-              value: brl(abertoCarteira),
-              hint: `${state.parcelas.filter((p) => p.status === "Vencida").length} vencidas`,
+              label: "A receber",
+              value: formatBRL(abertoCarteira),
+              hint: `caixa ${formatBRL(cart.caixaSaldo)}`,
             },
           ]}
+        />
+      </ModuleSection>
+
+      <ModuleSection title="Fase 1 — Acesso e cadastros">
+        <KpiGrid
+          items={[
+            {
+              label: "Pessoas",
+              value: pessoasAtivas,
+              hint: `${f1.organization.nomeFantasia}`,
+            },
+            {
+              label: "Usuários",
+              value: f1.users.filter((u) => u.status === "ativo").length,
+            },
+            {
+              label: "Notificações",
+              value: notifUnread,
+              hint: "não lidas",
+            },
+            {
+              label: "Tarefas abertas",
+              value: tarefasAbertas,
+            },
+          ]}
+        />
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          <DataTable
+            columns={[
+              { key: "titulo", label: "Notificação" },
+              { key: "quando", label: "Quando" },
+            ]}
+            rows={f1.notifications.slice(0, 4).map((n) => ({
+              titulo: (
+                <span className={n.lida ? "text-muted-foreground" : "font-medium"}>
+                  {n.titulo}
+                </span>
+              ),
+              quando: n.createdAt,
+            }))}
+          />
+          <DataTable
+            columns={[
+              { key: "titulo", label: "Tarefa" },
+              { key: "status", label: "Status" },
+              { key: "prazo", label: "Prazo" },
+            ]}
+            rows={f1.tasks.slice(0, 4).map((t) => ({
+              titulo: t.titulo,
+              status: (
+                <StatusPill
+                  tone={
+                    t.status === "concluida"
+                      ? "ok"
+                      : t.status === "em_andamento"
+                        ? "info"
+                        : "warn"
+                  }
+                >
+                  {t.status.replace("_", " ")}
+                </StatusPill>
+              ),
+              prazo: t.prazo,
+            }))}
+          />
+        </div>
+      </ModuleSection>
+
+      <ModuleSection title="Saldo por contrato">
+        <DataTable
+          columns={[
+            { key: "numero", label: "Contrato" },
+            { key: "cliente", label: "Cliente" },
+            { key: "lote", label: "Lote" },
+            { key: "saldo", label: "Saldo" },
+          ]}
+          rows={cart.contracts
+            .filter((c) => c.status === "ativo")
+            .map((c) => ({
+              numero: c.numero,
+              cliente: c.compradorNome,
+              lote: `${c.quadra}/${c.lote}`,
+              saldo: formatBRL(saldoDevedor(c.id)),
+            }))}
         />
       </ModuleSection>
 
@@ -77,22 +206,22 @@ export default function DashboardPage() {
               { key: "valor", label: "Valor" },
               { key: "status", label: "Status" },
             ]}
-            rows={state.parcelas.slice(0, 6).map((p) => ({
-              comprador: p.comprador,
-              n: p.n,
+            rows={cart.installments.slice(0, 6).map((p) => ({
+              comprador: p.compradorNome,
+              n: `${p.tipo} ${p.n}`,
               vencimento: p.vencimento,
-              valor: brl(p.valor + p.encargos),
+              valor: formatBRL(p.valor + p.juros + p.multa),
               status: (
                 <StatusPill
                   tone={
-                    p.status === "Paga"
+                    p.status === "paga"
                       ? "ok"
-                      : p.status === "Vencida"
+                      : p.status === "vencida"
                         ? "danger"
                         : "warn"
                   }
                 >
-                  {p.status}
+                  {p.status.replace("_", " ")}
                 </StatusPill>
               ),
             }))}

@@ -24,7 +24,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-brand-cream p-6 shadow-lg transition ease-in-out dark:bg-brand-navy",
+  "fixed z-50 gap-4 bg-card text-card-foreground p-6 shadow-lg transition ease-in-out",
   {
     variants: {
       side: {
@@ -75,7 +75,7 @@ function SheetTitle({
 }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("text-lg font-semibold text-brand-navy dark:text-brand-cream", className)}
+      className={cn("text-lg font-semibold text-foreground", className)}
       {...props}
     />
   );

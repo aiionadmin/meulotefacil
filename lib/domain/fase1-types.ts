@@ -1,0 +1,137 @@
+/** Tipos alinhados ao schema Fase 1 (docs/especificacao.md §12). */
+
+export type PersonTipo = "fisica" | "juridica";
+export type PersonPapel =
+  | "cliente"
+  | "comprador"
+  | "fornecedor"
+  | "profissional"
+  | "corretor"
+  | "socio"
+  | "pre_cadastro";
+
+export type ProfileCodigo =
+  | "administrador"
+  | "direcao"
+  | "financeiro"
+  | "engenharia"
+  | "obras"
+  | "suprimentos"
+  | "comercial"
+  | "corretor"
+  | "atendimento"
+  | "cobranca"
+  | "juridico"
+  | "regularizacao";
+
+export type Organization = {
+  id: string;
+  razaoSocial: string;
+  nomeFantasia: string;
+  cnpj: string;
+  telefone: string;
+  email: string;
+  advogadoNome: string;
+  advogadoOab: string;
+};
+
+export type Profile = {
+  id: string;
+  codigo: ProfileCodigo;
+  nome: string;
+  descricao: string;
+};
+
+export type AppUser = {
+  id: string;
+  nome: string;
+  email: string;
+  status: "ativo" | "inativo";
+  chave: boolean;
+  profileId: string;
+  organizationIds: string[];
+};
+
+export type Person = {
+  id: string;
+  tipo: PersonTipo;
+  status: string;
+  nome: string;
+  nomeFantasia?: string;
+  documento: string;
+  papeis: PersonPapel[];
+  telefone1?: string;
+  celular?: string;
+  email?: string;
+  cidade?: string;
+  uf?: string;
+  creci?: string;
+  qualificacao?: number;
+  observacoes?: string;
+  createdAt: string;
+};
+
+export type LookupList = {
+  id: string;
+  codigo: string;
+  nome: string;
+  itens: { codigo: string; nome: string; ordem: number; ativo: boolean; meta?: Record<string, unknown> }[];
+};
+
+export type AppFile = {
+  id: string;
+  nome: string;
+  rotina: string;
+  tag: string;
+  tamanho: string;
+  comentario?: string;
+  createdAt: string;
+};
+
+export type AppTask = {
+  id: string;
+  titulo: string;
+  status: "a_fazer" | "em_andamento" | "concluida";
+  prioridade: "baixa" | "media" | "alta";
+  prazo?: string;
+  responsavelNome?: string;
+};
+
+export type AppNotification = {
+  id: string;
+  titulo: string;
+  corpo?: string;
+  lida: boolean;
+  link?: string;
+  createdAt: string;
+};
+
+export type AuditEvent = {
+  id: string;
+  quando: string;
+  usuarioNome: string;
+  rotina: string;
+  acao: string;
+};
+
+export type ApprovalRule = {
+  id: string;
+  tipo: string;
+  perfilNome: string;
+  valorMinimo?: number;
+  ativo: boolean;
+};
+
+export type Fase1State = {
+  organization: Organization;
+  profiles: Profile[];
+  users: AppUser[];
+  people: Person[];
+  lookups: LookupList[];
+  files: AppFile[];
+  tasks: AppTask[];
+  notifications: AppNotification[];
+  audit: AuditEvent[];
+  approvalRules: ApprovalRule[];
+  currentUserId: string;
+};

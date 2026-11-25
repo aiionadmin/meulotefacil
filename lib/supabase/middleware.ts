@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "./client";
+import { publicUrl } from "@/lib/http/public-origin";
 
 const APP_PREFIXES = [
   "/dashboard",
@@ -9,6 +10,26 @@ const APP_PREFIXES = [
   "/documentos",
   "/protocolo",
   "/configuracoes",
+  "/cadastros",
+  "/tarefas",
+  "/notificacoes",
+  "/arquivos",
+  "/empreendimentos",
+  "/carteira",
+  "/boletos",
+  "/contratos",
+  "/reajustes",
+  "/vendas",
+  "/leads",
+  "/financeiro",
+  "/compras",
+  "/obras",
+  "/importacao",
+  "/cobranca",
+  "/juridico",
+  "/fiscal",
+  "/relatorios",
+  "/quadros",
 ];
 
 function isAppRoute(pathname: string) {
@@ -21,6 +42,12 @@ function isAuthRoute(pathname: string) {
   return pathname.startsWith("/auth");
 }
 
+function redirectTo(request: NextRequest, pathname: string, nextPath?: string) {
+  const url = publicUrl(request, pathname);
+  if (nextPath) url.searchParams.set("next", nextPath);
+  return NextResponse.redirect(url);
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
@@ -28,17 +55,10 @@ export async function updateSession(request: NextRequest) {
   const demoCookie = request.cookies.get("mlf_demo_session")?.value;
   const hasDemo = demoCookie === "1";
 
+  // Sem Supabase: demo aberto — não redireciona o sistema para login
   if (!isSupabaseConfigured()) {
-    if (isAppRoute(pathname) && !hasDemo) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/login";
-      url.searchParams.set("next", pathname);
-      return NextResponse.redirect(url);
-    }
     if (isAuthRoute(pathname) && hasDemo && !pathname.includes("/callback")) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
+      return redirectTo(request, "/dashboard");
     }
     return supabaseResponse;
   }
@@ -71,16 +91,11 @@ export async function updateSession(request: NextRequest) {
   const loggedIn = Boolean(user) || hasDemo;
 
   if (isAppRoute(pathname) && !loggedIn) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    return redirectTo(request, "/auth/login", pathname);
   }
 
   if (isAuthRoute(pathname) && loggedIn && !pathname.includes("/callback")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    return redirectTo(request, "/dashboard");
   }
 
   return supabaseResponse;
