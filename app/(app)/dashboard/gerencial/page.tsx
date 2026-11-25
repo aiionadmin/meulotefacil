@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,11 +9,16 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { formatBRL } from "@/lib/masks/br";
+import {
+  buildDefaultPermissionMatrix,
+  can,
+} from "@/lib/domain/permissoes";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useObras } from "@/lib/store/obras-store";
 import { useCompras } from "@/lib/store/compras-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 
 export default function DashboardGerencialPage() {
   const { state: cart } = useCarteira();
@@ -20,6 +26,21 @@ export default function DashboardGerencialPage() {
   const { state: compras } = useCompras();
   const { fluxoMensal, state: fin } = useFinanceiro();
   const { state: fluxo } = useFluxo();
+  const { state: f1, currentUser } = useFase1();
+
+  const profileCodigo =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.codigo ??
+    "administrador";
+  const matrix = useMemo(
+    () => buildDefaultPermissionMatrix(f1.profiles.map((p) => p.codigo)),
+    [f1.profiles]
+  );
+  const podeGerencial = can(
+    matrix,
+    profileCodigo,
+    "dashboard_gerencial",
+    "ver"
+  );
 
   const leads = fluxo.leads.length;
   const convertidas = fluxo.proposals.filter(
@@ -53,6 +74,28 @@ export default function DashboardGerencialPage() {
       (l) => l.developmentId === d.id && l.status === "vendido"
     ).length,
   }));
+
+  if (!podeGerencial) {
+    return (
+      <div className="space-y-6">
+        <ModuleHeader
+          title="Dashboard · Gerencial"
+          description="Acesso restrito a Direção e Financeiro."
+          actions={
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/dashboard/operacional">Números gerais</Link>
+            </Button>
+          }
+        />
+        <ModuleSection title="Sem permissão">
+          <p className="text-sm text-muted-foreground">
+            Seu perfil ({profileCodigo}) não visualiza o dashboard gerencial.
+            Peça à Direção ou use o painel operacional.
+          </p>
+        </ModuleSection>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

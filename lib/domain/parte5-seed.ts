@@ -61,6 +61,14 @@ export function seedParte5(): Parte5State {
         checklist: ["Descrição", "Encaminhar"],
         ativo: true,
       },
+      {
+        id: "dt-8",
+        nome: "Atualização cadastral",
+        prazoDias: 5,
+        responsavelPadrao: "Atendimento",
+        checklist: ["Conferir documento", "Aprovar", "Atualizar ficha"],
+        ativo: true,
+      },
     ],
     demandas: [
       {
@@ -82,6 +90,14 @@ export function seedParte5(): Parte5State {
         status: "aberta",
         criadoEm: "2026-11-24",
         custoPrevisto: 450,
+        comentarios: [
+          {
+            id: "cmt-1",
+            autor: "Maria Souza",
+            texto: "Prefiro visita pela manhã",
+            criadoEm: "2026-11-24",
+          },
+        ],
       },
       {
         id: "dem-2",

@@ -23,6 +23,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { downloadCsv, rowsToCsv } from "@/lib/domain/export-csv";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useCompras } from "@/lib/store/compras-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
@@ -46,8 +47,15 @@ const COLS: { id: DemandaStatus; label: string }[] = [
 function DemandasInner() {
   const search = useSearchParams();
   const statusQ = search.get("status") as DemandaStatus | null;
-  const { state, addDemanda, moverDemanda, vincularSc, vincularFaturamento } =
-    useParte5();
+  const {
+    state,
+    addDemanda,
+    moverDemanda,
+    vincularSc,
+    vincularFaturamento,
+    addComentario,
+    moverDemandasLote,
+  } = useParte5();
   const { addSolicitacao } = useCompras();
   const { addFaturamento, state: fin } = useFinanceiro();
   const { state: cart } = useCarteira();
@@ -57,6 +65,8 @@ function DemandasInner() {
   );
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Demanda | null>(null);
+  const [checked, setChecked] = useState<string[]>([]);
+  const [comentario, setComentario] = useState("");
   const [form, setForm] = useState({
     tipoId: "",
     empreendimentoId: "",
@@ -132,6 +142,40 @@ function DemandasInner() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/portal/cliente">Portal cliente</Link>
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const csv = rowsToCsv(
+                  [
+                    "Numero",
+                    "Tipo",
+                    "Empreendimento",
+                    "Cliente",
+                    "Prioridade",
+                    "Responsavel",
+                    "Prazo",
+                    "Origem",
+                    "Status",
+                  ],
+                  filtered.map((d) => [
+                    d.numero,
+                    tipoNome(d.tipoId),
+                    d.empreendimentoNome,
+                    d.clienteNome ?? "",
+                    d.prioridade,
+                    d.responsavel,
+                    d.prazo,
+                    d.origem,
+                    d.status,
+                  ])
+                );
+                downloadCsv("demandas.csv", csv);
+                notify(`Exportados ${filtered.length} registro(s)`);
+              }}
+            >
+              Exportar CSV
+            </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               Nova demanda
             </Button>
@@ -177,8 +221,43 @@ function DemandasInner() {
         />
       ) : (
         <ModuleSection title="Lista">
+          {checked.length > 0 ? (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 p-2 text-sm">
+              <span>{checked.length} selecionada(s)</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const n = moverDemandasLote(checked, "em_analise");
+                  notify(`${n} demanda(s) → em análise`);
+                  setChecked([]);
+                }}
+              >
+                Mover p/ Em análise
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const n = moverDemandasLote(checked, "concluida");
+                  notify(`${n} demanda(s) concluída(s)`);
+                  setChecked([]);
+                }}
+              >
+                Concluir
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setChecked([])}
+              >
+                Limpar
+              </Button>
+            </div>
+          ) : null}
           <PaginatedTable
             columns={[
+              { key: "sel", label: "" },
               { key: "num", label: "Nº" },
               { key: "tipo", label: "Tipo" },
               { key: "emp", label: "Empreendimento" },
@@ -190,6 +269,20 @@ function DemandasInner() {
               { key: "status", label: "Status" },
             ]}
             rows={filtered.map((d) => ({
+              sel: (
+                <input
+                  type="checkbox"
+                  checked={checked.includes(d.id)}
+                  onChange={(e) => {
+                    setChecked((prev) =>
+                      e.target.checked
+                        ? [...prev, d.id]
+                        : prev.filter((id) => id !== d.id)
+                    );
+                  }}
+                  aria-label={`Selecionar ${d.numero}`}
+                />
+              ),
               num: (
                 <button
                   type="button"
@@ -282,6 +375,46 @@ function DemandasInner() {
               label="Faturamento"
               value={live.faturamentoId ?? "—"}
             />
+            <div>
+              <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Comentários
+              </div>
+              <ul className="mb-2 space-y-1 text-sm">
+                {(live.comentarios ?? []).map((c) => (
+                  <li key={c.id} className="border-b py-1">
+                    <span className="font-medium">{c.autor}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {formatDateBR(c.criadoEm)}
+                    </span>
+                    <div>{c.texto}</div>
+                  </li>
+                ))}
+                {!(live.comentarios ?? []).length ? (
+                  <li className="text-muted-foreground">Nenhum comentário</li>
+                ) : null}
+              </ul>
+              <div className="flex gap-2">
+                <Input
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  placeholder="Novo comentário"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (!addComentario(live.id, "Atendimento", comentario)) {
+                      notify("Informe o texto");
+                      return;
+                    }
+                    notify("Comentário registrado");
+                    setComentario("");
+                  }}
+                >
+                  Enviar
+                </Button>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2 pt-2">
               {!live.purchaseRequestId ? (
                 <Button

@@ -83,6 +83,12 @@ type Parte5Api = {
     hoje?: string
   ) => { expiradas: number; lotesLiberados: string[] };
   minhasReservas: (corretorId?: string) => ReservaLote[];
+  addComentario: (
+    demandaId: string,
+    autor: string,
+    texto: string
+  ) => boolean;
+  moverDemandasLote: (ids: string[], status: DemandaStatus) => number;
 };
 
 const Ctx = createContext<Parte5Api | null>(null);
@@ -283,6 +289,39 @@ export function Parte5StoreProvider({ children }: { children: ReactNode }) {
       minhasReservas: (corretorId) => {
         const id = corretorId ?? state.portalCorretor.corretorId;
         return state.reservas.filter((r) => r.corretorId === id);
+      },
+      addComentario: (demandaId, autor, texto) => {
+        const t = texto.trim();
+        if (!t || !state.demandas.some((d) => d.id === demandaId)) return false;
+        const cmt = {
+          id: uid("cmt"),
+          autor,
+          texto: t,
+          criadoEm: todayIso(),
+        };
+        setState((s) => ({
+          ...s,
+          demandas: s.demandas.map((d) =>
+            d.id === demandaId
+              ? { ...d, comentarios: [...(d.comentarios ?? []), cmt] }
+              : d
+          ),
+        }));
+        return true;
+      },
+      moverDemandasLote: (ids, status) => {
+        const set = new Set(ids);
+        const n = state.demandas.filter(
+          (d) => set.has(d.id) && d.status !== status
+        ).length;
+        if (n === 0) return 0;
+        setState((s) => ({
+          ...s,
+          demandas: s.demandas.map((d) =>
+            set.has(d.id) && d.status !== status ? { ...d, status } : d
+          ),
+        }));
+        return n;
       },
     }),
     [state, ready]
