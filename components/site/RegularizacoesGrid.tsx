@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/site/SectionHeading";
 import {
@@ -91,7 +90,6 @@ export function RegularizacoesGrid({
               className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/70 transition-colors hover:text-ink lg:pb-1"
             >
               Ver todas as regularizações
-              <ArrowUpRight className="size-4" aria-hidden />
             </Link>
           ) : null}
         </div>
@@ -127,7 +125,6 @@ export function RegularizacoesGrid({
                 </p>
                 <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-ink/70 transition-colors group-hover:text-ink">
                   Ver detalhes
-                  <ArrowUpRight className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
                 </span>
               </div>
             </Link>

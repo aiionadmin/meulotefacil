@@ -13,7 +13,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <div className="[&_.rdf-bar]:relative [&_.rdf-bar]:z-[3] [&_.rdf-bar]:bg-gradient-to-b [&_.rdf-bar]:from-[#f3f1ec] [&_.rdf-bar]:via-[#f3f1ec]/92 [&_.rdf-bar]:to-transparent [&_.rdf-bar]:pb-10 [&_.rdf-tag]:text-[#2f3733] [&_.rdf-col-title]:text-ink [&_.rdf-logo>span:last-child]:sr-only [&_.rdf-link]:text-ink">
+    <div className="[&_.rdf-bar]:relative [&_.rdf-bar]:z-[3] [&_.rdf-bar]:bg-gradient-to-b [&_.rdf-bar]:from-[#f3f1ec] [&_.rdf-bar]:via-[#f3f1ec]/92 [&_.rdf-bar]:to-transparent [&_.rdf-bar]:pb-10 [&_.rdf-tag]:text-[#2f3733] [&_.rdf-col-title]:text-ink [&_.rdf-logo>span:last-child]:sr-only [&_.rdf-link]:after:content-none [&_.rdf-link]:text-ink">
     <RidgelineDitherFooter
       name={INSTITUTIONAL.name}
       brandHref="/"

@@ -1,33 +1,31 @@
 "use client";
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { SectionHeading } from "@/components/site/SectionHeading";
-import { REGULARIZACAO_FAQ } from "@/lib/data/regularizacao-content";
+import Faq05 from "@/components/ui/faq-05";
+import { whatsappUrl } from "@/lib/institutional";
 
+/** FAQ da página /regularizacao — mesmo Faq05 + copy REURB pt-BR. */
 export function RegularizacaoFAQ() {
+  const wa = whatsappUrl();
+
   return (
-    <section className="border-b border-linha bg-paper-muted py-20 lg:py-28">
-      <div className="site-container grid gap-10 lg:grid-cols-2">
-        <SectionHeading
-          number="05"
-          eyebrow="FAQ"
-          title="Dúvidas frequentes"
-          subtitle="Sobre REURB, municípios e a atuação da Meu Lote Fácil."
-        />
-        <Accordion type="single" collapsible className="w-full border-t border-linha">
-          {REGULARIZACAO_FAQ.map((f, i) => (
-            <AccordionItem key={f.q} value={`item-${i}`}>
-              <AccordionTrigger>{f.q}</AccordionTrigger>
-              <AccordionContent>{f.a}</AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </div>
-    </section>
+    <Faq05
+      className="border-b border-linha bg-paper-muted"
+      eyebrow="05 FAQ"
+      title="Dúvidas frequentes"
+      description={
+        <>
+          Sobre REURB, municípios e a atuação da Meu Lote Fácil.{" "}
+          <a
+            href={wa}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-latossolo underline-offset-4 hover:underline"
+          >
+            Fale conosco pelo WhatsApp
+          </a>
+          .
+        </>
+      }
+    />
   );
 }
