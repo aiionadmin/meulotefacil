@@ -21,5 +21,5 @@ Prompt: `docs/prompt-cursor-meu-lote-facil.md` §3.
 
 ## Pendente
 
-- Gantt completo, PDF RDO, calendário de expediente, upload de fotos no RDO, sync Supabase real, permissões granulares RDO.
-- Partes 3–5 (Compras, Financeiro, portais).
+- Gantt com caminho crítico/export, calendário de expediente, sync Supabase real.
+- *(Parcial no polish pós-#32: Gantt básico, PDF RDO stub, fotos no RDO.)*

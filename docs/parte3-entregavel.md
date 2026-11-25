@@ -21,5 +21,5 @@ Prompt: `docs/prompt-cursor-meu-lote-facil.md` §4.
 
 ## Pendente
 
-- Página pública do fornecedor, PDF mapa, alçadas por faixa de valor, arquivos/comentários, sync Supabase real.
-- Partes 4–5 (Financeiro Mais Controle, portais).
+- PDF mapa, alçadas por faixa de valor, arquivos/comentários, sync Supabase real.
+- *(Parcial no polish pós-#32: página pública `/cotacao/[token]`.)*

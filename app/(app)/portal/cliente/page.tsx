@@ -17,13 +17,19 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { PortalLoginGate } from "@/components/app/PortalLoginGate";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 
+function digits(s: string) {
+  return s.replace(/\D/g, "");
+}
+
 export default function PortalClientePage() {
-  const { state: p5, addDemanda, demandasDoCliente } = useParte5();
+  const { state: p5, addDemanda, demandasDoCliente, setPortalCliente } =
+    useParte5();
   const { state: cart, saldoDevedor } = useCarteira();
   const { state: fin } = useFinanceiro();
   const sess = p5.portalCliente;
@@ -54,6 +60,25 @@ export default function PortalClientePage() {
   );
 
   return (
+    <PortalLoginGate
+      kind="cliente"
+      title="Portal do cliente"
+      hint="Entre com CPF e o código enviado por SMS/e-mail."
+      demoHint="Demo: CPF 123.456.789-00 · código demo"
+      onLogin={({ documento, codigo }) => {
+        const okCpf =
+          digits(documento) === digits(sess.cpf) ||
+          digits(documento) === "12345678900";
+        if (!okCpf || codigo.toLowerCase() !== "demo") {
+          return {
+            ok: false,
+            message: "CPF ou código inválidos (use o demo)",
+          };
+        }
+        setPortalCliente("cli-1", "Maria Souza", "123.456.789-00");
+        return { ok: true };
+      }}
+    >
     <div className="space-y-6">
       <ModuleHeader
         title={`Portal do cliente · ${sess.nome}`}
@@ -195,5 +220,6 @@ export default function PortalClientePage() {
         </Field>
       </FormDialog>
     </div>
+    </PortalLoginGate>
   );
 }

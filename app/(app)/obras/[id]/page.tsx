@@ -18,6 +18,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { GanttChart } from "@/components/app/GanttChart";
 import { formatBRL } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
 import { precoComBdi } from "@/lib/money/orcamento";
@@ -53,6 +54,10 @@ export default function ObraDetalhePage() {
   const [despesa, setDespesa] = useState({ nodeId: "", valor: 0 });
 
   const curva = state.curvaS[id] ?? [];
+  const cronograma = useMemo(
+    () => state.cronograma.filter((c) => c.obraId === id),
+    [state.cronograma, id]
+  );
 
   const itens = useMemo(
     () => nodes.filter((n) => n.kind === "item"),
@@ -157,6 +162,10 @@ export default function ObraDetalhePage() {
             fis: `${n.fisicoPct}%`,
           }))}
         />
+      </ModuleSection>
+
+      <ModuleSection title="Cronograma · Gantt">
+        <GanttChart items={cronograma} />
       </ModuleSection>
 
       <ModuleSection title="Curva S">

@@ -31,27 +31,49 @@ export function ModuleHeader({
 export function KpiGrid({
   items,
 }: {
-  items: { label: string; value: string | number; hint?: string }[];
+  items: {
+    label: string;
+    value: string | number;
+    hint?: string;
+    /** Quando definido, o card inteiro abre a lista de origem. */
+    href?: string;
+  }[];
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {items.map((item) => (
-        <Card key={item.label}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {item.label}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-display text-2xl text-ink sm:text-3xl">
-              {item.value}
-            </p>
-            {item.hint ? (
-              <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p>
-            ) : null}
-          </CardContent>
-        </Card>
-      ))}
+      {items.map((item) => {
+        const inner = (
+          <>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {item.label}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="font-display text-2xl text-ink sm:text-3xl">
+                {item.value}
+              </p>
+              {item.hint ? (
+                <p className="mt-1 text-xs text-muted-foreground">{item.hint}</p>
+              ) : item.href ? (
+                <p className="mt-1 text-xs text-brand-orange">Abrir lista →</p>
+              ) : null}
+            </CardContent>
+          </>
+        );
+        if (item.href) {
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="block rounded-xl transition hover:ring-2 hover:ring-brand-orange/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
+            >
+              <Card className="h-full">{inner}</Card>
+            </Link>
+          );
+        }
+        return <Card key={item.label}>{inner}</Card>;
+      })}
     </div>
   );
 }

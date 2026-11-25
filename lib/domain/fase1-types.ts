@@ -19,6 +19,7 @@ export type ProfileCodigo =
   | "suprimentos"
   | "comercial"
   | "corretor"
+  | "cliente"
   | "atendimento"
   | "cobranca"
   | "juridico"

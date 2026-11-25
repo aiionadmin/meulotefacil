@@ -191,8 +191,14 @@ export default function CotacoesPage() {
                       {f.contato} · {f.email} · {f.telefone}
                     </div>
                     <div className="text-xs">
-                      Qualificação {f.qualificacao}/5 · link público /cotacao/
-                      {f.publicToken}
+                      Qualificação {f.qualificacao}/5 ·{" "}
+                      <Link
+                        className="underline text-brand-orange"
+                        href={`/cotacao/${f.publicToken}`}
+                        target="_blank"
+                      >
+                        link público /cotacao/{f.publicToken}
+                      </Link>
                     </div>
                   </li>
                 ))}

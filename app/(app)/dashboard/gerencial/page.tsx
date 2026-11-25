@@ -68,15 +68,25 @@ export default function DashboardGerencialPage() {
 
       <KpiGrid
         items={[
-          { label: "Conversão funil", value: `${conversao}%` },
-          { label: "Inadimplência %", value: `${inadPct}%` },
+          {
+            label: "Conversão funil",
+            value: `${conversao}%`,
+            href: "/leads",
+          },
+          {
+            label: "Inadimplência %",
+            value: `${inadPct}%`,
+            href: "/financeiro/recebimentos?status=vencido",
+          },
           {
             label: "Inadimplência R$",
             value: formatBRL(inad.reduce((a, r) => a + r.valor, 0)),
+            href: "/financeiro/recebimentos?status=vencido",
           },
           {
             label: "Títulos vencidos",
             value: inad.length,
+            href: "/financeiro/recebimentos?status=vencido",
           },
         ]}
       />
@@ -145,7 +155,7 @@ export default function DashboardGerencialPage() {
           {Object.entries(comprasPorStatus).map(([st, n]) => (
             <Link
               key={st}
-              href="/compras"
+              href={`/compras?status=${st}`}
               className="rounded-md bg-muted px-3 py-1.5 hover:text-brand-orange"
             >
               {st.replace(/_/g, " ")}: {n}
