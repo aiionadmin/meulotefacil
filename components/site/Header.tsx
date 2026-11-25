@@ -114,7 +114,7 @@ export function Header() {
                   >
                     {l.label}
                     <ArrowRight
-                      className="size-3.5 opacity-70"
+                      className="hidden size-3.5 opacity-70 xl:inline"
                       aria-hidden
                     />
                   </Link>
