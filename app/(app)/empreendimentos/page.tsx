@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,51 +20,94 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { brl } from "@/lib/data/sistema";
-import { useDemoStore, type Lote } from "@/lib/store/demo-store";
+import { formatBRL } from "@/lib/masks/br";
+import { useCarteira } from "@/lib/store/carteira-store";
+import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
+
+const STATUS_TONE: Record<LotStatus, "ok" | "warn" | "danger" | "info" | "neutral"> = {
+  disponivel: "ok",
+  reservado: "warn",
+  vendido: "info",
+  quitado: "ok",
+  escritura: "info",
+  bloqueado: "danger",
+};
 
 export default function EmpreendimentosPage() {
-  const { state, addEmpreendimento, updateLote, massGenerateLotes } =
-    useDemoStore();
+  const {
+    state,
+    addDevelopment,
+    massGenerateLots,
+    changeLotStatus,
+    updateLot,
+  } = useCarteira();
   const [q, setQ] = useState("");
+  const [empFilter, setEmpFilter] = useState("todos");
   const [openEmp, setOpenEmp] = useState(false);
   const [openMass, setOpenMass] = useState(false);
-  const [selected, setSelected] = useState<Lote | null>(null);
+  const [openStatus, setOpenStatus] = useState(false);
+  const [selected, setSelected] = useState<Lot | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [empForm, setEmpForm] = useState({
     codigo: "",
     nome: "",
-    tipo: "Loteamento",
-    status: "Em venda",
+    tipo: "loteamento" as Development["tipo"],
+    status: "em_andamento" as Development["status"],
     cidade: "Campinas",
     uf: "SP",
-    quadras: 4,
-    lotes: 80,
-    vendidos: 0,
-    area: "5,0 ha",
+    qtdQuadras: 4,
+    qtdLotes: 0,
+    diasMora: 0,
+    taxaMoraMes: 0.01,
+    taxaMulta: 0.02,
+    diaMulta: 0,
   });
   const [mass, setMass] = useState({
-    emp: "Horizonte",
+    developmentId: state.developments[0]?.id ?? "",
     quadra: "E",
     qtd: 5,
     area: 250,
     valor: 180000,
   });
+  const [statusForm, setStatusForm] = useState({
+    status: "bloqueado" as LotStatus,
+    motivo: "",
+  });
 
   const lotes = useMemo(() => {
+    let list = state.lots;
+    if (empFilter !== "todos") {
+      list = list.filter((l) => l.developmentId === empFilter);
+    }
     const term = q.trim().toLowerCase();
-    if (!term) return state.lotes;
-    return state.lotes.filter((l) =>
-      [l.emp, l.quadra, l.lote, l.status].join(" ").toLowerCase().includes(term)
-    );
-  }, [state.lotes, q]);
+    if (term) {
+      list = list.filter((l) =>
+        [l.empNome, l.quadra, l.lote, l.status, l.compradorNome]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(term)
+      );
+    }
+    return list;
+  }, [state.lots, q, empFilter]);
+
+  const disponiveis = state.lots.filter((l) => l.status === "disponivel").length;
+  const vendidos = state.lots.filter((l) => l.status === "vendido").length;
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Empreendimentos e lotes"
-        description="Cadastro de empreendimentos, lotes Emp+Quadra+Lote, status com travas e geração em massa."
+        description="Fase 2 — estoque Emp+Quadra+Lote, status com travas, geração em massa e planta."
         actions={
           <>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/empreendimentos/planta">Planta</Link>
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setOpenStatus(true)}>
+              Alterar status
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setOpenMass(true)}>
               Gerar lotes
             </Button>
@@ -73,18 +117,13 @@ export default function EmpreendimentosPage() {
           </>
         }
       />
+
       <KpiGrid
         items={[
-          { label: "Empreendimentos", value: state.empreendimentos.length },
-          { label: "Lotes (amostra)", value: state.lotes.length },
-          {
-            label: "Disponíveis",
-            value: state.lotes.filter((l) => l.status === "Disponível").length,
-          },
-          {
-            label: "Bloqueados venda",
-            value: state.lotes.filter((l) => l.bloqueiaVenda).length,
-          },
+          { label: "Empreendimentos", value: state.developments.length },
+          { label: "Lotes", value: state.lots.length },
+          { label: "Disponíveis", value: disponiveis },
+          { label: "Vendidos", value: vendidos },
         ]}
       />
 
@@ -95,254 +134,270 @@ export default function EmpreendimentosPage() {
             { key: "nome", label: "Nome" },
             { key: "tipo", label: "Tipo" },
             { key: "cidade", label: "Cidade" },
-            { key: "lotes", label: "Lotes" },
-            { key: "vendidos", label: "Vendidos" },
             { key: "status", label: "Status" },
+            { key: "lotes", label: "Lotes" },
           ]}
-          rows={state.empreendimentos.map((e) => ({
-            codigo: e.codigo,
-            nome: <span className="font-medium">{e.nome}</span>,
-            tipo: e.tipo,
-            cidade: `${e.cidade}/${e.uf}`,
-            lotes: e.lotes,
-            vendidos: e.vendidos,
-            status: <StatusPill tone="info">{e.status}</StatusPill>,
+          rows={state.developments.map((d) => ({
+            codigo: d.codigo,
+            nome: d.nome,
+            tipo: d.tipo,
+            cidade: `${d.cidade}/${d.uf}`,
+            status: <StatusPill tone="info">{d.status.replace(/_/g, " ")}</StatusPill>,
+            lotes: state.lots.filter((l) => l.developmentId === d.id).length,
           }))}
         />
       </ModuleSection>
 
-      <ModuleSection title="Lotes">
-        <FilterBar value={q} onChange={setQ} placeholder="Filtrar lotes…" />
-        <DataTable
-          onRowClick={(i) => setSelected(lotes[i])}
-          columns={[
-            { key: "emp", label: "Emp" },
-            { key: "ql", label: "Quadra/Lote" },
-            { key: "area", label: "Área" },
-            { key: "valor", label: "Valor" },
-            { key: "status", label: "Status" },
-            { key: "travas", label: "Travas" },
-          ]}
-          rows={lotes.map((l) => ({
-            emp: l.emp,
-            ql: (
-              <span className="font-medium">
-                {l.quadra}/{l.lote}
-              </span>
-            ),
-            area: `${l.area} m²`,
-            valor: l.valor ? brl(l.valor) : "sem preço",
-            status: (
-              <StatusPill
-                tone={
-                  l.status === "Disponível"
-                    ? "ok"
-                    : l.status === "Jurídico"
-                      ? "danger"
-                      : "warn"
-                }
-              >
-                {l.status}
-              </StatusPill>
-            ),
-            travas: [
-              l.bloqueiaVenda ? "venda" : null,
-              l.bloqueiaFinanceiro ? "fin." : null,
-            ]
-              .filter(Boolean)
-              .join(", ") || "nenhuma",
-          }))}
-        />
-      </ModuleSection>
+      <FilterBar
+        value={q}
+        onChange={setQ}
+        placeholder="Buscar quadra, lote, status, comprador…"
+      >
+        <select
+          className={fieldControlClass + " max-w-[220px]"}
+          value={empFilter}
+          onChange={(e) => setEmpFilter(e.target.value)}
+        >
+          <option value="todos">Todos empreendimentos</option>
+          {state.developments.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.nome}
+            </option>
+          ))}
+        </select>
+      </FilterBar>
+
+      <DataTable
+        columns={[
+          { key: "sel", label: "" },
+          { key: "emp", label: "Empreendimento" },
+          { key: "ql", label: "Q/L" },
+          { key: "area", label: "Área" },
+          { key: "valor", label: "Valor" },
+          { key: "status", label: "Status" },
+          { key: "comprador", label: "Comprador" },
+        ]}
+        rows={lotes.map((l) => ({
+          sel: (
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(l.id)}
+              onChange={(e) =>
+                setSelectedIds((ids) =>
+                  e.target.checked
+                    ? [...ids, l.id]
+                    : ids.filter((id) => id !== l.id)
+                )
+              }
+            />
+          ),
+          emp: (
+            <button
+              type="button"
+              className="text-left font-medium hover:text-brand-orange"
+              onClick={() => setSelected(l)}
+            >
+              {l.empNome}
+            </button>
+          ),
+          ql: `${l.quadra}/${l.lote}`,
+          area: `${l.area} m²`,
+          valor: formatBRL(l.valor),
+          status: (
+            <StatusPill tone={STATUS_TONE[l.status]}>
+              {l.status}
+            </StatusPill>
+          ),
+          comprador: l.compradorNome ?? "—",
+        }))}
+      />
+
+      <DetailSheet
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+        title={selected ? `${selected.quadra}/${selected.lote}` : ""}
+      >
+        {selected ? (
+          <div className="space-y-2">
+            <DetailRow label="Status" value={selected.status} />
+            <DetailRow label="Área" value={`${selected.area} m²`} />
+            <DetailRow label="Valor" value={formatBRL(selected.valor)} />
+            <DetailRow label="m²" value={formatBRL(selected.valorM2)} />
+            <DetailRow label="Matrícula" value={selected.matricula ?? "—"} />
+            <DetailRow
+              label="Travas"
+              value={`venda ${selected.bloqueiaVenda ? "sim" : "não"} · fin. ${selected.bloqueiaFinanceiro ? "sim" : "não"}`}
+            />
+            <DetailRow label="Comprador" value={selected.compradorNome ?? "—"} />
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-4"
+              onClick={() => {
+                updateLot(selected.id, {
+                  valor: selected.valor + 5000,
+                  valorM2:
+                    Math.round(((selected.valor + 5000) / selected.area) * 100) /
+                    100,
+                });
+                notify("Valor atualizado (+R$ 5.000)");
+                setSelected(null);
+              }}
+            >
+              + R$ 5.000 no valor
+            </Button>
+          </div>
+        ) : null}
+      </DetailSheet>
 
       <FormDialog
         open={openEmp}
         onOpenChange={setOpenEmp}
         title="Novo empreendimento"
-        submitLabel="Cadastrar"
         onSubmit={() => {
-          if (!empForm.nome || !empForm.codigo) return;
-          addEmpreendimento(empForm);
+          if (!empForm.codigo || !empForm.nome) {
+            notify("Código e nome obrigatórios");
+            return;
+          }
+          addDevelopment(empForm);
           notify("Empreendimento criado", empForm.nome);
           setOpenEmp(false);
         }}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Código">
-            <Input
-              value={empForm.codigo}
-              onChange={(e) =>
-                setEmpForm({ ...empForm, codigo: e.target.value.toUpperCase() })
-              }
-              required
-            />
-          </Field>
-          <Field label="Tipo">
-            <select
-              className={fieldControlClass}
-              value={empForm.tipo}
-              onChange={(e) => setEmpForm({ ...empForm, tipo: e.target.value })}
-            >
-              <option>Loteamento</option>
-              <option>Regularização</option>
-              <option>Condomínio</option>
-            </select>
-          </Field>
-        </div>
-        <Field label="Nome">
+        <Field label="Código *">
+          <Input
+            value={empForm.codigo}
+            onChange={(e) => setEmpForm({ ...empForm, codigo: e.target.value })}
+            required
+          />
+        </Field>
+        <Field label="Nome *">
           <Input
             value={empForm.nome}
             onChange={(e) => setEmpForm({ ...empForm, nome: e.target.value })}
             required
           />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Cidade">
-            <Input
-              value={empForm.cidade}
-              onChange={(e) => setEmpForm({ ...empForm, cidade: e.target.value })}
-            />
-          </Field>
-          <Field label="Área">
-            <Input
-              value={empForm.area}
-              onChange={(e) => setEmpForm({ ...empForm, area: e.target.value })}
-            />
-          </Field>
-        </div>
+        <Field label="Cidade">
+          <Input
+            value={empForm.cidade}
+            onChange={(e) => setEmpForm({ ...empForm, cidade: e.target.value })}
+          />
+        </Field>
       </FormDialog>
 
       <FormDialog
         open={openMass}
         onOpenChange={setOpenMass}
-        title="Geração em massa de lotes"
-        submitLabel="Gerar"
+        title="Gerar lotes em massa"
         onSubmit={() => {
-          const n = massGenerateLotes(
-            mass.emp,
-            mass.quadra,
-            Number(mass.qtd) || 1,
-            Number(mass.area) || 200,
-            Number(mass.valor) || 0
-          );
-          notify("Lotes gerados", `${n} lotes na quadra ${mass.quadra}`);
+          const n = massGenerateLots(mass);
+          notify(n ? `${n} lotes gerados` : "Nada gerado");
           setOpenMass(false);
         }}
       >
         <Field label="Empreendimento">
+          <select
+            className={fieldControlClass}
+            value={mass.developmentId}
+            onChange={(e) => setMass({ ...mass, developmentId: e.target.value })}
+          >
+            {state.developments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nome}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Quadra">
           <Input
-            value={mass.emp}
-            onChange={(e) => setMass({ ...mass, emp: e.target.value })}
+            value={mass.quadra}
+            onChange={(e) => setMass({ ...mass, quadra: e.target.value })}
           />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Quadra">
-            <Input
-              value={mass.quadra}
-              onChange={(e) =>
-                setMass({ ...mass, quadra: e.target.value.toUpperCase() })
-              }
-            />
-          </Field>
-          <Field label="Quantidade">
-            <Input
-              type="number"
-              min={1}
-              max={40}
-              value={mass.qtd}
-              onChange={(e) =>
-                setMass({ ...mass, qtd: Number(e.target.value) })
-              }
-            />
-          </Field>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Área (m²)">
-            <Input
-              type="number"
-              value={mass.area}
-              onChange={(e) =>
-                setMass({ ...mass, area: Number(e.target.value) })
-              }
-            />
-          </Field>
-          <Field label="Valor">
-            <Input
-              type="number"
-              value={mass.valor}
-              onChange={(e) =>
-                setMass({ ...mass, valor: Number(e.target.value) })
-              }
-            />
-          </Field>
-        </div>
+        <Field label="Quantidade">
+          <Input
+            type="number"
+            value={mass.qtd}
+            onChange={(e) =>
+              setMass({ ...mass, qtd: Number(e.target.value) || 1 })
+            }
+          />
+        </Field>
+        <Field label="Área (m²)">
+          <Input
+            type="number"
+            value={mass.area}
+            onChange={(e) =>
+              setMass({ ...mass, area: Number(e.target.value) || 0 })
+            }
+          />
+        </Field>
+        <Field label="Valor">
+          <Input
+            type="number"
+            value={mass.valor}
+            onChange={(e) =>
+              setMass({ ...mass, valor: Number(e.target.value) || 0 })
+            }
+          />
+        </Field>
       </FormDialog>
 
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelected(null)}
-        title={
-          selected
-            ? `${selected.emp} ${selected.quadra}/${selected.lote}`
-            : "Lote"
-        }
-        footer={
-          selected ? (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const next = !selected.bloqueiaVenda;
-                  updateLote(selected.id, { bloqueiaVenda: next });
-                  setSelected({ ...selected, bloqueiaVenda: next });
-                  notify(next ? "Venda bloqueada" : "Venda liberada");
-                }}
-              >
-                {selected.bloqueiaVenda ? "Liberar venda" : "Bloquear venda"}
-              </Button>
-              {selected.status === "Disponível" ? (
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    updateLote(selected.id, {
-                      status: "Reservado",
-                      bloqueiaVenda: true,
-                    });
-                    setSelected({
-                      ...selected,
-                      status: "Reservado",
-                      bloqueiaVenda: true,
-                    });
-                    notify("Lote reservado");
-                  }}
-                >
-                  Reservar
-                </Button>
-              ) : null}
-            </>
-          ) : null
-        }
+      <FormDialog
+        open={openStatus}
+        onOpenChange={setOpenStatus}
+        title="Alterar status de lotes"
+        onSubmit={() => {
+          if (!selectedIds.length) {
+            notify("Selecione lotes na grade");
+            return;
+          }
+          changeLotStatus(selectedIds, statusForm.status, statusForm.motivo || "Alteração manual");
+          notify(`${selectedIds.length} lote(s) → ${statusForm.status}`);
+          setSelectedIds([]);
+          setOpenStatus(false);
+        }}
       >
-        {selected ? (
-          <>
-            <DetailRow label="Área" value={`${selected.area} m²`} />
-            <DetailRow
-              label="Valor"
-              value={selected.valor ? brl(selected.valor) : "sem preço"}
-            />
-            <DetailRow label="Status" value={selected.status} />
-            <DetailRow
-              label="Trava venda"
-              value={selected.bloqueiaVenda ? "Sim" : "Não"}
-            />
-            <DetailRow
-              label="Trava fin."
-              value={selected.bloqueiaFinanceiro ? "Sim" : "Não"}
-            />
-          </>
-        ) : null}
-      </DetailSheet>
+        <p className="text-sm text-muted-foreground">
+          {selectedIds.length} selecionado(s)
+        </p>
+        <Field label="Novo status">
+          <select
+            className={fieldControlClass}
+            value={statusForm.status}
+            onChange={(e) =>
+              setStatusForm({
+                ...statusForm,
+                status: e.target.value as LotStatus,
+              })
+            }
+          >
+            {(
+              [
+                "disponivel",
+                "reservado",
+                "vendido",
+                "bloqueado",
+                "quitado",
+                "escritura",
+              ] as LotStatus[]
+            ).map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Motivo">
+          <Input
+            value={statusForm.motivo}
+            onChange={(e) =>
+              setStatusForm({ ...statusForm, motivo: e.target.value })
+            }
+          />
+        </Field>
+      </FormDialog>
     </div>
   );
 }

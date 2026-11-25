@@ -50,6 +50,8 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "/pessoas": Users,
   "/usuarios": Shield,
   "/empreendimentos": Building2,
+  "/empreendimentos/planta": Map,
+  "/contratos": FileSignature,
   "/vendas": FileSignature,
   "/carteira": Wallet,
   "/boletos": Receipt,

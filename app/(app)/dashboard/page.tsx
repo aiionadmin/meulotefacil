@@ -11,36 +11,69 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { brl } from "@/lib/data/sistema";
+import { formatBRL } from "@/lib/masks/br";
 import { useDemoStore } from "@/lib/store/demo-store";
 import { useFase1 } from "@/lib/store/fase1-store";
+import { useCarteira } from "@/lib/store/carteira-store";
 
 export default function DashboardPage() {
   const { state } = useDemoStore();
   const { state: f1, currentUser } = useFase1();
-  const abertoCarteira = state.parcelas
-    .filter((p) => p.status !== "Paga")
-    .reduce((a, p) => a + p.valor + p.encargos, 0);
+  const { state: cart, saldoDevedor } = useCarteira();
+  const abertoCarteira = cart.installments
+    .filter((p) => p.status !== "paga" && p.status !== "cancelada")
+    .reduce(
+      (a, p) =>
+        a + p.valor + p.juros + p.multa + p.correcao + p.despesaBancaria - p.desconto,
+      0
+    );
   const nfeSem = state.fiscal.filter((n) => n.status === "Sem lançamento").length;
   const pessoasAtivas = f1.people.filter((p) => p.status !== "excluido").length;
   const notifUnread = f1.notifications.filter((n) => !n.lida).length;
   const tarefasAbertas = f1.tasks.filter((t) => t.status !== "concluida").length;
+  const lotesDisp = cart.lots.filter((l) => l.status === "disponivel").length;
 
   return (
     <div className="space-y-8">
       <ModuleHeader
         title="Painel unificado"
-        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fase 1 (acesso, pessoas, arquivos) ativa · demais módulos em demo até as fases seguintes.`}
+        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fases 1–4 ativas (acesso, estoque, carteira, boletos).`}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
-              <Link href="/cadastros/pessoas">Pessoas</Link>
+              <Link href="/empreendimentos">Lotes</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/tarefas?novo=1">Nova tarefa</Link>
+              <Link href="/contratos">Nova venda</Link>
             </Button>
           </>
         }
       />
+
+      <ModuleSection title="Carteira e estoque (Fases 2–4)">
+        <KpiGrid
+          items={[
+            {
+              label: "Empreendimentos",
+              value: cart.developments.length,
+            },
+            {
+              label: "Lotes disponíveis",
+              value: lotesDisp,
+              hint: `${cart.lots.length} no total`,
+            },
+            {
+              label: "Contratos ativos",
+              value: cart.contracts.filter((c) => c.status === "ativo").length,
+            },
+            {
+              label: "A receber",
+              value: formatBRL(abertoCarteira),
+              hint: `caixa ${formatBRL(cart.caixaSaldo)}`,
+            },
+          ]}
+        />
+      </ModuleSection>
 
       <ModuleSection title="Fase 1 — Acesso e cadastros">
         <KpiGrid
@@ -107,29 +140,22 @@ export default function DashboardPage() {
         </div>
       </ModuleSection>
 
-      <ModuleSection title="Carteira (demo)">
-        <KpiGrid
-          items={[
-            {
-              label: "Empreendimentos",
-              value: state.empreendimentos.length,
-            },
-            {
-              label: "Lotes (amostra)",
-              value: state.lotes.length,
-              hint: `${state.lotes.filter((l) => l.status === "Disponível").length} disponíveis`,
-            },
-            {
-              label: "Contratos",
-              value: state.contratos.length,
-              hint: `${state.contratos.filter((c) => c.status === "Ativo").length} ativos`,
-            },
-            {
-              label: "A receber (amostra)",
-              value: brl(abertoCarteira),
-              hint: `${state.parcelas.filter((p) => p.status === "Vencida").length} vencidas`,
-            },
+      <ModuleSection title="Saldo por contrato">
+        <DataTable
+          columns={[
+            { key: "numero", label: "Contrato" },
+            { key: "cliente", label: "Cliente" },
+            { key: "lote", label: "Lote" },
+            { key: "saldo", label: "Saldo" },
           ]}
+          rows={cart.contracts
+            .filter((c) => c.status === "ativo")
+            .map((c) => ({
+              numero: c.numero,
+              cliente: c.compradorNome,
+              lote: `${c.quadra}/${c.lote}`,
+              saldo: formatBRL(saldoDevedor(c.id)),
+            }))}
         />
       </ModuleSection>
 
@@ -147,22 +173,22 @@ export default function DashboardPage() {
               { key: "valor", label: "Valor" },
               { key: "status", label: "Status" },
             ]}
-            rows={state.parcelas.slice(0, 6).map((p) => ({
-              comprador: p.comprador,
-              n: p.n,
+            rows={cart.installments.slice(0, 6).map((p) => ({
+              comprador: p.compradorNome,
+              n: `${p.tipo} ${p.n}`,
               vencimento: p.vencimento,
-              valor: brl(p.valor + p.encargos),
+              valor: formatBRL(p.valor + p.juros + p.multa),
               status: (
                 <StatusPill
                   tone={
-                    p.status === "Paga"
+                    p.status === "paga"
                       ? "ok"
-                      : p.status === "Vencida"
+                      : p.status === "vencida"
                         ? "danger"
                         : "warn"
                   }
                 >
-                  {p.status}
+                  {p.status.replace("_", " ")}
                 </StatusPill>
               ),
             }))}

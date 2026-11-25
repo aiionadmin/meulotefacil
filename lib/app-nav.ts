@@ -28,7 +28,7 @@ export const APP_NAV: AppNavGroup[] = [
     id: "quadros",
     label: "2. Quadros",
     items: [
-      { href: "/quadros/jornada", label: "Jornada do cliente", stub: true },
+      { href: "/quadros/jornada", label: "Jornada do cliente", description: "Cards por etapa (Fase 3; dnd na 8)" },
       { href: "/quadros/cobranca", label: "Cobrança", stub: true },
       { href: "/quadros/regularizacao", label: "Regularização e escritura", stub: true },
       { href: "/quadros/compras", label: "Compras", stub: true },
@@ -40,29 +40,32 @@ export const APP_NAV: AppNavGroup[] = [
     id: "comercial",
     label: "3. Comercial",
     items: [
-      { href: "/vendas", label: "Efetuar venda / contratos", description: "Demo provisório até Fase 8" },
+      { href: "/contratos", label: "Efetuar venda / contratos", description: "Venda gera contrato e parcelas (Fase 3)" },
     ],
   },
   {
     id: "empreendimentos",
     label: "4. Empreendimentos",
     items: [
-      { href: "/empreendimentos", label: "Empreendimentos e lotes", description: "Demo provisório até Fase 2" },
+      { href: "/empreendimentos", label: "Empreendimentos e lotes", description: "Estoque, status, geração em massa" },
+      { href: "/empreendimentos/planta", label: "Planta do loteamento", description: "Lotes clicáveis por status" },
     ],
   },
   {
     id: "contratos",
     label: "5. Contratos",
     items: [
-      { href: "/carteira", label: "Carteira / ficha", description: "Demo provisório até Fase 3" },
-      { href: "/reajustes", label: "Reajuste e operações", description: "Demo provisório até Fase 4" },
+      { href: "/contratos", label: "Contratos", description: "Lista, saldo e operações" },
+      { href: "/carteira", label: "Ficha financeira", description: "Parcelas e encargos" },
+      { href: "/reajustes", label: "Reajuste e operações", description: "Índice anual e operações" },
     ],
   },
   {
     id: "recebimentos",
     label: "6. Recebimentos",
     items: [
-      { href: "/boletos", label: "Boletos e remessa", description: "Demo provisório até Fase 4" },
+      { href: "/carteira", label: "Caixa (receber)", description: "Baixa e estorno de parcelas" },
+      { href: "/boletos", label: "Boletos, remessa e retorno", description: "Emissão CNAB demo" },
     ],
   },
   {
@@ -150,8 +153,9 @@ export const APP_FLAT_NAV = APP_NAV.flatMap((g) =>
 
 export const NOVO_ATALHOS = [
   { href: "/cadastros/pessoas?novo=1", label: "Pessoa" },
+  { href: "/contratos", label: "Venda / contrato" },
   { href: "/tarefas?novo=1", label: "Tarefa" },
-  { href: "/vendas", label: "Venda", stub: true },
-  { href: "/boletos", label: "Boleto", stub: true },
+  { href: "/boletos", label: "Boleto" },
+  { href: "/empreendimentos", label: "Empreendimento" },
   { href: "/compras", label: "Solicitação de compra", stub: true },
 ] as const;
