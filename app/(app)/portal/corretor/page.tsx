@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,16 +18,25 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { PortalLoginGate } from "@/components/app/PortalLoginGate";
-import { formatBRL } from "@/lib/masks/br";
+import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 
 export default function PortalCorretorPage() {
-  const { state: p5, addDemanda, demandasDoCorretor, setPortalCorretor } =
-    useParte5();
+  const {
+    state: p5,
+    addDemanda,
+    demandasDoCorretor,
+    setPortalCorretor,
+    comissoesDoCorretor,
+    totaisComissao,
+    reservarLote,
+    expirarReservasVencidas,
+    minhasReservas,
+  } = useParte5();
   const { state: fluxo } = useFluxo();
-  const { state: cart } = useCarteira();
+  const { state: cart, updateLot } = useCarteira();
   const sess = p5.portalCorretor;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -36,6 +45,21 @@ export default function PortalCorretorPage() {
     quadra: "",
     lote: "",
   });
+
+  useEffect(() => {
+    const { expiradas, lotesLiberados } = expirarReservasVencidas();
+    if (expiradas > 0) {
+      for (const lotId of lotesLiberados) {
+        updateLot(lotId, {
+          status: "disponivel",
+          bloqueiaVenda: false,
+          compradorNome: undefined,
+        });
+      }
+      notify(`${expiradas} reserva(s) expirada(s) — lotes liberados`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- uma vez ao montar
+  }, []);
 
   // Isolamento demo: leads cujo responsável/corretor casa com a sessão
   const leadsIsolados = useMemo(() => {
@@ -51,6 +75,9 @@ export default function PortalCorretorPage() {
 
   const minhasDemandas = demandasDoCorretor();
   const disponiveis = cart.lots.filter((l) => l.status === "disponivel");
+  const comissoes = comissoesDoCorretor();
+  const totais = totaisComissao();
+  const reservas = minhasReservas();
 
   const propostas = fluxo.proposals.filter((p) =>
     leadsIsolados.some((l) => l.id === p.leadId)
@@ -93,7 +120,7 @@ export default function PortalCorretorPage() {
           { label: "Meus leads", value: leadsIsolados.length },
           { label: "Propostas", value: propostas.length },
           { label: "Lotes disponíveis", value: disponiveis.length },
-          { label: "Minhas demandas", value: minhasDemandas.length },
+          { label: "Comissão liberada", value: formatBRL(totais.liberado) },
         ]}
       />
 
@@ -103,13 +130,69 @@ export default function PortalCorretorPage() {
             { key: "emp", label: "Empreendimento" },
             { key: "ql", label: "Quadra/Lote" },
             { key: "valor", label: "Preço" },
-            { key: "st", label: "Status" },
+            { key: "acao", label: "Ação" },
           ]}
           rows={disponiveis.slice(0, 20).map((l) => ({
             emp: l.empNome,
             ql: `${l.quadra}-${l.lote}`,
             valor: formatBRL(l.valor),
-            st: l.status,
+            acao: (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const res = reservarLote({
+                    lotId: l.id,
+                    empNome: l.empNome,
+                    quadra: l.quadra,
+                    lote: l.lote,
+                    lotStatus: l.status,
+                    prazoDias: 3,
+                  });
+                  if (!res.ok) {
+                    notify(res.motivo);
+                    return;
+                  }
+                  updateLot(l.id, {
+                    status: "reservado",
+                    bloqueiaVenda: true,
+                    compradorNome: `Reserva ${sess.nome}`,
+                  });
+                  notify(
+                    `Reservado até ${formatDateBR(res.reserva.expiraEm)}`
+                  );
+                }}
+              >
+                Reservar 3 dias
+              </Button>
+            ),
+          }))}
+        />
+      </ModuleSection>
+
+      <ModuleSection title="Minhas reservas">
+        <PaginatedTable
+          columns={[
+            { key: "ql", label: "Quadra/Lote" },
+            { key: "expira", label: "Expira" },
+            { key: "st", label: "Status" },
+          ]}
+          rows={reservas.map((r) => ({
+            ql: `${r.empNome} · ${r.quadra}-${r.lote}`,
+            expira: formatDateBR(r.expiraEm),
+            st: (
+              <StatusPill
+                tone={
+                  r.status === "ativa"
+                    ? "info"
+                    : r.status === "expirada"
+                      ? "danger"
+                      : "neutral"
+                }
+              >
+                {r.status}
+              </StatusPill>
+            ),
           }))}
         />
       </ModuleSection>
@@ -133,23 +216,40 @@ export default function PortalCorretorPage() {
         </p>
       </ModuleSection>
 
-      <ModuleSection title="Comissões (demo)">
+      <ModuleSection title="Comissões">
         <PaginatedTable
           columns={[
             { key: "venda", label: "Venda" },
             { key: "prev", label: "Prevista" },
             { key: "lib", label: "Liberada" },
             { key: "paga", label: "Paga" },
+            { key: "st", label: "Status" },
           ]}
-          rows={[
-            {
-              venda: "CTR-1001 · Horizonte",
-              prev: formatBRL(3200),
-              lib: formatBRL(1600),
-              paga: formatBRL(0),
-            },
-          ]}
+          rows={comissoes.map((c) => ({
+            venda: `${c.vendaRef} · ${c.empreendimentoNome}`,
+            prev: formatBRL(c.valorPrevisto),
+            lib: formatBRL(c.valorLiberado),
+            paga: formatBRL(c.valorPago),
+            st: (
+              <StatusPill
+                tone={
+                  c.status === "paga"
+                    ? "ok"
+                    : c.status === "liberada"
+                      ? "info"
+                      : "neutral"
+                }
+              >
+                {c.status}
+              </StatusPill>
+            ),
+          }))}
         />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Isolamento: só comissões de {sess.nome}. Totais — prevista{" "}
+          {formatBRL(totais.previsto)} · liberada {formatBRL(totais.liberado)} ·
+          paga {formatBRL(totais.pago)}.
+        </p>
       </ModuleSection>
 
       <ModuleSection title="Materiais de venda">

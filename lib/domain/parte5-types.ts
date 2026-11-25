@@ -1,5 +1,15 @@
 /** Parte 5 — dashboards, portais, demandas. */
 
+import type {
+  ComissaoCorretor,
+  ReservaLote,
+} from "./corretor-comissao-reserva";
+
+export type {
+  ComissaoCorretor,
+  ReservaLote,
+} from "./corretor-comissao-reserva";
+
 export type DemandaStatus =
   | "aberta"
   | "em_analise"
@@ -70,4 +80,6 @@ export type Parte5State = {
   portalCorretor: PortalCorretorSession;
   portalCliente: PortalClienteSession;
   materiaisVenda: MaterialVenda[];
+  comissoes: ComissaoCorretor[];
+  reservas: ReservaLote[];
 };
