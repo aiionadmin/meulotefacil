@@ -9,8 +9,8 @@ export function RegularizacaoFAQ() {
 
   return (
     <Faq05
-      className="border-b border-linha bg-paper-muted"
-      eyebrow="05 FAQ"
+      className="relative overflow-hidden border-b border-ink/10 bg-paper-muted"
+      eyebrow="06 FAQ"
       title="Dúvidas frequentes"
       description={
         <>

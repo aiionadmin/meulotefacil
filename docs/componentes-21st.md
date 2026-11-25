@@ -31,5 +31,7 @@ Se o registry falhar (auth), usar shadcn/ui base + composição própria no mesm
 | Hero shell | `https://21st.dev/r/aceternity/hero-section` | Pendente (Home) |
 | Number ticker | `https://21st.dev/r/magicui/number-ticker` | Pendente |
 | Timeline | `https://21st.dev/r/uiable/feature-24-milestone-timeline` | Integrado em `/quem-somos` (`milestone-timeline.tsx` + `LinhaDoTempo.tsx`) |
+| Feature spotlight | `https://21st.dev/r/mohammadshehadeh/feature-08` | Integrado em `/regularizacao` método (`feature-spotlight-grid.tsx`) |
+| Regularização page | Feature cards + showcase + mapa 21st | `/regularizacao` — intro, método, portfólio, grid, mapa, FAQ, CTA |
 | Features | `https://21st.dev/r/aceternity/feature-sections` | Pendente |
 | Cards notícias | `https://21st.dev/r/aceternity/card-hover-effect` | Pendente |

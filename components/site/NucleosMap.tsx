@@ -199,22 +199,33 @@ export function NucleosMap({ className }: { className?: string }) {
 
 export function NucleosMapSection() {
   return (
-    <section className="border-b border-linha bg-paper py-20 lg:py-28">
-      <div className="site-container">
-        <SectionHeading
-          number="06"
-          eyebrow="Mapa"
-          title="Onde estamos regularizando"
-          subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades. Passe o mouse no mapa para ver os marcadores."
-        />
-        <div className="relative mx-auto mt-12 h-[400px] w-full max-w-[600px] overflow-hidden border border-linha bg-paper">
+    <section className="relative overflow-hidden border-b border-ink/10 bg-paper py-20 lg:py-28">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(237,134,0,0.08),transparent_45%),radial-gradient(ellipse_at_10%_80%,rgba(62,90,75,0.08),transparent_40%)]"
+      />
+      <div className="site-container relative">
+        <div className="mx-auto max-w-2xl text-center">
+          <SectionHeading
+            number="05"
+            eyebrow="Mapa"
+            title="Onde estamos regularizando"
+            subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades. Passe o mouse no mapa para ver os marcadores."
+            align="center"
+          />
+        </div>
+        <div className="relative mx-auto mt-12 h-[400px] w-full max-w-[600px] overflow-hidden rounded-sm border border-ink/12 bg-paper shadow-[0_0_0_1px_rgba(17,22,20,0.03)]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-transparent via-transparent to-paper/40"
+          />
           <MapVisual />
         </div>
-        <ul className="mx-auto mt-8 flex max-w-[600px] flex-wrap justify-center gap-5 text-sm text-ink">
+        <ul className="mx-auto mt-8 flex max-w-[600px] flex-wrap justify-center gap-5 text-sm text-ink/80">
           {(Object.keys(statusNucleoLabel) as StatusNucleo[]).map((s) => (
             <li key={s} className="inline-flex items-center gap-2">
               <span
-                className="h-2.5 w-2.5 rounded-full"
+                className="size-2.5 rounded-full"
                 style={{ background: statusColor[s] }}
                 aria-hidden
               />

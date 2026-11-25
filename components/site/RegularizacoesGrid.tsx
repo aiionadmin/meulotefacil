@@ -69,7 +69,7 @@ export function RegularizacoesGrid({
   return (
     <section
       ref={rootRef}
-      className="relative overflow-hidden border-b border-linha bg-paper-muted text-ink"
+      className="relative overflow-hidden border-b border-ink/10 bg-paper-muted text-ink"
     >
       <div
         aria-hidden
@@ -100,7 +100,7 @@ export function RegularizacoesGrid({
               key={n.id}
               href={`/regularizacoes/${n.slug}`}
               data-cursor="Ver"
-              className="reg-card group relative flex flex-col overflow-hidden rounded-sm border border-linha bg-card transition-colors duration-300 hover:border-ink/25"
+              className="reg-card group relative flex flex-col overflow-hidden rounded-sm border border-ink/10 bg-card transition-colors duration-300 hover:border-ink/25"
             >
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
