@@ -1,172 +1,360 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
   StatusPill,
-  ModuleSection,
 } from "@/components/app/ModulePage";
+import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
-  DetailRow,
-  DetailSheet,
   Field,
   FilterBar,
   FormDialog,
+  fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
-import { useOperacoes } from "@/lib/store/operacoes-store";
-import type { WorkSite } from "@/lib/domain/operacoes-types";
+import { useObras } from "@/lib/store/obras-store";
+import type { ObraStatus } from "@/lib/domain/obras-types";
+import { useCarteira } from "@/lib/store/carteira-store";
+
+const STATUS_LABEL: Record<ObraStatus, string> = {
+  em_orcamento: "Em orçamento",
+  em_andamento: "Em andamento",
+  paralisada: "Paralisada",
+  finalizada: "Finalizada",
+};
 
 export default function ObrasPage() {
-  const { state, updateWorkProgress } = useOperacoes();
+  const { state, addObra, duplicateObra, softRemoveObra } = useObras();
+  const { state: carteira } = useCarteira();
   const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<WorkSite | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
-  const [fisico, setFisico] = useState(0);
-  const [realizado, setRealizado] = useState(0);
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    codigo: "",
+    nome: "",
+    tipo: "infraestrutura",
+    status: "em_orcamento" as ObraStatus,
+    clienteNome: "",
+    developmentId: "",
+    responsavelObra: "Eng. Paula",
+    responsavelTecnico: "",
+    art: "",
+    ceiCno: "",
+    areaTotal: 0,
+    bdiPct: 0.25,
+    visivelPara: "Administrador",
+    cidade: "Campinas",
+    uf: "SP",
+    exibirLancamentos: true,
+    exibirFaturamentos: true,
+    exibirCompras: true,
+  });
 
   const filtered = useMemo(() => {
+    let list = state.obras;
+    if (statusFilter !== "todos") {
+      list = list.filter((o) => o.status === statusFilter);
+    }
     const term = q.trim().toLowerCase();
-    if (!term) return state.works;
-    return state.works.filter((o) =>
-      [o.nome, o.status].join(" ").toLowerCase().includes(term)
-    );
-  }, [state.works, q]);
-
-  const orcado = state.works.reduce((a, o) => a + o.orcado, 0);
-  const real = state.works.reduce((a, o) => a + o.realizado, 0);
+    if (term) {
+      list = list.filter((o) =>
+        [o.codigo, o.nome, o.clienteNome, o.tipo, o.developmentNome]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(term)
+      );
+    }
+    return list;
+  }, [state.obras, q, statusFilter]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Obras e orçamento"
-        description="gestão de custos por empreendimento (centro de custo compartilhado)."
+        title="Minhas obras"
+        description="Obra independente dos lotes — vínculo com empreendimento é opcional."
+        actions={
+          <>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/obras/rdo">RDO</Link>
+            </Button>
+            <Button size="sm" onClick={() => setOpen(true)}>
+              Nova obra
+            </Button>
+          </>
+        }
       />
 
       <KpiGrid
         items={[
-          { label: "Obras", value: state.works.length },
-          { label: "Orçado", value: formatBRL(orcado) },
-          { label: "Realizado", value: formatBRL(real) },
+          { label: "Obras", value: state.obras.length },
           {
-            label: "Saldo",
-            value: formatBRL(orcado - real),
+            label: "Em andamento",
+            value: state.obras.filter((o) => o.status === "em_andamento")
+              .length,
+          },
+          {
+            label: "Orçado",
+            value: formatBRL(
+              state.obras.reduce((a, o) => a + o.orcado, 0)
+            ),
+          },
+          {
+            label: "Realizado",
+            value: formatBRL(
+              state.obras.reduce((a, o) => a + o.realizado, 0)
+            ),
           },
         ]}
       />
 
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar obra…" />
+      <FilterBar value={q} onChange={setQ} placeholder="Buscar código, obra, cliente…">
+        <select
+          className={fieldControlClass + " max-w-[180px]"}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="todos">Todos status</option>
+          {(Object.keys(STATUS_LABEL) as ObraStatus[]).map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </select>
+      </FilterBar>
 
-      <DataTable
+      <PaginatedTable
         columns={[
-          { key: "nome", label: "Obra" },
+          { key: "img", label: "" },
+          { key: "codigo", label: "Código" },
+          { key: "obra", label: "Obra" },
+          { key: "cliente", label: "Cliente" },
+          { key: "tipo", label: "Tipo" },
           { key: "status", label: "Status" },
+          { key: "visivel", label: "Visível para" },
           { key: "fisico", label: "Físico" },
-          { key: "orcado", label: "Orçado" },
-          { key: "realizado", label: "Realizado" },
-          { key: "saldo", label: "Saldo" },
+          { key: "acoes", label: "" },
         ]}
         rows={filtered.map((o) => ({
-          nome: (
-            <button
-              type="button"
+          img: (
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-sm bg-paper-muted text-[10px] text-muted-foreground">
+              img
+            </span>
+          ),
+          codigo: o.codigo,
+          obra: (
+            <Link
+              href={`/obras/${o.id}`}
               className="font-medium hover:text-brand-orange"
-              onClick={() => setSelected(o)}
             >
               {o.nome}
-            </button>
+            </Link>
           ),
-          status: <StatusPill tone="info">{o.status}</StatusPill>,
-          fisico: `${o.fisico}%`,
-          orcado: formatBRL(o.orcado),
-          realizado: formatBRL(o.realizado),
-          saldo: formatBRL(o.orcado - o.realizado),
+          cliente: o.clienteNome,
+          tipo: o.tipo,
+          status: (
+            <StatusPill tone="info">{STATUS_LABEL[o.status]}</StatusPill>
+          ),
+          visivel: (o.visivelPara ?? []).join(", ") || "—",
+          fisico: `${o.fisicoPct}%`,
+          acoes: (
+            <div className="flex gap-1">
+              <Button size="sm" variant="outline" asChild>
+                <Link href={`/obras/${o.id}`}>Editar</Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  duplicateObra(o.id);
+                  notify("Obra duplicada");
+                }}
+              >
+                Duplicar
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  softRemoveObra(o.id);
+                  notify("Obra removida da lista");
+                }}
+              >
+                Remover
+              </Button>
+            </div>
+          ),
         }))}
       />
 
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelected(null)}
-        title={selected?.nome ?? ""}
-        footer={
-          selected ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                setFisico(selected.fisico);
-                setRealizado(selected.realizado);
-                setEditOpen(true);
-              }}
-            >
-              Atualizar progresso
-            </Button>
-          ) : null
-        }
-      >
-        {selected ? (
-          <div className="space-y-4">
-            <DetailRow label="Orçamento" value={selected.budgetStatus} />
-            <DetailRow label="Físico" value={`${selected.fisico}%`} />
-            <DetailRow label="Orçado" value={formatBRL(selected.orcado)} />
-            <DetailRow label="Realizado" value={formatBRL(selected.realizado)} />
-            <ModuleSection title="Árvore do orçamento">
-              <DataTable
-                columns={[
-                  { key: "codigo", label: "Cód." },
-                  { key: "desc", label: "Item" },
-                  { key: "orcado", label: "Orçado" },
-                  { key: "real", label: "Real" },
-                  { key: "pct", label: "%" },
-                ]}
-                rows={selected.nodes.map((n) => ({
-                  codigo: n.codigo,
-                  desc: n.descricao,
-                  orcado: formatBRL(n.orcado),
-                  real: formatBRL(n.realizado),
-                  pct:
-                    n.orcado > 0
-                      ? `${Math.round((n.realizado / n.orcado) * 100)}%`
-                      : "—",
-                }))}
-              />
-            </ModuleSection>
-          </div>
-        ) : null}
-      </DetailSheet>
-
       <FormDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        title="Atualizar evolução"
+        open={open}
+        onOpenChange={setOpen}
+        title="Nova obra"
         onSubmit={() => {
-          if (!selected) return;
-          updateWorkProgress(selected.id, {
-            fisico: Math.min(100, Math.max(0, fisico)),
-            realizado,
+          if (!form.nome.trim() || !form.codigo.trim()) {
+            notify("Código e nome obrigatórios");
+            return;
+          }
+          const emp = carteira.developments.find(
+            (d) => d.id === form.developmentId
+          );
+          addObra({
+            codigo: form.codigo,
+            nome: form.nome.slice(0, 200),
+            tipo: form.tipo,
+            status: form.status,
+            clienteNome: form.clienteNome || "Cliente",
+            developmentId: emp?.id,
+            developmentNome: emp?.nome,
+            areaTotal: form.areaTotal || undefined,
+            unidade: "m²",
+            art: form.art || undefined,
+            ceiCno: form.ceiCno.slice(0, 20) || undefined,
+            responsavelObra: form.responsavelObra,
+            responsavelTecnico: form.responsavelTecnico || undefined,
+            visivelPara: form.visivelPara
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+            bdiPct: form.bdiPct,
+            cidade: form.cidade,
+            uf: form.uf,
+            endereco: { cidade: form.cidade, estado: form.uf },
+            exibirLancamentos: form.exibirLancamentos,
+            exibirFaturamentos: form.exibirFaturamentos,
+            exibirCompras: form.exibirCompras,
+            propostaStatus: "contato_inicial",
           });
-          notify("Progresso atualizado");
-          setEditOpen(false);
-          setSelected(null);
+          notify("Obra criada");
+          setOpen(false);
         }}
       >
-        <Field label="Evolução física (%)">
+        <Field label="Código *">
           <Input
-            type="number"
-            value={fisico}
-            onChange={(e) => setFisico(Number(e.target.value) || 0)}
+            value={form.codigo}
+            onChange={(e) => setForm({ ...form, codigo: e.target.value })}
           />
         </Field>
-        <Field label="Realizado (R$)">
+        <Field label="Nome *">
           <Input
-            type="number"
-            value={realizado}
-            onChange={(e) => setRealizado(Number(e.target.value) || 0)}
+            value={form.nome}
+            maxLength={200}
+            onChange={(e) => setForm({ ...form, nome: e.target.value })}
           />
+        </Field>
+        <Field label="Tipo">
+          <Input
+            value={form.tipo}
+            onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+          />
+        </Field>
+        <Field label="Status *">
+          <select
+            className={fieldControlClass}
+            value={form.status}
+            onChange={(e) =>
+              setForm({ ...form, status: e.target.value as ObraStatus })
+            }
+          >
+            {(Object.keys(STATUS_LABEL) as ObraStatus[]).map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Visível para *">
+          <Input
+            value={form.visivelPara}
+            onChange={(e) =>
+              setForm({ ...form, visivelPara: e.target.value })
+            }
+            placeholder="Admin, Comercial…"
+          />
+        </Field>
+        <Field label="Cliente">
+          <Input
+            value={form.clienteNome}
+            onChange={(e) =>
+              setForm({ ...form, clienteNome: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Responsável técnico">
+          <Input
+            value={form.responsavelTecnico}
+            onChange={(e) =>
+              setForm({ ...form, responsavelTecnico: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Responsável da obra">
+          <Input
+            value={form.responsavelObra}
+            onChange={(e) =>
+              setForm({ ...form, responsavelObra: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="ART / CEI-CNO">
+          <div className="flex gap-2">
+            <Input
+              placeholder="ART"
+              value={form.art}
+              onChange={(e) => setForm({ ...form, art: e.target.value })}
+            />
+            <Input
+              placeholder="CEI/CNO"
+              maxLength={20}
+              value={form.ceiCno}
+              onChange={(e) => setForm({ ...form, ceiCno: e.target.value })}
+            />
+          </div>
+        </Field>
+        <Field label="Empreendimento (opcional)">
+          <select
+            className={fieldControlClass}
+            value={form.developmentId}
+            onChange={(e) =>
+              setForm({ ...form, developmentId: e.target.value })
+            }
+          >
+            <option value="">Sem vínculo</option>
+            {carteira.developments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nome}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Exibir obra para">
+          <div className="flex flex-wrap gap-3 text-sm">
+            {(
+              [
+                ["exibirLancamentos", "Lançamentos"],
+                ["exibirFaturamentos", "Faturamentos"],
+                ["exibirCompras", "Compras"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="inline-flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={form[key]}
+                  onChange={(e) =>
+                    setForm({ ...form, [key]: e.target.checked })
+                  }
+                />
+                {label}
+              </label>
+            ))}
+          </div>
         </Field>
       </FormDialog>
     </div>
