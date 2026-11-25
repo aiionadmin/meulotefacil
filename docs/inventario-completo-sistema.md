@@ -70,25 +70,28 @@ Blocos 21st adaptados: `faq-05.tsx`, `editorial-testimonial.tsx`, `ridgeline-dit
 
 ## 4. Site institucional (`app/(site)/`)
 
-Layout: `Header` fixo + `Footer` (Ridgeline) + `SiteBackLink` em páginas internas.
+Layout (`app/(site)/layout.tsx`): Lenis, Preloader, PageTransition, `Header` fixo, `SiteBackLink`, `Footer` (Ridgeline).
 
 ### Rotas
 
 | Rota | Página | Conteúdo |
 | --- | --- | --- |
-| `/` | Home | ScrollHero + seções (ver §4.1) |
-| `/quem-somos` | Institucional | Quem somos |
-| `/sobre` | Alias / legado | Sobre |
-| `/regularizacao` | REURB completa | Intro, modalidades, processo, showcase CRF, grid de núcleos, mapa, FAQ, CTA |
-| `/regularizacoes` | Portfólio | Grid de todos os núcleos |
-| `/regularizacoes/[slug]` | Ficha do núcleo | Detalhe + PDF CRF quando existir |
-| `/servicos` | Serviços | Cards de atuação |
-| `/servicos/consultoria` | Consultoria municipal | Página de serviço |
-| `/servicos/planos-e-projetos` | Planos e projetos | Página de serviço |
-| `/noticias` | Notícias | Listagem editorial |
-| `/contato` | Contato | Unidades + WhatsApp |
+| `/` | Home | ScrollHero + seções (ver §4.1). **Não** monta mapa/simulador/marquee na home atual |
+| `/quem-somos` | Institucional | Quem somos + timeline |
+| `/sobre` | Legado | `redirect` → `/quem-somos` (também 301 em `next.config`) |
+| `/regularizacao` | REURB hub | Intro, modalidades, processo, showcase CRF, grid, mapa, FAQ, CTA |
+| `/regularizacoes` | Legado | **301** → `/regularizacao` (`next.config`; página ainda no repo) |
+| `/regularizacoes/[slug]` | Ficha do núcleo | Detalhe + PDF CRF se existir em `public/docs/crf/` |
+| `/consulta` | Legado | Redirect → `/regularizacao` (temporário em `next.config`) |
+| `/servicos` | Serviços | `ServicosCards` |
+| `/servicos/consultoria` | Consultoria municipal | Artigo + WhatsApp |
+| `/servicos/planos-e-projetos` | Planos e projetos | Artigo + WhatsApp |
+| `/noticias` | Notícias | Stub “em breve” |
+| `/contato` | Contato | Unidades + formulário RHF/Zod (envio mock) + WhatsApp |
 
 Navegação pública (`lib/site-nav.ts`): Home, Quem somos, Regularização, Serviços, Notícias, Contato. CTA: **Falar com a equipe** (WhatsApp). Links `/auth` **não** aparecem no menu público.
+
+SEO: `app/sitemap.ts` (rotas estáticas + slugs de núcleos), `app/robots.ts` (permite `/`; bloqueia caminhos de app/auth).
 
 ### 4.1 Home — seções e ritmo de cor
 
@@ -113,18 +116,19 @@ Header, Footer, SiteBackLink, SectionHeading, ServicosCards, HowItWorks, Regular
 
 - `ScrollHero.tsx` — scrub por scroll (não autoplay)
 - `heroSteps.ts` — etapas / CTAs
-- Frames: `public/hero-frames/` (~240 desktop; mobile em subpasta)
-- Extração: `scripts/extract-frames.sh`
+- Frames: `public/hero-frames/` — **240** desktop + **144** mobile
+- Extração: `HERO_FRAMES=240 HERO_MOBILE_FRAMES=144 ./scripts/extract-frames.sh …`
 - Specs: `docs/prompt-video-hero.md`, `docs/video-hero-da-terra-ao-lar.md`
+- A11y: `prefers-reduced-motion` / `saveData` amostram frames
 
 ### 4.4 Portfólio de núcleos (`lib/data/nucleos.ts`)
 
-| Status | Qtde (aprox.) |
+| Status | Qtde |
 | --- | --- |
 | `concluido` | 8 |
 | `em_registro` | 2 |
 | `em_andamento` | 17 |
-| **Total** | **~27** |
+| **Total** | **27** |
 
 Cidades de atuação (institucional): Campinas, Hortolândia, Valinhos, Amparo.
 
@@ -262,16 +266,21 @@ Atalhos “Novo”: Lead, Proposta, Pessoa, Venda, Tarefa, Boleto, SC, Lançamen
 
 ### 6.2 Maturidade (estado atual)
 
-A maior parte das telas do sistema são **shells com KPIs/tabelas mock** (leitura + CTAs ainda sem CRUD completo no servidor). Há demos mais interativas em:
+Providers no `AppShell`: Fase1, Carteira, Operacoes, Fluxo, DemoStore (muitos usam **seed + `localStorage`** quando Supabase não está configurado).
 
-- Stores React (`lib/store/*`) com seed + algumas mutações em memória / `localStorage` conforme módulo
-- Kanban com dnd-kit
-- `/documentos` (upload em estado local)
-- `/protocolo` (busca em mocks)
-- `/nucleos` (mapa + sheet)
-- Cálculo de atraso: API `GET/POST` carteira
+Demos mais interativas já ligadas a store:
 
-Nível alvo (spec): CRUD + RLS Supabase + regras financeiras **no servidor**. Isso ainda está em fases (ver §9).
+- Cadastros `/cadastros/*` → `fase1-store` (`PeopleModule`)
+- Leads / vendas / cobrança / jurídico / jornadas → `fluxo-store`
+- Empreendimentos, contratos, carteira, boletos, reajustes → `carteira-store`
+- Obras / compras / financeiro / importação → `operacoes-store`
+- Quadros Kanban → `BoardViews` + stores acima (dnd-kit)
+- `/documentos`, `/protocolo`, `/nucleos` (mapa + sheet)
+- Cálculo de atraso: `/api/carteira/atraso` (+ teste `lib/money/atraso.test.ts`)
+
+Redirects de atalho: `/pessoas` → `/cadastros/pessoas`, `/usuarios` → `/configuracoes/usuarios`.
+
+Nível alvo (spec): CRUD + RLS Supabase + regras financeiras **no servidor**. Produção ainda em fases (ver §9).
 
 ### 6.3 Shell de módulo (`components/app/`)
 
@@ -355,15 +364,23 @@ Dados legados a migrar (relatório): ~41 empreendimentos, ~13k lotes, ~3,5k comp
 | Seed | `supabase/seed/` |
 | Clients | `lib/supabase/*` |
 
-Sem URL/anon key em `.env.local` → modo demo. Anexos previstos: Storage até 10 MB (spec).
+Migrations presentes:
+
+1. `202611250001_fase1_acesso_pessoas.sql`
+2. `202611250002_fase2_4_estoque_carteira.sql`
+3. `202611250003_fase5_7_import_financeiro_obras.sql`
+4. `202611250004_fase8_10_fluxo.sql`
+
+Sem `NEXT_PUBLIC_SUPABASE_URL` / anon key em `.env.local` → modo demo. Anexos previstos: Storage até 10 MB (spec).
 
 ---
 
 ## 11. Testes e qualidade
 
-- `tests/rules/` — regras (ex.: financeiras)
-- ESLint (`eslint.config.mjs`)
-- TypeScript strict via `tsconfig.json`
+- `lib/money/atraso.test.ts` — encargos de referência
+- `tests/rules/` — regras adicionais
+- ESLint (`eslint.config.mjs`); sem script `test` no `package.json` ainda
+- TypeScript via `tsconfig.json`
 
 ---
 
@@ -423,4 +440,4 @@ tests/rules/
 
 ---
 
-*Inventário alinhado ao código do branch de trabalho do agente (stack do site + sistema). Para o detalhe tela a tela da especificação, ver `docs/especificacao.md` e `docs/relatorio-sistema-unificado.md`.*
+*Inventário alinhado ao tip do stack do site + sistema. Detalhe tela a tela da especificação: `docs/especificacao.md` e `docs/relatorio-sistema-unificado.md`. Inventário técnico complementar (explore): store `internal/codebase-full-inventory.md`.*
