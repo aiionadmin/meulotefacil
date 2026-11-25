@@ -22,6 +22,7 @@ import type {
   Parte5State,
 } from "@/lib/domain/parte5-types";
 
+
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -55,6 +56,8 @@ type Parte5Api = {
   demandasDoCliente: (clienteId?: string) => Demanda[];
   setPortalCorretor: (corretorId: string, nome: string) => void;
   setPortalCliente: (clienteId: string, nome: string, cpf: string) => void;
+  vincularSc: (demandaId: string, purchaseRequestId: string) => boolean;
+  vincularFaturamento: (demandaId: string, faturamentoId: string) => boolean;
 };
 
 const Ctx = createContext<Parte5Api | null>(null);
@@ -78,6 +81,9 @@ export function Parte5StoreProvider({ children }: { children: ReactNode }) {
           demandas: parsed.demandas?.length ? parsed.demandas : seed.demandas,
           portalCorretor: parsed.portalCorretor ?? seed.portalCorretor,
           portalCliente: parsed.portalCliente ?? seed.portalCliente,
+          materiaisVenda: parsed.materiaisVenda?.length
+            ? parsed.materiaisVenda
+            : seed.materiaisVenda,
         });
       }
     } catch {
@@ -172,6 +178,28 @@ export function Parte5StoreProvider({ children }: { children: ReactNode }) {
           ...s,
           portalCliente: { clienteId, nome, cpf },
         }));
+      },
+      vincularSc: (demandaId, purchaseRequestId) => {
+        if (!state.demandas.some((d) => d.id === demandaId)) return false;
+        setState((s) => ({
+          ...s,
+          demandas: s.demandas.map((d) =>
+            d.id === demandaId
+              ? { ...d, purchaseRequestId, status: "em_execucao" as DemandaStatus }
+              : d
+          ),
+        }));
+        return true;
+      },
+      vincularFaturamento: (demandaId, faturamentoId) => {
+        if (!state.demandas.some((d) => d.id === demandaId)) return false;
+        setState((s) => ({
+          ...s,
+          demandas: s.demandas.map((d) =>
+            d.id === demandaId ? { ...d, faturamentoId } : d
+          ),
+        }));
+        return true;
       },
     }),
     [state, ready]

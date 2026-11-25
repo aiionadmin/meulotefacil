@@ -56,9 +56,18 @@ export type PortalClienteSession = {
   cpf: string;
 };
 
+export type MaterialVenda = {
+  id: string;
+  titulo: string;
+  tipo: "tabela" | "folheto" | "planta";
+  empreendimentoNome: string;
+  url: string;
+};
+
 export type Parte5State = {
   demandaTipos: DemandaTipo[];
   demandas: Demanda[];
   portalCorretor: PortalCorretorSession;
   portalCliente: PortalClienteSession;
+  materiaisVenda: MaterialVenda[];
 };
