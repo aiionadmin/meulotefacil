@@ -24,7 +24,7 @@ import { leadProntoParaProposta } from "@/lib/domain/lead-score";
 
 export default function VendasPage() {
   const { state, addProposal, converterProposal } = useFluxo();
-  const { state: carteira } = useCarteira();
+  const { state: carteira, addContract } = useCarteira();
   const [q, setQ] = useState("");
   const [empFilter, setEmpFilter] = useState("todos");
   const [open, setOpen] = useState(false);
@@ -159,8 +159,59 @@ export default function VendasPage() {
               <Button
                 size="sm"
                 onClick={() => {
+                  if (p.servicoRegularizacao) {
+                    converterProposal(p.id);
+                    notify("Convertida · jornada → Contrato (regularização)");
+                    return;
+                  }
+                  const valorParcela =
+                    p.parcelas > 0
+                      ? Math.round(
+                          ((p.valor - p.entrada) / p.parcelas) * 100
+                        ) / 100
+                      : 0;
+                  const lot =
+                    (p.lotId &&
+                      carteira.lots.find((l) => l.id === p.lotId)) ||
+                    carteira.lots.find(
+                      (l) =>
+                        l.empNome === p.empNome &&
+                        `${l.quadra}/${l.lote}` === p.loteLabel
+                    );
+                  const emp =
+                    (p.developmentId &&
+                      carteira.developments.find(
+                        (d) => d.id === p.developmentId
+                      )) ||
+                    carteira.developments.find((d) => d.nome === p.empNome);
+                  if (!lot || !emp) {
+                    notify(
+                      "Sem lote no estoque",
+                      "Vincule um lote disponível à proposta"
+                    );
+                    return;
+                  }
+                  const ct = addContract({
+                    developmentId: emp.id,
+                    lotId: lot.id,
+                    compradorNome: p.cliente,
+                    preco: p.valor,
+                    entrada: p.entrada,
+                    qtdParcelas: p.parcelas,
+                    valorParcela,
+                  });
+                  if (!ct) {
+                    notify(
+                      "Contrato não criado",
+                      "Lote indisponível ou bloqueado"
+                    );
+                    return;
+                  }
                   converterProposal(p.id);
-                  notify("Convertida · card → Contrato");
+                  notify(
+                    "Contrato criado",
+                    `${ct.numero} · herdou proposta`
+                  );
                 }}
               >
                 Converter

@@ -10,7 +10,7 @@ Prompt: `docs/prompt-cursor-meu-lote-facil.md` §2.
 - **Planta PDF**: upload por empreendimento + lista de versões (marcação de polígonos pendente).
 - **Kanban só avança** (Jornada e Regularização); atraso vira **selo**, não muda coluna.
 - **Leads** com qualificação + score/temperatura; mínimos para proposta.
-- **Proposta** exige empreendimento + lote ou serviço de regularização.
+- **Proposta** exige empreendimento + lote ou serviço de regularização; **Converter** cria contrato na carteira herdando valores (lote disponível/reservado).
 - **Listas** com paginação (10/25/50/100) em leads, propostas, lotes e ficha financeira.
 - **Ficha financeira**: sem refresh de todas as parcelas no mount; encargos só da página; teste de 240 parcelas.
 

@@ -683,7 +683,15 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
       }) => {
         const emp = state.developments.find((d) => d.id === developmentId);
         const lot = state.lots.find((l) => l.id === lotId);
-        if (!emp || !lot || lot.bloqueiaVenda || lot.status !== "disponivel") {
+        // Proposta → contrato: aceita disponível ou já reservado
+        if (
+          !emp ||
+          !lot ||
+          lot.status === "bloqueado" ||
+          lot.status === "vendido" ||
+          lot.status === "quitado" ||
+          lot.status === "escritura"
+        ) {
           return null;
         }
         const numero = String(
