@@ -84,7 +84,13 @@ export const HERO_MARKERS = HERO_STEPS.map((s) => ({
   at: (s.start + s.end) / 2,
 }));
 
+/** Resolução Full HD do vídeo/frames do hero (obrigatória). */
+export const HERO_FRAME_WIDTH = 1920;
+export const HERO_FRAME_HEIGHT = 1080;
+
 export const HERO_FRAME_CONFIG = {
+  width: HERO_FRAME_WIDTH,
+  height: HERO_FRAME_HEIGHT,
   desktop: {
     count: 240,
     path: (i: number) =>
