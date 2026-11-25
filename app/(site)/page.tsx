@@ -7,7 +7,6 @@ import { WhyUs } from "@/components/site/WhyUs";
 import { Testimonials } from "@/components/site/Testimonials";
 import { FAQ } from "@/components/site/FAQ";
 import { FinalCTA } from "@/components/site/FinalCTA";
-import { NucleosMapSection } from "@/components/site/NucleosMap";
 
 export default function HomePage() {
   return (
@@ -22,7 +21,6 @@ export default function HomePage() {
           subtitle="Concluídas, em registro e em andamento, veja o portfólio completo."
           sectionNumber="03"
         />
-        <NucleosMapSection />
         <ConsultaBairro />
         <WhyUs />
         <Testimonials />

@@ -99,7 +99,7 @@ export function ConsultaBairro({ embedded = false }: { embedded?: boolean }) {
     <section className="border-b border-linha bg-brand-cream py-20 lg:py-28">
       <div className="site-container">
         <SectionHeading
-          number="05"
+          number="04"
           eyebrow="Consulta"
           title="Meu bairro está sendo regularizado?"
           subtitle="Busque pelo nome do núcleo ou cidade e veja o status do processo."

@@ -24,7 +24,7 @@ export function Testimonials() {
     <section className="border-b border-linha bg-brand-cream py-20 lg:py-28">
       <div className="site-container">
         <SectionHeading
-          number="07"
+          number="06"
           eyebrow="Depoimentos"
           title="Histórias de quem já tem escritura"
           subtitle="Conteúdo placeholder, aguardando depoimentos e vídeos reais."

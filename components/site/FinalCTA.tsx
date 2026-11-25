@@ -17,7 +17,7 @@ export function FinalCTA() {
       <div className="site-container">
         <div className="grid gap-10 border border-brand-cream/15 p-8 sm:p-12 lg:grid-cols-[1.4fr_1fr] lg:items-end">
           <SectionHeading
-            number="09"
+            number="08"
             eyebrow="Contato"
             title="Seu imóvel está sem escritura?"
             subtitle="Fale com quem já regularizou milhares de lotes em Campinas e região."
