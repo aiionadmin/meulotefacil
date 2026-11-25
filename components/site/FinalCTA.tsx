@@ -11,7 +11,13 @@ import { prefersReducedMotion } from "@/lib/utils";
 /**
  * CTA final — painel escuro com atmosfera e hierarquia clara (padrão 21st).
  */
-export function FinalCTA() {
+export function FinalCTA({
+  secondaryHref = "/regularizacao",
+  secondaryLabel = "Ver regularizações",
+}: {
+  secondaryHref?: string;
+  secondaryLabel?: string;
+} = {}) {
   const rootRef = useRef<HTMLElement>(null);
   const wa = whatsappUrl();
 
@@ -96,10 +102,10 @@ export function FinalCTA() {
                 Falar no WhatsApp
               </a>
               <Link
-                href="/regularizacao"
+                href={secondaryHref}
                 className="inline-flex items-center justify-center gap-2 rounded-sm border border-paper/35 bg-transparent px-6 py-3.5 text-sm font-medium text-paper transition-colors hover:border-paper hover:bg-paper/10"
               >
-                Ver regularizações
+                {secondaryLabel}
               </Link>
             </div>
           </div>

@@ -10,7 +10,6 @@ import {
   type StatusNucleo,
 } from "@/lib/data/nucleos";
 import { Button } from "@/components/ui/button";
-import MapVisual from "@/components/ui/map";
 import { SectionHeading } from "@/components/site/SectionHeading";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { gsap, useGSAP } from "@/lib/gsap";
@@ -18,7 +17,7 @@ import { prefersReducedMotion, cn } from "@/lib/utils";
 
 const statusColor: Record<StatusNucleo, string> = {
   concluido: "#3E5A4B",
-  em_registro: "#A8502A",
+  em_registro: "#ED8600",
   em_andamento: "#6B756E",
 };
 
@@ -74,31 +73,31 @@ export function NucleosMap({ className }: { className?: string }) {
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>
-      <div className="mb-4 flex flex-wrap gap-4 text-sm text-brand-ink dark:text-brand-cream">
+      <div className="mb-4 flex flex-wrap gap-4 text-sm text-ink/80">
         {(Object.keys(statusNucleoLabel) as StatusNucleo[]).map((s) => (
           <span key={s} className="inline-flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full" style={{ background: statusColor[s] }} />
+            <span className="size-2.5 rounded-full" style={{ background: statusColor[s] }} />
             {statusNucleoLabel[s]}
           </span>
         ))}
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-brand-navy/10 bg-white p-4 dark:bg-brand-navy">
+      <div className="relative overflow-hidden rounded-sm border border-ink/10 bg-paper-muted/40 p-3 sm:p-4">
         <svg
           viewBox="0 0 480 320"
           className="h-auto w-full"
           role="img"
           aria-label="Mapa ilustrado de núcleos atendidos em Campinas e região"
         >
-          <rect width="480" height="320" fill="#FFF6EC" rx="12" />
+          <rect width="480" height="320" fill="#F3F1EC" rx="4" />
           <path
             d="M40 280 Q240 240 440 280"
             fill="none"
-            stroke="#F7821E"
+            stroke="#ED8600"
             strokeWidth="10"
-            opacity="0.2"
+            opacity="0.18"
           />
-          <text x="24" y="36" fill="#1E1856" fontSize="14" fontWeight="700">
+          <text x="24" y="36" fill="#111614" fontSize="14" fontWeight="700">
             Núcleos atendidos, Campinas e região
           </text>
           {Object.entries(cityPos).map(([city, pos]) => (
@@ -107,10 +106,10 @@ export function NucleosMap({ className }: { className?: string }) {
               x={pos.x}
               y={pos.y - 28}
               textAnchor="middle"
-              fill="#1E1856"
+              fill="#111614"
               fontSize="11"
               fontWeight="600"
-              opacity="0.55"
+              opacity="0.5"
             >
               {city}
             </text>
@@ -123,7 +122,7 @@ export function NucleosMap({ className }: { className?: string }) {
               cy={cy}
               r={hover?.id === n.id ? 9 : 7}
               fill={statusColor[n.status]}
-              stroke="#1E1856"
+              stroke="#111614"
               strokeWidth="1.5"
               tabIndex={0}
               role="button"
@@ -142,12 +141,12 @@ export function NucleosMap({ className }: { className?: string }) {
         </svg>
 
         {hover && (
-          <div className="pointer-events-none absolute bottom-6 left-6 right-6 rounded-lg bg-brand-navy px-3 py-2 text-xs text-brand-cream shadow-lg sm:left-auto sm:right-6 sm:w-64">
+          <div className="pointer-events-none absolute bottom-6 left-6 right-6 rounded-sm bg-ink px-3 py-2 text-xs text-paper shadow-lg sm:left-auto sm:right-6 sm:w-64">
             <p className="font-semibold">{hover.nome}</p>
             <p>
               {hover.cidade}, {lotesLabel(hover)}
             </p>
-            <p className="text-brand-orange">{statusNucleoLabel[hover.status]}</p>
+            <p className="text-latossolo">{statusNucleoLabel[hover.status]}</p>
           </div>
         )}
       </div>
@@ -199,29 +198,24 @@ export function NucleosMap({ className }: { className?: string }) {
 
 export function NucleosMapSection() {
   return (
-    <section className="border-b border-linha bg-paper py-20 lg:py-28">
-      <div className="site-container">
-        <SectionHeading
-          number="06"
-          eyebrow="Mapa"
-          title="Onde estamos regularizando"
-          subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades. Passe o mouse no mapa para ver os marcadores."
-        />
-        <div className="relative mx-auto mt-12 h-[400px] w-full max-w-[600px] overflow-hidden border border-linha bg-paper">
-          <MapVisual />
+    <section className="relative overflow-hidden border-b border-ink/10 bg-paper py-20 lg:py-28">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(237,134,0,0.08),transparent_45%),radial-gradient(ellipse_at_10%_80%,rgba(62,90,75,0.08),transparent_40%)]"
+      />
+      <div className="site-container relative">
+        <div className="mx-auto max-w-2xl text-center">
+          <SectionHeading
+            number="05"
+            eyebrow="Mapa"
+            title="Onde estamos regularizando"
+            subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades. Clique nos marcadores para abrir a ficha."
+            align="center"
+          />
         </div>
-        <ul className="mx-auto mt-8 flex max-w-[600px] flex-wrap justify-center gap-5 text-sm text-ink">
-          {(Object.keys(statusNucleoLabel) as StatusNucleo[]).map((s) => (
-            <li key={s} className="inline-flex items-center gap-2">
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: statusColor[s] }}
-                aria-hidden
-              />
-              {statusNucleoLabel[s]}
-            </li>
-          ))}
-        </ul>
+        <div className="relative mx-auto mt-12 max-w-3xl overflow-hidden rounded-sm border border-ink/12 bg-paper p-3 sm:p-5">
+          <NucleosMap />
+        </div>
       </div>
     </section>
   );

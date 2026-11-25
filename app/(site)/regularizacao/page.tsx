@@ -24,7 +24,7 @@ export default function RegularizacaoPage() {
       />
       <NucleosMapSection />
       <RegularizacaoFAQ />
-      <FinalCTA />
+      <FinalCTA secondaryHref="/contato" secondaryLabel="Falar com a equipe" />
     </div>
   );
 }
