@@ -21,9 +21,12 @@ export const APP_NAV: AppNavGroup[] = [
     id: "inicio",
     label: "1. Início",
     items: [
-      { href: "/dashboard", label: "Painel", description: "Carteira, obras, funil e alertas" },
-      { href: "/notificacoes", label: "Notificações", description: "Não lidas e histórico" },
-      { href: "/tarefas", label: "Minhas tarefas", description: "Tarefas do usuário" },
+      { href: "/dashboard", label: "Painel", description: "Visão geral" },
+      { href: "/dashboard/operacional", label: "Números gerais", description: "Painel operacional clicável" },
+      { href: "/dashboard/gerencial", label: "Gerencial", description: "Painel da direção" },
+      { href: "/demandas", label: "Demandas", description: "Tipos, kanban e prazos" },
+      { href: "/portal/corretor", label: "Portal do corretor", description: "Leads, reservas e comissões" },
+      { href: "/portal/cliente", label: "Portal do cliente", description: "Contratos, boletos e demandas" },
     ],
   },
   {
@@ -53,6 +56,7 @@ export const APP_NAV: AppNavGroup[] = [
     items: [
       { href: "/empreendimentos", label: "Empreendimentos e lotes", description: "Cadastro completo, status e estoque" },
       { href: "/empreendimentos/planta", label: "Planta do loteamento", description: "Lotes clicáveis por status" },
+      { href: "/empreendimentos/hub", label: "Visão do empreendimento", description: "Abas resumo à arquivos" },
       { href: "/planos-pagamento", label: "Planos de pagamento", description: "Entradas, prestações e moedas" },
       { href: "/comissoes", label: "Comissões", description: "Previsto, liberado e pago" },
       { href: "/cartorios", label: "Cartórios e escrituras", description: "RI e protocolos" },
@@ -194,6 +198,7 @@ export const NOVO_ATALHOS = [
   { href: "/cadastros/pessoas?novo=1", label: "Pessoa" },
   { href: "/contratos", label: "Venda / contrato" },
   { href: "/tarefas?novo=1", label: "Tarefa" },
+  { href: "/demandas", label: "Demanda" },
   { href: "/boletos", label: "Boleto" },
   { href: "/compras", label: "Solicitação de compra" },
   { href: "/compras/cotacoes", label: "Cotação" },
