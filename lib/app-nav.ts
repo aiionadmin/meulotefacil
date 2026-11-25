@@ -113,8 +113,15 @@ export const APP_NAV: AppNavGroup[] = [
     id: "financeiro",
     label: "11. Financeiro",
     items: [
-      { href: "/financeiro", label: "Pagar, receber e contas", description: "Lançamentos e contas" },
-      { href: "/importacao", label: "Importação / conferência", description: "LoteWin / Mais Controle" },
+      { href: "/financeiro", label: "Pagamentos", description: "Contas a pagar" },
+      { href: "/financeiro/recebimentos", label: "Recebimentos", description: "Faturamentos e recebimentos" },
+      { href: "/financeiro/pre-lancamentos", label: "Pré-lançamentos", description: "Aprovação prévia" },
+      { href: "/financeiro/notas", label: "Notas fiscais", description: "XML/PDF e CNPJs" },
+      { href: "/financeiro/contas", label: "Contas bancárias", description: "Saldos e extrato" },
+      { href: "/financeiro/transferencias", label: "Transferências", description: "Entre contas" },
+      { href: "/financeiro/fluxo", label: "Fluxo de caixa", description: "Matriz por plano" },
+      { href: "/financeiro/resultados", label: "Resultados", description: "Demonstrativo mensal" },
+      { href: "/financeiro/plano-contas", label: "Plano e categorias", description: "Plano, categorias e naturezas" },
     ],
   },
   {
