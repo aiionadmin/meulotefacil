@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { processos, statusProcessoLabel } from "@/lib/data/processos";
 import { faseLabel } from "@/lib/data/nucleos";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  ModuleHeader,
+  StatusPill,
+} from "@/components/app/ModulePage";
 
 export default function ProtocoloPage() {
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState("MLF-2026-0142");
   const [found, setFound] = useState<(typeof processos)[0] | null | undefined>(
     undefined
   );
@@ -23,14 +27,15 @@ export default function ProtocoloPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl text-brand-navy dark:text-brand-cream">
-          Consultar protocolo
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Informe o número do protocolo, {/* TODO: plugar Supabase */}
-        </p>
-      </div>
+      <ModuleHeader
+        title="Consultar protocolo"
+        description="Busque pelo número do protocolo para ver fase, status e documentos pendentes."
+        actions={
+          <Button asChild size="sm" variant="outline">
+            <Link href="/processos">Lista de processos</Link>
+          </Button>
+        }
+      />
 
       <Card className="max-w-xl">
         <CardHeader>
@@ -49,19 +54,21 @@ export default function ProtocoloPage() {
 
       {found === null && (
         <p className="text-sm text-muted-foreground">
-          Protocolo não encontrado nos mocks. Experimente MLF-2026-0142.
+          Protocolo não encontrado. Experimente MLF-2026-0142.
         </p>
       )}
 
       {found && (
-        <Card className="max-w-xl">
+        <Card className="max-w-xl border-linha">
           <CardHeader>
-            <CardTitle className="flex items-center gap-3">
+            <CardTitle className="flex flex-wrap items-center gap-3">
               {found.protocolo}
-              <Badge variant="secondary">{statusProcessoLabel[found.status]}</Badge>
+              <StatusPill tone="info">
+                {statusProcessoLabel[found.status]}
+              </StatusPill>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-2 text-sm text-ink">
             <p>
               <span className="text-muted-foreground">Núcleo:</span>{" "}
               <strong>{found.nucleoNome}</strong>
@@ -82,6 +89,9 @@ export default function ProtocoloPage() {
               <span className="text-muted-foreground">Docs pendentes:</span>{" "}
               {found.docsPendentes}
             </p>
+            <Button asChild size="sm" className="mt-3">
+              <Link href="/documentos">Abrir documentos</Link>
+            </Button>
           </CardContent>
         </Card>
       )}

@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { demoUser } from "@/lib/data/clientes";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -15,14 +14,33 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ModuleHeader } from "@/components/app/ModulePage";
+import { notify } from "@/components/app/ModuleToolkit";
 import { configGrupos } from "@/lib/data/sistema";
+import { useDemoStore } from "@/lib/store/demo-store";
 
 export default function ConfiguracoesPage() {
+  const { state, setConfigToggle, saveEmpresa, savePerfil, reset } =
+    useDemoStore();
+  const [perfil, setPerfil] = useState(state.perfil);
+  const [empresa, setEmpresa] = useState(state.empresa);
+
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Configurações e parâmetros"
-        description="Empresa, encargos, caixa, vendas, boletos, reajuste, financeiro, compras, obras e aparência (~75 chaves do LoteWin a validar com o cliente)."
+        description="Empresa, encargos, caixa, vendas, boletos, reajuste, financeiro, compras, obras e aparência."
+        actions={
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              reset();
+              notify("Dados demo restaurados");
+            }}
+          >
+            Restaurar demo
+          </Button>
+        }
       />
 
       <Tabs defaultValue="parametros">
@@ -41,15 +59,27 @@ export default function ConfiguracoesPage() {
                   <CardTitle className="text-base">{g.grupo}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {g.itens.map((item) => (
-                    <label
-                      key={item}
-                      className="flex items-center justify-between gap-3 text-sm"
-                    >
-                      <span>{item}</span>
-                      <Switch defaultChecked />
-                    </label>
-                  ))}
+                  {g.itens.map((item) => {
+                    const key = `${g.grupo}::${item}`;
+                    return (
+                      <label
+                        key={item}
+                        className="flex items-center justify-between gap-3 text-sm"
+                      >
+                        <span>{item}</span>
+                        <Switch
+                          checked={state.configToggles[key] ?? true}
+                          onCheckedChange={(v) => {
+                            setConfigToggle(key, v);
+                            notify(
+                              v ? "Parâmetro ativado" : "Parâmetro desativado",
+                              item
+                            );
+                          }}
+                        />
+                      </label>
+                    );
+                  })}
                 </CardContent>
               </Card>
             ))}
@@ -60,18 +90,37 @@ export default function ConfiguracoesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Perfil</CardTitle>
-              <CardDescription>Usuário logado (demo)</CardDescription>
+              <CardDescription>Usuário logado (demo persistente)</CardDescription>
             </CardHeader>
             <CardContent className="grid max-w-lg gap-4">
               <div>
                 <Label>Nome</Label>
-                <Input className="mt-1.5" defaultValue={demoUser.nome} />
+                <Input
+                  className="mt-1.5"
+                  value={perfil.nome}
+                  onChange={(e) =>
+                    setPerfil({ ...perfil, nome: e.target.value })
+                  }
+                />
               </div>
               <div>
                 <Label>E-mail</Label>
-                <Input className="mt-1.5" defaultValue={demoUser.email} />
+                <Input
+                  className="mt-1.5"
+                  value={perfil.email}
+                  onChange={(e) =>
+                    setPerfil({ ...perfil, email: e.target.value })
+                  }
+                />
               </div>
-              <Button type="button" className="w-fit">
+              <Button
+                type="button"
+                className="w-fit"
+                onClick={() => {
+                  savePerfil(perfil);
+                  notify("Perfil salvo");
+                }}
+              >
                 Salvar
               </Button>
             </CardContent>
@@ -83,58 +132,89 @@ export default function ConfiguracoesPage() {
             <CardHeader>
               <CardTitle>Empresa</CardTitle>
               <CardDescription>
-                Mais de um CNPJ na mesma conta, com seletor
+                Dados cadastrais e responsável jurídico
               </CardDescription>
             </CardHeader>
             <CardContent className="grid max-w-lg gap-4">
               <div>
                 <Label>Razão social</Label>
-                <Input className="mt-1.5" defaultValue="Meu Lote Fácil Ltda" />
+                <Input
+                  className="mt-1.5"
+                  value={empresa.razao}
+                  onChange={(e) =>
+                    setEmpresa({ ...empresa, razao: e.target.value })
+                  }
+                />
               </div>
               <div>
                 <Label>CNPJ</Label>
-                <Input className="mt-1.5" placeholder="00.000.000/0001-00" />
+                <Input
+                  className="mt-1.5"
+                  value={empresa.cnpj}
+                  onChange={(e) =>
+                    setEmpresa({ ...empresa, cnpj: e.target.value })
+                  }
+                />
               </div>
               <div>
                 <Label>Advogado (OAB)</Label>
-                <Input className="mt-1.5" placeholder="Nome · CPF · OAB" />
+                <Input
+                  className="mt-1.5"
+                  value={empresa.oab}
+                  onChange={(e) =>
+                    setEmpresa({ ...empresa, oab: e.target.value })
+                  }
+                />
               </div>
-              <Button type="button" className="w-fit">
-                Salvar empresa
+              <Button
+                type="button"
+                className="w-fit"
+                onClick={() => {
+                  saveEmpresa(empresa);
+                  notify("Empresa salva");
+                }}
+              >
+                Salvar
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="integracoes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Integrações</CardTitle>
-              <CardDescription>
-                Cada uma é projeto à parte (relatório §10)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {[
-                "Open Finance / conciliação bancária",
-                "Remessa e retorno de boletos",
-                "NFe / NFSe + certificado digital",
-                "WhatsApp",
-                "Exportação contábil",
-                "DIMOB / SPED",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center justify-between border-b border-linha py-2 last:border-0"
-                >
-                  <span>{item}</span>
-                  <Button asChild variant="outline" size="sm" arrow={false}>
-                    <Link href="/configuracoes">Configurar</Link>
-                  </Button>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[
+              {
+                nome: "Supabase Auth",
+                status: "Opcional",
+                detalhe: "Login real quando variáveis estiverem configuradas",
+              },
+              {
+                nome: "Sicredi CNAB",
+                status: "Demo",
+                detalhe: "Remessa/retorno simulados em Boletos",
+              },
+              {
+                nome: "NFSe municipal",
+                status: "Demo",
+                detalhe: "Emissão local no módulo Fiscal",
+              },
+              {
+                nome: "Open Finance",
+                status: "Planejado",
+                detalhe: "Conciliação bancária automática",
+              },
+            ].map((i) => (
+              <Card key={i.nome}>
+                <CardHeader>
+                  <CardTitle className="text-base">{i.nome}</CardTitle>
+                  <CardDescription>{i.status}</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  {i.detalhe}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

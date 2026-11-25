@@ -10,21 +10,21 @@ import {
   StatusPill,
   ModuleSection,
 } from "@/components/app/ModulePage";
-import {
-  sistemaKpis,
-  brl,
-  parcelasCarteira,
-  obrasMock,
-  financeiroPagar,
-  tarefasMock,
-} from "@/lib/data/sistema";
+import { brl } from "@/lib/data/sistema";
+import { useDemoStore } from "@/lib/store/demo-store";
 
 export default function DashboardPage() {
+  const { state } = useDemoStore();
+  const abertoCarteira = state.parcelas
+    .filter((p) => p.status !== "Paga")
+    .reduce((a, p) => a + p.valor + p.encargos, 0);
+  const nfeSem = state.fiscal.filter((n) => n.status === "Sem lançamento").length;
+
   return (
     <div className="space-y-8">
       <ModuleHeader
         title="Painel unificado"
-        description="Carteira (LoteWin), obras e financeiro (Mais Controle) e regularização fundiária em um só lugar."
+        description="Carteira, obras, financeiro e regularização fundiária em um só lugar. Dados demo persistentes no navegador."
         actions={
           <>
             <Button asChild variant="outline" size="sm">
@@ -42,21 +42,22 @@ export default function DashboardPage() {
           items={[
             {
               label: "Empreendimentos",
-              value: sistemaKpis.empreendimentos,
+              value: state.empreendimentos.length,
             },
             {
-              label: "Lotes / vendidos",
-              value: `${sistemaKpis.lotes.toLocaleString("pt-BR")} / ${sistemaKpis.lotesVendidos.toLocaleString("pt-BR")}`,
+              label: "Lotes (amostra)",
+              value: state.lotes.length,
+              hint: `${state.lotes.filter((l) => l.status === "Disponível").length} disponíveis`,
             },
             {
-              label: "Contratos ativos",
-              value: sistemaKpis.contratosAtivos.toLocaleString("pt-BR"),
-              hint: `${sistemaKpis.contratosTotal.toLocaleString("pt-BR")} no total`,
+              label: "Contratos",
+              value: state.contratos.length,
+              hint: `${state.contratos.filter((c) => c.status === "Ativo").length} ativos`,
             },
             {
-              label: "A receber",
-              value: brl(sistemaKpis.carteiraReceber),
-              hint: `${sistemaKpis.inadimplentes} inadimplentes · ${sistemaKpis.vencimentos30d} venc. 30d`,
+              label: "A receber (amostra)",
+              value: brl(abertoCarteira),
+              hint: `${state.parcelas.filter((p) => p.status === "Vencida").length} vencidas`,
             },
           ]}
         />
@@ -76,7 +77,7 @@ export default function DashboardPage() {
               { key: "valor", label: "Valor" },
               { key: "status", label: "Status" },
             ]}
-            rows={parcelasCarteira.map((p) => ({
+            rows={state.parcelas.slice(0, 6).map((p) => ({
               comprador: p.comprador,
               n: p.n,
               vencimento: p.vencimento,
@@ -98,13 +99,9 @@ export default function DashboardPage() {
           />
         </ModuleSection>
 
-        <ModuleSection
-          title="Obras"
-          actionHref="/obras"
-          actionLabel="Ver obras"
-        >
+        <ModuleSection title="Obras" actionHref="/obras" actionLabel="Ver obras">
           <div className="space-y-3">
-            {obrasMock.map((o) => (
+            {state.obras.map((o) => (
               <Card key={o.id}>
                 <CardContent className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -142,16 +139,18 @@ export default function DashboardPage() {
               { key: "valor", label: "Valor" },
               { key: "status", label: "Status" },
             ]}
-            rows={financeiroPagar.map((p) => ({
-              favorecido: p.favorecido,
-              vencimento: p.vencimento,
-              valor: brl(p.valor),
-              status: (
-                <StatusPill tone={p.status === "Vencido" ? "danger" : "warn"}>
-                  {p.status}
-                </StatusPill>
-              ),
-            }))}
+            rows={state.pagar
+              .filter((p) => p.status !== "Pago")
+              .map((p) => ({
+                favorecido: p.favorecido,
+                vencimento: p.vencimento,
+                valor: brl(p.valor),
+                status: (
+                  <StatusPill tone={p.status === "Vencido" ? "danger" : "warn"}>
+                    {p.status}
+                  </StatusPill>
+                ),
+              }))}
           />
         </ModuleSection>
 
@@ -160,11 +159,14 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground">
-                  Pré-lançamentos
+                  Compras em aprovação
                 </CardTitle>
               </CardHeader>
               <CardContent className="font-display text-2xl">
-                {sistemaKpis.preLancamentos}
+                {
+                  state.compras.filter((c) => c.status.includes("aprovação"))
+                    .length
+                }
               </CardContent>
             </Card>
             <Card>
@@ -174,7 +176,7 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="font-display text-2xl">
-                {sistemaKpis.nfeSemLancamento}
+                {nfeSem}
               </CardContent>
             </Card>
             <Card>
@@ -184,7 +186,7 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="font-display text-2xl">
-                {sistemaKpis.usuarios}
+                {state.usuarios.length}
               </CardContent>
             </Card>
           </div>
@@ -195,7 +197,7 @@ export default function DashboardPage() {
               { key: "prazo", label: "Prazo" },
               { key: "status", label: "Status" },
             ]}
-            rows={tarefasMock.slice(0, 4).map((t) => ({
+            rows={state.tarefas.slice(0, 4).map((t) => ({
               titulo: t.titulo,
               responsavel: t.responsavel,
               prazo: t.prazo,

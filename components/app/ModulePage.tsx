@@ -60,10 +60,12 @@ export function DataTable({
   columns,
   rows,
   empty = "Nenhum registro.",
+  onRowClick,
 }: {
   columns: { key: string; label: string; className?: string }[];
   rows: Record<string, React.ReactNode>[];
   empty?: string;
+  onRowClick?: (index: number) => void;
 }) {
   if (!rows.length) {
     return (
@@ -98,7 +100,11 @@ export function DataTable({
             {rows.map((row, i) => (
               <tr
                 key={i}
-                className="border-b border-linha/70 last:border-0 hover:bg-paper-muted/40"
+                onClick={onRowClick ? () => onRowClick(i) : undefined}
+                className={cn(
+                  "border-b border-linha/70 last:border-0 hover:bg-paper-muted/40",
+                  onRowClick && "cursor-pointer"
+                )}
               >
                 {columns.map((col) => (
                   <td key={col.key} className={cn("px-4 py-3", col.className)}>
