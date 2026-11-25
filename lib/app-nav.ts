@@ -106,7 +106,9 @@ export const APP_NAV: AppNavGroup[] = [
     id: "compras",
     label: "10. Compras",
     items: [
-      { href: "/compras", label: "Solicitações e OC", description: "Fluxo SC → OC → a pagar (Fase 7)" },
+      { href: "/compras", label: "Solicitações", description: "SC com centro de custo (Parte 3)" },
+      { href: "/compras/cotacoes", label: "Cotações", description: "Mapa e fornecedores" },
+      { href: "/compras/ordens", label: "Ordens de compra", description: "OC a partir da cotação" },
     ],
   },
   {
