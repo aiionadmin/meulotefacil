@@ -31,6 +31,13 @@ export type DemandaTipo = {
   ativo: boolean;
 };
 
+export type DemandaComentario = {
+  id: string;
+  autor: string;
+  texto: string;
+  criadoEm: string;
+};
+
 export type Demanda = {
   id: string;
   numero: string;
@@ -53,6 +60,7 @@ export type Demanda = {
   corretorId?: string;
   purchaseRequestId?: string;
   faturamentoId?: string;
+  comentarios?: DemandaComentario[];
 };
 
 export type PortalCorretorSession = {

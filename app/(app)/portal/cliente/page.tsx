@@ -19,6 +19,11 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { PortalLoginGate } from "@/components/app/PortalLoginGate";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import {
+  descricaoPedidoCadastro,
+  informeAnualPagamentos,
+  valorAtualizadoParcela,
+} from "@/lib/domain/portal-cliente-extras";
 import { regularizacoesDoCliente } from "@/lib/domain/regularizacao-timeline";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useCarteira } from "@/lib/store/carteira-store";
@@ -37,10 +42,18 @@ export default function PortalClientePage() {
   const { state: fluxo } = useFluxo();
   const sess = p5.portalCliente;
   const [open, setOpen] = useState(false);
+  const [cadOpen, setCadOpen] = useState(false);
   const [form, setForm] = useState({
     tipoId: "dt-1",
     descricao: "",
   });
+  const [cad, setCad] = useState({
+    campo: "Telefone",
+    valorAtual: "(19) 99999-0000",
+    valorNovo: "",
+  });
+  const hoje = new Date().toISOString().slice(0, 10);
+  const ano = Number(hoje.slice(0, 4));
 
   const meusContratos = useMemo(() => {
     const byName = cart.contracts.filter((c) =>
@@ -60,6 +73,10 @@ export default function PortalClientePage() {
     (r) =>
       r.origem === "contrato" &&
       r.cliente.toLowerCase().includes(sess.nome.split(" ")[0].toLowerCase())
+  );
+  const informe = useMemo(
+    () => informeAnualPagamentos(meusRecs, sess.nome, ano),
+    [meusRecs, sess.nome, ano]
   );
   const minhasReg = useMemo(
     () =>
@@ -124,12 +141,24 @@ export default function PortalClientePage() {
             { key: "cli", label: "Cliente" },
             { key: "st", label: "Status" },
             { key: "saldo", label: "Saldo" },
+            { key: "pdf", label: "PDF" },
           ]}
           rows={meusContratos.map((c) => ({
             num: c.numero,
             cli: c.compradorNome,
             st: c.status,
             saldo: formatBRL(saldoDevedor(c.id)),
+            pdf: (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  notify(`Contrato ${c.numero} — PDF gerado (demo)`)
+                }
+              >
+                Baixar
+              </Button>
+            ),
           }))}
         />
         <p className="mt-2 text-xs text-muted-foreground">
@@ -143,30 +172,67 @@ export default function PortalClientePage() {
           columns={[
             { key: "venc", label: "Vencimento" },
             { key: "valor", label: "Valor" },
+            { key: "atual", label: "Atualizado" },
             { key: "st", label: "Status" },
             { key: "ref", label: "Ref." },
           ]}
-          rows={meusRecs.map((r) => ({
-            venc: formatDateBR(r.vencimento),
-            valor: formatBRL(r.valor),
-            st: (
-              <StatusPill
-                tone={r.status === "vencido" ? "danger" : "info"}
-              >
-                {r.status}
-              </StatusPill>
-            ),
-            ref: r.contratoRef ?? "—",
+          rows={meusRecs.map((r) => {
+            const at = valorAtualizadoParcela(r, hoje);
+            return {
+              venc: formatDateBR(r.vencimento),
+              valor: formatBRL(r.valor),
+              atual: at.emAtraso
+                ? `${formatBRL(at.total)} (+${formatBRL(at.juros + at.multa)})`
+                : formatBRL(r.valor),
+              st: (
+                <StatusPill
+                  tone={
+                    r.status === "vencido" || at.emAtraso
+                      ? "danger"
+                      : r.status === "recebido"
+                        ? "ok"
+                        : "info"
+                  }
+                >
+                  {r.status.replace(/_/g, " ")}
+                </StatusPill>
+              ),
+              ref: r.contratoRef ?? "—",
+            };
+          })}
+        />
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => notify("2ª via / Pix gerados (demo)")}
+          >
+            Gerar 2ª via boleto / Pix
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setCadOpen(true)}>
+            Pedir atualização cadastral
+          </Button>
+        </div>
+      </ModuleSection>
+
+      <ModuleSection title={`Informe anual ${ano}`}>
+        <PaginatedTable
+          columns={[
+            { key: "ref", label: "Contrato" },
+            { key: "pago", label: "Pago em" },
+            { key: "venc", label: "Vencimento" },
+            { key: "valor", label: "Valor" },
+          ]}
+          rows={informe.linhas.map((l) => ({
+            ref: l.contratoRef,
+            pago: formatDateBR(l.pagoEm),
+            venc: formatDateBR(l.vencimento),
+            valor: formatBRL(l.valor),
           }))}
         />
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-2"
-          onClick={() => notify("2ª via / Pix gerados (demo)")}
-        >
-          Gerar 2ª via boleto / Pix
-        </Button>
+        <p className="mt-2 text-sm">
+          Total pago em {ano}: <strong>{formatBRL(informe.totalPago)}</strong>
+        </p>
       </ModuleSection>
 
       <ModuleSection title="Minha regularização">
@@ -307,6 +373,67 @@ export default function PortalClientePage() {
           <Input
             value={form.descricao}
             onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+          />
+        </Field>
+      </FormDialog>
+
+      <FormDialog
+        open={cadOpen}
+        onOpenChange={setCadOpen}
+        title="Pedido de atualização cadastral"
+        onSubmit={() => {
+          if (!cad.valorNovo.trim()) {
+            notify("Informe o novo valor");
+            return;
+          }
+          const dem = addDemanda({
+            tipoId: "dt-8",
+            empreendimentoId: "dev-horizonte",
+            empreendimentoNome: "Residencial Horizonte",
+            clienteId: sess.clienteId,
+            clienteNome: sess.nome,
+            descricao: descricaoPedidoCadastro({
+              clienteId: sess.clienteId,
+              clienteNome: sess.nome,
+              campo: cad.campo,
+              valorAtual: cad.valorAtual,
+              valorNovo: cad.valorNovo,
+            }),
+            prioridade: "normal",
+            origem: "portal_cliente",
+            responsavel: "Atendimento",
+          });
+          if (!dem) {
+            notify("Não foi possível abrir o pedido");
+            return;
+          }
+          notify(`${dem.numero} enviada ao atendimento para aprovar`);
+          setCadOpen(false);
+          setCad({ ...cad, valorNovo: "" });
+        }}
+      >
+        <Field label="Campo">
+          <select
+            className={fieldControlClass}
+            value={cad.campo}
+            onChange={(e) => setCad({ ...cad, campo: e.target.value })}
+          >
+            <option>Telefone</option>
+            <option>E-mail</option>
+            <option>Endereço</option>
+            <option>Estado civil</option>
+          </select>
+        </Field>
+        <Field label="Valor atual">
+          <Input
+            value={cad.valorAtual}
+            onChange={(e) => setCad({ ...cad, valorAtual: e.target.value })}
+          />
+        </Field>
+        <Field label="Novo valor *">
+          <Input
+            value={cad.valorNovo}
+            onChange={(e) => setCad({ ...cad, valorNovo: e.target.value })}
           />
         </Field>
       </FormDialog>
