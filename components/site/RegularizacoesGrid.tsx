@@ -101,7 +101,15 @@ export function RegularizacoesGrid({
                 </p>
                 <p className="text-sm font-medium text-orange-300">
                   <strong>{lotesLabel(n)}</strong>
+                  {n.area ? (
+                    <span className="ml-1 font-normal text-brand-cream/70">
+                      · {n.area}
+                    </span>
+                  ) : null}
                 </p>
+                {n.aprovacao ? (
+                  <p className="text-xs text-brand-cream/70">{n.aprovacao}</p>
+                ) : null}
                 <p className="pt-1 text-sm font-medium text-brand-cream/90 transition-colors group-hover:text-orange-300">
                   Ver detalhes →
                 </p>
@@ -113,7 +121,7 @@ export function RegularizacoesGrid({
         {limit && (
           <div className="mt-10 text-center">
             <Link
-              href="/regularizacoes"
+              href="/regularizacao#nucleos"
               className="inline-flex font-semibold text-orange-300 hover:text-orange-200 hover:underline"
             >
               Ver todas as regularizações →
