@@ -188,7 +188,7 @@ export function HowItWorks() {
             <div
               ref={progressRef}
               aria-hidden
-              className="absolute left-[1.15rem] top-4 h-[calc(100%-2rem)] w-px origin-top bg-gradient-to-b from-latossolo via-mata-muted to-mata sm:left-[1.35rem]"
+              className="absolute left-[1.15rem] top-4 h-[calc(100%-2rem)] w-px origin-top bg-gradient-to-b from-latossolo via-[var(--mata-muted)] to-mata sm:left-[1.35rem]"
               style={{ transform: "scaleY(0)" }}
             />
 
