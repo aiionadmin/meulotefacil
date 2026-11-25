@@ -113,6 +113,89 @@ export function seedParte5(): Parte5State {
       nome: "Maria Souza",
       cpf: "123.456.789-00",
     },
+    materiaisVenda: [
+      {
+        id: "mat-1",
+        titulo: "Tabela de preços 2026",
+        tipo: "tabela",
+        empreendimentoNome: "Residencial Horizonte",
+        url: "/materiais/tabela-horizonte-2026.csv",
+      },
+      {
+        id: "mat-2",
+        titulo: "Folheto comercial",
+        tipo: "folheto",
+        empreendimentoNome: "Residencial Horizonte",
+        url: "/materiais/folheto-horizonte.txt",
+      },
+      {
+        id: "mat-3",
+        titulo: "Planta baixa (PDF stub)",
+        tipo: "planta",
+        empreendimentoNome: "Jardins do Sol",
+        url: "/materiais/planta-jardins.txt",
+      },
+    ],
+  };
+}
+
+export function relatorioDemandas(state: {
+  demandas: {
+    tipoId: string;
+    status: string;
+    prazo: string;
+    criadoEm: string;
+    responsavel: string;
+  }[];
+  demandaTipos: { id: string; nome: string }[];
+  hoje?: string;
+}) {
+  const hoje = state.hoje ?? new Date().toISOString().slice(0, 10);
+  const porTipo = state.demandaTipos.map((t) => ({
+    tipo: t.nome,
+    qtd: state.demandas.filter((d) => d.tipoId === t.id).length,
+  }));
+  const concluidas = state.demandas.filter((d) => d.status === "concluida");
+  const dias = (a: string, b: string) =>
+    Math.max(
+      0,
+      Math.round(
+        (new Date(b + "T12:00:00").getTime() -
+          new Date(a + "T12:00:00").getTime()) /
+          86400000
+      )
+    );
+  const tempoMedio =
+    concluidas.length === 0
+      ? 0
+      : Math.round(
+          (concluidas.reduce(
+            (acc, d) => acc + dias(d.criadoEm, d.prazo),
+            0
+          ) /
+            concluidas.length) *
+            10
+        ) / 10;
+  const atrasadas = state.demandas.filter(
+    (d) =>
+      d.prazo < hoje &&
+      d.status !== "concluida" &&
+      d.status !== "cancelada"
+  );
+  const porResponsavel = new Map<string, number>();
+  for (const d of atrasadas) {
+    porResponsavel.set(
+      d.responsavel,
+      (porResponsavel.get(d.responsavel) ?? 0) + 1
+    );
+  }
+  return {
+    porTipo,
+    tempoMedioDias: tempoMedio,
+    atrasadas: atrasadas.length,
+    atrasadasPorResponsavel: [...porResponsavel.entries()].map(
+      ([responsavel, qtd]) => ({ responsavel, qtd })
+    ),
   };
 }
 

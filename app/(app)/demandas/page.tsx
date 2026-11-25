@@ -14,15 +14,21 @@ import {
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import { BoardViews } from "@/components/kanban/BoardViews";
 import {
+  DetailRow,
+  DetailSheet,
   Field,
   FilterBar,
   FormDialog,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { formatDateBR } from "@/lib/masks/br";
+import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useParte5 } from "@/lib/store/parte5-store";
+import { useCompras } from "@/lib/store/compras-store";
+import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { relatorioDemandas } from "@/lib/domain/parte5-seed";
 import type {
+  Demanda,
   DemandaPrioridade,
   DemandaStatus,
 } from "@/lib/domain/parte5-types";
@@ -40,13 +46,17 @@ const COLS: { id: DemandaStatus; label: string }[] = [
 function DemandasInner() {
   const search = useSearchParams();
   const statusQ = search.get("status") as DemandaStatus | null;
-  const { state, addDemanda, moverDemanda } = useParte5();
+  const { state, addDemanda, moverDemanda, vincularSc, vincularFaturamento } =
+    useParte5();
+  const { addSolicitacao } = useCompras();
+  const { addFaturamento, state: fin } = useFinanceiro();
   const { state: cart } = useCarteira();
   const [q, setQ] = useState("");
   const [view, setView] = useState<"lista" | "quadro">(
     statusQ ? "lista" : "quadro"
   );
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<Demanda | null>(null);
   const [form, setForm] = useState({
     tipoId: "",
     empreendimentoId: "",
@@ -64,6 +74,15 @@ function DemandasInner() {
       d.status !== "concluida" &&
       d.status !== "cancelada"
   ).length;
+
+  const rel = useMemo(
+    () => relatorioDemandas({ ...state, hoje }),
+    [state, hoje]
+  );
+
+  const live = selected
+    ? state.demandas.find((d) => d.id === selected.id) ?? selected
+    : null;
 
   const filtered = useMemo(() => {
     let list = state.demandas;
@@ -171,7 +190,15 @@ function DemandasInner() {
               { key: "status", label: "Status" },
             ]}
             rows={filtered.map((d) => ({
-              num: d.numero,
+              num: (
+                <button
+                  type="button"
+                  className="font-medium hover:text-brand-orange"
+                  onClick={() => setSelected(d)}
+                >
+                  {d.numero}
+                </button>
+              ),
               tipo: tipoNome(d.tipoId),
               emp: `${d.empreendimentoNome}${d.quadra ? ` · ${d.quadra}-${d.lote}` : ""}`,
               cli: d.clienteNome ?? "—",
@@ -188,6 +215,148 @@ function DemandasInner() {
           />
         </ModuleSection>
       )}
+
+      <ModuleSection title="Relatório">
+        <div className="grid gap-3 text-sm sm:grid-cols-3">
+          <div>
+            <div className="text-muted-foreground">Por tipo</div>
+            <ul>
+              {rel.porTipo
+                .filter((t) => t.qtd > 0)
+                .map((t) => (
+                  <li key={t.tipo}>
+                    {t.tipo}: {t.qtd}
+                  </li>
+                ))}
+            </ul>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Tempo médio (concluídas)</div>
+            <div className="font-display text-xl">{rel.tempoMedioDias} dias</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">
+              Atrasadas ({rel.atrasadas})
+            </div>
+            <ul>
+              {rel.atrasadasPorResponsavel.map((r) => (
+                <li key={r.responsavel}>
+                  {r.responsavel}: {r.qtd}
+                </li>
+              ))}
+              {!rel.atrasadasPorResponsavel.length ? (
+                <li className="text-muted-foreground">Nenhuma</li>
+              ) : null}
+            </ul>
+          </div>
+        </div>
+      </ModuleSection>
+
+      <DetailSheet
+        open={!!live}
+        onOpenChange={(o) => !o && setSelected(null)}
+        title={live?.numero ?? ""}
+      >
+        {live ? (
+          <div className="space-y-3">
+            <DetailRow label="Tipo" value={tipoNome(live.tipoId)} />
+            <DetailRow label="Descrição" value={live.descricao} />
+            <DetailRow
+              label="Empreendimento"
+              value={`${live.empreendimentoNome}${live.quadra ? ` · ${live.quadra}-${live.lote}` : ""}`}
+            />
+            <DetailRow label="Cliente" value={live.clienteNome ?? "—"} />
+            <DetailRow
+              label="Custo previsto"
+              value={
+                live.custoPrevisto != null
+                  ? formatBRL(live.custoPrevisto)
+                  : "—"
+              }
+            />
+            <DetailRow
+              label="SC"
+              value={live.purchaseRequestId ?? "—"}
+            />
+            <DetailRow
+              label="Faturamento"
+              value={live.faturamentoId ?? "—"}
+            />
+            <div className="flex flex-wrap gap-2 pt-2">
+              {!live.purchaseRequestId ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const sc = addSolicitacao({
+                      descricao: `Demanda ${live.numero} · ${live.descricao}`,
+                      centro: {
+                        tipo: "obra",
+                        obraId: "obr-1",
+                        label: live.empreendimentoNome,
+                      },
+                      necessidade: live.prazo,
+                      urgente:
+                        live.prioridade === "alta" ||
+                        live.prioridade === "urgente",
+                      solicitante: live.responsavel,
+                      itens: [
+                        {
+                          descricao: live.descricao,
+                          unidade: "un",
+                          quantidade: 1,
+                        },
+                      ],
+                    });
+                    if (!sc) {
+                      notify("Falha ao criar SC (centro obrigatório)");
+                      return;
+                    }
+                    vincularSc(live.id, sc.id);
+                    notify(`SC ${sc.numero} gerada e vinculada`);
+                  }}
+                >
+                  Gerar SC
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/compras">Ver compras</Link>
+                </Button>
+              )}
+              {!live.faturamentoId && (live.custoPrevisto ?? 0) > 0 ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const r = addFaturamento({
+                      descricao: `Cobrança demanda ${live.numero}`,
+                      cliente: live.clienteNome ?? "Cliente demanda",
+                      naturezaId: fin.naturezas[0]?.id ?? "nat-1",
+                      competencia: `${hoje.slice(0, 7)}-01`,
+                      vencimento: live.prazo,
+                      centro: {
+                        tipo: "obra",
+                        obraId: "obr-1",
+                        label: live.empreendimentoNome,
+                      },
+                      contaId: fin.contas[0]?.id ?? "cta-1",
+                      valorBruto: live.custoPrevisto!,
+                      forma: "boleto",
+                    });
+                    if (!r.ok || !r.faturamento) {
+                      notify("Falha ao faturar");
+                      return;
+                    }
+                    vincularFaturamento(live.id, r.faturamento.id);
+                    notify(`Faturamento ${r.faturamento.id} gerado`);
+                  }}
+                >
+                  Gerar cobrança
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </DetailSheet>
 
       <FormDialog
         open={open}

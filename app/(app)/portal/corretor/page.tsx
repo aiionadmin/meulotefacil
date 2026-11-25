@@ -152,6 +152,29 @@ export default function PortalCorretorPage() {
         />
       </ModuleSection>
 
+      <ModuleSection title="Materiais de venda">
+        <ul className="space-y-2 text-sm">
+          {p5.materiaisVenda.map((m) => (
+            <li
+              key={m.id}
+              className="flex flex-wrap items-center justify-between gap-2 border-b py-2"
+            >
+              <span>
+                <span className="font-medium">{m.titulo}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {m.tipo} · {m.empreendimentoNome}
+                </span>
+              </span>
+              <Button size="sm" variant="outline" asChild>
+                <a href={m.url} download>
+                  Baixar
+                </a>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </ModuleSection>
+
       <ModuleSection title="Minhas demandas">
         <div className="mb-3">
           <Button size="sm" onClick={() => setOpen(true)}>
