@@ -12,32 +12,102 @@ import {
 } from "@/components/app/ModulePage";
 import { brl } from "@/lib/data/sistema";
 import { useDemoStore } from "@/lib/store/demo-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 
 export default function DashboardPage() {
   const { state } = useDemoStore();
+  const { state: f1, currentUser } = useFase1();
   const abertoCarteira = state.parcelas
     .filter((p) => p.status !== "Paga")
     .reduce((a, p) => a + p.valor + p.encargos, 0);
   const nfeSem = state.fiscal.filter((n) => n.status === "Sem lançamento").length;
+  const pessoasAtivas = f1.people.filter((p) => p.status !== "excluido").length;
+  const notifUnread = f1.notifications.filter((n) => !n.lida).length;
+  const tarefasAbertas = f1.tasks.filter((t) => t.status !== "concluida").length;
 
   return (
     <div className="space-y-8">
       <ModuleHeader
         title="Painel unificado"
-        description="Carteira, obras, financeiro e regularização fundiária em um só lugar. Dados demo persistentes no navegador."
+        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fase 1 (acesso, pessoas, arquivos) ativa · demais módulos em demo até as fases seguintes.`}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
-              <Link href="/carteira">Abrir carteira</Link>
+              <Link href="/cadastros/pessoas">Pessoas</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/vendas">Nova venda</Link>
+              <Link href="/tarefas?novo=1">Nova tarefa</Link>
             </Button>
           </>
         }
       />
 
-      <ModuleSection title="Carteira">
+      <ModuleSection title="Fase 1 — Acesso e cadastros">
+        <KpiGrid
+          items={[
+            {
+              label: "Pessoas",
+              value: pessoasAtivas,
+              hint: `${f1.organization.nomeFantasia}`,
+            },
+            {
+              label: "Usuários",
+              value: f1.users.filter((u) => u.status === "ativo").length,
+            },
+            {
+              label: "Notificações",
+              value: notifUnread,
+              hint: "não lidas",
+            },
+            {
+              label: "Tarefas abertas",
+              value: tarefasAbertas,
+            },
+          ]}
+        />
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          <DataTable
+            columns={[
+              { key: "titulo", label: "Notificação" },
+              { key: "quando", label: "Quando" },
+            ]}
+            rows={f1.notifications.slice(0, 4).map((n) => ({
+              titulo: (
+                <span className={n.lida ? "text-muted-foreground" : "font-medium"}>
+                  {n.titulo}
+                </span>
+              ),
+              quando: n.createdAt,
+            }))}
+          />
+          <DataTable
+            columns={[
+              { key: "titulo", label: "Tarefa" },
+              { key: "status", label: "Status" },
+              { key: "prazo", label: "Prazo" },
+            ]}
+            rows={f1.tasks.slice(0, 4).map((t) => ({
+              titulo: t.titulo,
+              status: (
+                <StatusPill
+                  tone={
+                    t.status === "concluida"
+                      ? "ok"
+                      : t.status === "em_andamento"
+                        ? "info"
+                        : "warn"
+                  }
+                >
+                  {t.status.replace("_", " ")}
+                </StatusPill>
+              ),
+              prazo: t.prazo,
+            }))}
+          />
+        </div>
+      </ModuleSection>
+
+      <ModuleSection title="Carteira (demo)">
         <KpiGrid
           items={[
             {

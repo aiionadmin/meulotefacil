@@ -8,6 +8,7 @@ import {
   Bell,
   Menu,
   Moon,
+  Plus,
   Search,
   Sun,
   LogOut,
@@ -31,10 +32,10 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { demoUser } from "@/lib/data/clientes";
 import { createClient } from "@/lib/supabase/client";
 import { clearDemoSession } from "@/lib/auth-demo";
-import { APP_FLAT_NAV } from "@/lib/app-nav";
+import { APP_FLAT_NAV, NOVO_ATALHOS } from "@/lib/app-nav";
+import { useFase1 } from "@/lib/store/fase1-store";
 
 const crumbs: Record<string, string> = Object.fromEntries(
   APP_FLAT_NAV.map((i) => [i.href.replace(/^\//, ""), i.label])
@@ -49,8 +50,10 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { currentUser, currentProfileName, state } = useFase1();
   const [open, setOpen] = useState(false);
   const parts = pathname.split("/").filter(Boolean);
+  const unread = state.notifications.filter((n) => !n.lida).length;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -87,20 +90,40 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
           Sistema
         </Link>
         {parts.map((p, i) => (
-          <span key={p} className="flex items-center gap-1">
+          <span key={`${p}-${i}`} className="flex items-center gap-1">
             <span>/</span>
             <span
               className={
                 i === parts.length - 1 ? "font-medium text-foreground" : ""
               }
             >
-              {crumbs[p] || p}
+              {crumbs[parts.slice(0, i + 1).join("/")] ||
+                crumbs[p] ||
+                p}
             </span>
           </span>
         ))}
       </nav>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <span className="hidden text-xs text-muted-foreground xl:inline">
+          {state.organization.nomeFantasia}
+        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" className="hidden sm:inline-flex">
+              <Plus className="h-4 w-4" />
+              Novo
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {NOVO_ATALHOS.map((a) => (
+              <DropdownMenuItem key={a.href} asChild>
+                <Link href={a.href}>{a.label}</Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant="outline"
           size="sm"
@@ -121,8 +144,18 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
         >
           <Search className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" aria-label="Notificações">
-          <Bell className="h-4 w-4" />
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Notificações"
+          asChild
+        >
+          <Link href="/notificacoes" className="relative">
+            <Bell className="h-4 w-4" />
+            {unread > 0 ? (
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-brand-accent-strong" />
+            ) : null}
+          </Link>
         </Button>
         <Button
           variant="ghost"
@@ -141,7 +174,7 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
             >
               <Avatar className="h-9 w-9">
                 <AvatarFallback>
-                  {demoUser.nome
+                  {(currentUser?.nome ?? "AD")
                     .split(" ")
                     .map((n) => n[0])
                     .slice(0, 2)
@@ -152,13 +185,18 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <div className="px-2 py-1.5 text-sm">
-              <p className="font-medium">{demoUser.nome}</p>
-              <p className="text-xs text-muted-foreground">{demoUser.email}</p>
+              <p className="font-medium">{currentUser?.nome ?? "Demo"}</p>
+              <p className="text-xs text-muted-foreground">
+                {currentUser?.email}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {currentProfileName}
+              </p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/configuracoes">
-                <User className="mr-2 h-4 w-4" /> Perfil
+              <Link href="/configuracoes/empresa">
+                <User className="mr-2 h-4 w-4" /> Empresa
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -175,7 +213,7 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
       </div>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Buscar páginas…" />
+        <CommandInput placeholder="Buscar páginas, pessoa, CPF…" />
         <CommandList>
           <CommandEmpty>Nenhum resultado.</CommandEmpty>
           <CommandGroup heading="Navegação">
@@ -188,6 +226,19 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
                 }}
               >
                 {c.label}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          <CommandGroup heading="Pessoas">
+            {state.people.slice(0, 8).map((p) => (
+              <CommandItem
+                key={p.id}
+                onSelect={() => {
+                  setOpen(false);
+                  router.push("/cadastros/pessoas");
+                }}
+              >
+                {p.nome} · {p.documento}
               </CommandItem>
             ))}
           </CommandGroup>

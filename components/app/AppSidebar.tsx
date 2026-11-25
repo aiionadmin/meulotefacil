@@ -23,6 +23,7 @@ import {
   CheckSquare,
   Files,
   Settings,
+  Bell,
   ChevronLeft,
   ChevronRight,
   ArrowRight,
@@ -33,6 +34,19 @@ import { APP_NAV } from "@/lib/app-nav";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "/dashboard": LayoutDashboard,
+  "/notificacoes": Bell,
+  "/tarefas": CheckSquare,
+  "/quadros/jornada": FolderKanban,
+  "/quadros/cobranca": Wallet,
+  "/quadros/regularizacao": FolderKanban,
+  "/quadros/compras": ShoppingCart,
+  "/quadros/obras": HardHat,
+  "/quadros/tarefas": CheckSquare,
+  "/cadastros/pessoas": Users,
+  "/cadastros/clientes": Users,
+  "/cadastros/fornecedores": Users,
+  "/cadastros/profissionais": Users,
+  "/cadastros/corretores": Users,
   "/pessoas": Users,
   "/usuarios": Shield,
   "/empreendimentos": Building2,
@@ -49,9 +63,14 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "/documentos": FolderOpen,
   "/protocolo": Hash,
   "/relatorios": BarChart3,
-  "/tarefas": CheckSquare,
   "/arquivos": Files,
   "/configuracoes": Settings,
+  "/configuracoes/empresa": Settings,
+  "/configuracoes/usuarios": Shield,
+  "/configuracoes/perfis": Shield,
+  "/configuracoes/alcadas": Shield,
+  "/configuracoes/listas": Files,
+  "/configuracoes/auditoria": Shield,
 };
 
 export function AppSidebar({

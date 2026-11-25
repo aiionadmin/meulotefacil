@@ -9,41 +9,38 @@ import {
   DataTable,
 } from "@/components/app/ModulePage";
 import {
-  DetailRow,
-  DetailSheet,
   Field,
   FilterBar,
   FormDialog,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { useDemoStore, type Arquivo } from "@/lib/store/demo-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 
 export default function ArquivosPage() {
-  const { state, addArquivo } = useDemoStore();
+  const { state, addFile } = useFase1();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Arquivo | null>(null);
   const [form, setForm] = useState({
     nome: "",
-    rotina: "Vendas",
+    rotina: "Cadastros",
     tag: "Documento",
     tamanho: "120 KB",
   });
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return state.arquivos;
-    return state.arquivos.filter((a) =>
+    if (!term) return state.files;
+    return state.files.filter((a) =>
       [a.nome, a.rotina, a.tag].join(" ").toLowerCase().includes(term)
     );
-  }, [state.arquivos, q]);
+  }, [state.files, q]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Arquivos"
-        description="Repositório central com tags por rotina (contratos, plantas, NFe, ART)."
+        description="Repositório central com tags. Limite de 10 MB por arquivo no Storage (Supabase)."
         actions={
           <Button size="sm" onClick={() => setOpen(true)}>
             Enviar arquivo
@@ -52,63 +49,45 @@ export default function ArquivosPage() {
       />
       <KpiGrid
         items={[
-          { label: "Arquivos", value: state.arquivos.length },
+          { label: "Arquivos", value: state.files.length },
           {
             label: "Tags",
-            value: new Set(state.arquivos.map((a) => a.tag)).size,
-          },
-          {
-            label: "Rotinas",
-            value: new Set(state.arquivos.map((a) => a.rotina)).size,
-          },
-          {
-            label: "Filtrados",
-            value: filtered.length,
+            value: new Set(state.files.map((a) => a.tag)).size,
           },
         ]}
       />
       <FilterBar value={q} onChange={setQ} placeholder="Buscar arquivo…" />
       <DataTable
-        onRowClick={(i) => setSelected(filtered[i])}
         columns={[
           { key: "nome", label: "Arquivo" },
           { key: "rotina", label: "Rotina" },
           { key: "tag", label: "Tag" },
           { key: "tamanho", label: "Tamanho" },
-          { key: "quando", label: "Quando" },
         ]}
         rows={filtered.map((a) => ({
           nome: <span className="font-medium">{a.nome}</span>,
           rotina: a.rotina,
           tag: a.tag,
           tamanho: a.tamanho,
-          quando: a.quando,
         }))}
       />
 
       <FormDialog
         open={open}
         onOpenChange={setOpen}
-        title="Enviar arquivo (demo)"
-        submitLabel="Registrar"
+        title="Registrar arquivo (demo)"
+        submitLabel="Salvar"
         onSubmit={() => {
           if (!form.nome.trim()) return;
-          addArquivo(form);
+          addFile(form);
           notify("Arquivo registrado", form.nome);
           setOpen(false);
-          setForm({
-            nome: "",
-            rotina: "Vendas",
-            tag: "Documento",
-            tamanho: "120 KB",
-          });
         }}
       >
-        <Field label="Nome do arquivo">
+        <Field label="Nome">
           <Input
             value={form.nome}
             onChange={(e) => setForm({ ...form, nome: e.target.value })}
-            placeholder="ex.: contrato-CTR-3201.pdf"
             required
           />
         </Field>
@@ -119,16 +98,11 @@ export default function ArquivosPage() {
               value={form.rotina}
               onChange={(e) => setForm({ ...form, rotina: e.target.value })}
             >
-              {[
-                "Vendas",
-                "Empreendimentos",
-                "Fiscal",
-                "Obras",
-                "Regularização",
-                "Financeiro",
-              ].map((r) => (
-                <option key={r}>{r}</option>
-              ))}
+              {["Cadastros", "Contratos", "Obras", "Fiscal", "Regularização"].map(
+                (r) => (
+                  <option key={r}>{r}</option>
+                )
+              )}
             </select>
           </Field>
           <Field label="Tag">
@@ -139,21 +113,6 @@ export default function ArquivosPage() {
           </Field>
         </div>
       </FormDialog>
-
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelected(null)}
-        title={selected?.nome ?? "Arquivo"}
-      >
-        {selected ? (
-          <>
-            <DetailRow label="Rotina" value={selected.rotina} />
-            <DetailRow label="Tag" value={selected.tag} />
-            <DetailRow label="Tamanho" value={selected.tamanho} />
-            <DetailRow label="Quando" value={selected.quando} />
-          </>
-        ) : null}
-      </DetailSheet>
     </div>
   );
 }
