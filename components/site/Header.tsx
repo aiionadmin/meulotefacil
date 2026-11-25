@@ -11,7 +11,7 @@ import { whatsappUrl } from "@/lib/institutional";
 import { cn } from "@/lib/utils";
 
 /**
- * Navbar flutuante.
+ * Navbar fixa no topo (borda a borda), sem card flutuante.
  * Texto claro (paper) só sobre o hero escuro da home.
  * Em qualquer outra página / após sair do hero: barra sólida com texto ink.
  */
@@ -62,15 +62,15 @@ export function Header() {
 
   return (
     <>
-      <header className="site-header pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4">
-        <div
-          className={cn(
-            "pointer-events-auto site-container transition-[max-width,padding,background-color,border-color,box-shadow,color] duration-300",
-            solid
-              ? "rounded-sm border border-linha/80 bg-paper/95 text-ink shadow-[0_8px_28px_-18px_rgba(17,22,20,0.45)] backdrop-blur-md"
-              : "rounded-sm border border-transparent bg-transparent text-paper"
-          )}
-        >
+      <header
+        className={cn(
+          "site-header fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,color,backdrop-filter] duration-300",
+          solid
+            ? "border-b border-linha/80 bg-paper/95 text-ink backdrop-blur-md"
+            : "border-b border-transparent bg-transparent text-paper"
+        )}
+      >
+        <div className="site-container">
           <div className="flex h-14 items-center justify-between gap-3 sm:h-16 sm:gap-4">
             <Link
               href="/"
