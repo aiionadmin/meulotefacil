@@ -68,6 +68,7 @@ export function HowItWorks() {
 
       const items = gsap.utils.toArray<HTMLElement>(".how-step");
       const progress = progressRef.current;
+      const timeline = root.querySelector(".how-timeline");
 
       if (!prefersReducedMotion()) {
         items.forEach((el) => {
@@ -97,13 +98,13 @@ export function HowItWorks() {
         });
       });
 
-      if (progress) {
+      if (progress && timeline) {
         gsap.set(progress, { transformOrigin: "top center", scaleY: 0 });
         gsap.to(progress, {
           scaleY: 1,
           ease: "none",
           scrollTrigger: {
-            trigger: root.querySelector(".how-timeline"),
+            trigger: timeline,
             start: "top 60%",
             end: "bottom 40%",
             scrub: 0.4,
@@ -117,9 +118,9 @@ export function HowItWorks() {
   return (
     <section
       ref={rootRef}
-      className="relative overflow-hidden border-b border-ink/10 bg-ink text-paper"
+      className="relative border-b border-ink/10 bg-ink text-paper"
     >
-      {/* Atmosphere — not flat */}
+      {/* Atmosphere — absolute only; no overflow-hidden (breaks sticky rail) */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(237,134,0,0.14),transparent_50%),radial-gradient(ellipse_at_90%_40%,rgba(62,90,75,0.35),transparent_45%)]"
@@ -134,9 +135,9 @@ export function HowItWorks() {
       />
 
       <div className="site-container relative py-20 lg:py-28">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-16 xl:gap-24">
-          {/* Sticky intro — Aceternity timeline pattern */}
-          <div className="lg:sticky lg:top-28 lg:self-start">
+        <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-16 xl:gap-24">
+          {/* Sticky intro — acompanhar a rolagem das etapas à direita */}
+          <aside className="how-rail relative z-10 lg:sticky lg:top-24 lg:self-start lg:h-fit">
             <SectionHeading
               number="02"
               eyebrow="Método"
@@ -177,7 +178,7 @@ export function HowItWorks() {
                 </li>
               ))}
             </ol>
-          </div>
+          </aside>
 
           {/* Timeline */}
           <div className="how-timeline relative">
