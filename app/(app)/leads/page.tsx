@@ -34,6 +34,7 @@ export default function LeadsPage() {
   const [form, setForm] = useState({
     nome: "",
     telefone: "",
+    cpf: "",
     email: "",
     empInteresse: carteira.developments[0]?.nome ?? "",
     origem: "whatsapp" as LeadOrigem,
@@ -191,7 +192,14 @@ export default function LeadsPage() {
             notify("Nome e telefone obrigatórios");
             return;
           }
-          addLead(form);
+          const res = addLead({
+            ...form,
+            cpf: form.cpf || undefined,
+          });
+          if (!res.ok) {
+            notify(res.motivo);
+            return;
+          }
           notify("Lead criado · score calculado");
           setOpen(false);
         }}
@@ -206,6 +214,13 @@ export default function LeadsPage() {
           <Input
             value={form.telefone}
             onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+          />
+        </Field>
+        <Field label="CPF (bloqueio de duplicidade)">
+          <Input
+            value={form.cpf}
+            onChange={(e) => setForm({ ...form, cpf: e.target.value })}
+            placeholder="000.000.000-00"
           />
         </Field>
         <Field label="E-mail">
