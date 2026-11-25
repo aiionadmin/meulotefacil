@@ -18,6 +18,8 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { podeAprovarPorAlcada } from "@/lib/domain/alcadas";
 import type { OrdemCompra } from "@/lib/domain/compras-types";
 
 export default function OrdensCompraPage() {
@@ -27,6 +29,10 @@ export default function OrdensCompraPage() {
     negarOrdem,
     marcarOcEntregue,
   } = useCompras();
+  const { state: f1, currentUser } = useFase1();
+  const perfil =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ??
+    "Administrador";
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<OrdemCompra | null>(null);
 
@@ -192,6 +198,16 @@ export default function OrdensCompraPage() {
                   <Button
                     size="sm"
                     onClick={() => {
+                      const gate = podeAprovarPorAlcada(
+                        f1.approvalRules,
+                        "Ordem de compra",
+                        live.valor,
+                        perfil
+                      );
+                      if (!gate.ok) {
+                        notify(gate.motivo ?? "Fora da sua alçada");
+                        return;
+                      }
                       const r = aprovarOrdem(live.id);
                       if (!r.ok) {
                         notify(

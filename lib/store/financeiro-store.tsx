@@ -14,14 +14,17 @@ import {
   planoDaCategoria,
   seedFinanceiro,
 } from "@/lib/domain/financeiro-seed";
+import { matchPagamento, parseOfx } from "@/lib/domain/ofx";
 import type {
   CentroFin,
   CondicaoPagamento,
   ContaBancaria,
+  ExtratoLinha,
   Faturamento,
   FinanceiroState,
   FormaPagamento,
   Lancamento,
+  OfxImport,
   Pagamento,
   PagamentoStatus,
   PreLancamento,
@@ -66,6 +69,13 @@ type FinanceiroApi = {
   ) => boolean;
   estornarPagamento: (id: string) => boolean;
   conciliarPagamento: (id: string) => boolean;
+  desconciliarPagamento: (id: string) => boolean;
+  importOfx: (
+    contaId: string,
+    text: string,
+    arquivoNome?: string
+  ) => { ok: boolean; import?: OfxImport; matched: number; total: number };
+  extratoConta: (contaId: string) => ExtratoLinha[];
   addFaturamento: (input: {
     descricao: string;
     cliente: string;
@@ -153,6 +163,7 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           preLancamentos: parsed.preLancamentos ?? seed.preLancamentos,
           transferencias: parsed.transferencias ?? seed.transferencias,
           notas: parsed.notas ?? seed.notas,
+          ofxImports: parsed.ofxImports ?? seed.ofxImports ?? [],
         });
       }
     } catch {
@@ -356,6 +367,124 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      desconciliarPagamento: (id) => {
+        setState((s) => ({
+          ...s,
+          pagamentos: s.pagamentos.map((p) =>
+            p.id === id ? { ...p, conciliado: false } : p
+          ),
+        }));
+        return true;
+      },
+      importOfx: (contaId, text, arquivoNome) => {
+        const conta = state.contas.find((c) => c.id === contaId);
+        if (!conta) return { ok: false, matched: 0, total: 0 };
+        const txns = parseOfx(text);
+        if (!txns.length) return { ok: false, matched: 0, total: 0 };
+        const matchedIds: string[] = [];
+        for (const t of txns) {
+          const pid = matchPagamento(t, state.pagamentos);
+          if (pid) matchedIds.push(pid);
+        }
+        const unique = [...new Set(matchedIds)];
+        const imp: OfxImport = {
+          id: uid("ofx"),
+          contaId,
+          arquivo: arquivoNome ?? "import.ofx",
+          importadoEm: todayIso(),
+          qtd: txns.length,
+          conciliados: unique.length,
+          fitIds: txns.map((t) => t.fitId),
+        };
+        setState((s) => ({
+          ...s,
+          ofxImports: [imp, ...s.ofxImports],
+          pagamentos: s.pagamentos.map((p) => {
+            if (!unique.includes(p.id)) return p;
+            const paid =
+              p.status === "pago"
+                ? p
+                : {
+                    ...p,
+                    status: "pago" as PagamentoStatus,
+                    valorPago: p.valor,
+                    pagoEm: p.pagoEm ?? todayIso(),
+                  };
+            return { ...paid, conciliado: true };
+          }),
+        }));
+        return {
+          ok: true,
+          import: imp,
+          matched: unique.length,
+          total: txns.length,
+        };
+      },
+      extratoConta: (contaId) => {
+        const conta = state.contas.find((c) => c.id === contaId);
+        if (!conta) return [];
+        const lines: ExtratoLinha[] = [
+          {
+            data: conta.dataInicial,
+            descricao: "Saldo inicial",
+            valor: conta.valorInicial,
+            saldo: conta.valorInicial,
+            origem: "saldo_inicial",
+          },
+        ];
+        type Ev = { data: string; descricao: string; valor: number; origem: ExtratoLinha["origem"]; refId?: string; conciliado?: boolean };
+        const events: Ev[] = [];
+        for (const p of state.pagamentos) {
+          if (p.contaId !== contaId || !p.pagoEm) continue;
+          events.push({
+            data: p.pagoEm,
+            descricao: `Pagamento · ${p.favorecido} · ${p.descricao}`,
+            valor: -p.valorPago,
+            origem: "pagamento",
+            refId: p.id,
+            conciliado: p.conciliado,
+          });
+        }
+        for (const r of state.recebimentos) {
+          if (r.contaId !== contaId || !r.recebidoEm) continue;
+          events.push({
+            data: r.recebidoEm,
+            descricao: `Recebimento · ${r.cliente} · ${r.descricao}`,
+            valor: r.valorRecebido,
+            origem: "recebimento",
+            refId: r.id,
+            conciliado: r.conciliado,
+          });
+        }
+        for (const t of state.transferencias) {
+          if (!t.pago) continue;
+          if (t.deContaId === contaId) {
+            events.push({
+              data: t.data,
+              descricao: `Transferência saída · ${t.descricao}`,
+              valor: -t.valor,
+              origem: "transferencia",
+              refId: t.id,
+            });
+          }
+          if (t.paraContaId === contaId) {
+            events.push({
+              data: t.data,
+              descricao: `Transferência entrada · ${t.descricao}`,
+              valor: t.valor,
+              origem: "transferencia",
+              refId: t.id,
+            });
+          }
+        }
+        events.sort((a, b) => a.data.localeCompare(b.data));
+        let saldo = conta.valorInicial;
+        for (const e of events) {
+          saldo = Math.round((saldo + e.valor) * 100) / 100;
+          lines.push({ ...e, saldo });
+        }
+        return lines;
       },
       addFaturamento: (input) => {
         if (!input.naturezaId || !input.centro?.label || input.valorBruto <= 0) {

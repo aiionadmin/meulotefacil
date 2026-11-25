@@ -195,6 +195,26 @@ export type FinanceiroConfig = {
   numeroDocObrigatorioPagamento: boolean;
 };
 
+export type OfxImport = {
+  id: string;
+  contaId: string;
+  arquivo: string;
+  importadoEm: string;
+  qtd: number;
+  conciliados: number;
+  fitIds: string[];
+};
+
+export type ExtratoLinha = {
+  data: string;
+  descricao: string;
+  valor: number;
+  saldo: number;
+  origem: "saldo_inicial" | "pagamento" | "recebimento" | "transferencia" | "ofx";
+  refId?: string;
+  conciliado?: boolean;
+};
+
 export type FinanceiroState = {
   config: FinanceiroConfig;
   planos: PlanoConta[];
@@ -208,4 +228,5 @@ export type FinanceiroState = {
   preLancamentos: PreLancamento[];
   transferencias: Transferencia[];
   notas: NotaFiscal[];
+  ofxImports: OfxImport[];
 };
