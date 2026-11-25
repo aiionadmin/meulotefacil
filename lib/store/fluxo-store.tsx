@@ -12,7 +12,7 @@ import { FLUXO_STORAGE_KEY, seedFluxo } from "@/lib/domain/fluxo-seed";
 import {
   JORNADA_FORWARD_ORDER,
   REGULARIZACAO_FORWARD_ORDER,
-  canMoveForward,
+  canMoveOnBoard,
 } from "@/lib/domain/kanban-forward";
 import { findDuplicateLead } from "@/lib/domain/lead-duplicate";
 import { scoreLead } from "@/lib/domain/lead-score";
@@ -155,7 +155,7 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
         const lead = state.leads.find((l) => l.id === id);
         if (!lead) return false;
         const de = lead.etapa;
-        const allowed = canMoveForward(JORNADA_FORWARD_ORDER, de, para, {
+        const allowed = canMoveOnBoard(JORNADA_FORWARD_ORDER, de, para, {
           force: opts?.force,
           allowExit: true,
         });
@@ -315,7 +315,7 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
         const item = state.regularization.find((r) => r.id === id);
         if (!item) return false;
         const de = item.etapa;
-        const allowed = canMoveForward(REGULARIZACAO_FORWARD_ORDER, de, para, {
+        const allowed = canMoveOnBoard(REGULARIZACAO_FORWARD_ORDER, de, para, {
           force: opts?.force,
           allowExit: false,
         });

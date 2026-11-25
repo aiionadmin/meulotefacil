@@ -10,6 +10,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { BoardViews } from "@/components/kanban/BoardViews";
+import { neighborStep } from "@/lib/domain/kanban-forward";
 import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import type { JornadaColuna, Lead } from "@/lib/domain/fluxo-types";
@@ -46,7 +47,7 @@ export default function JornadaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Jornada do cliente"
-        description="Cards só avançam. Atraso vira selo no card — cobrança fica no quadro próprio. Saídas: Perdido (com motivo)."
+        description="Arraste para avançar ou voltar de etapa. Atraso vira selo no card — cobrança fica no quadro próprio. Saídas: Perdido (com motivo)."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -64,14 +65,17 @@ export default function JornadaPage() {
         columns={columns}
         cards={cards}
         onMove={(cardId, to) => {
+          const lead = state.leads.find((l) => l.id === cardId);
           const ok = moveLead(cardId, to as JornadaColuna);
           if (!ok) {
-            notify(
-              "Movimento bloqueado",
-              "O card só pode avançar. Voltar exige perfil Administrador com motivo."
-            );
+            notify("Movimento bloqueado", "Coluna inválida para este card.");
           } else {
-            notify("Card avançou");
+            const deIdx = JORNADA_COLS.findIndex((c) => c.id === lead?.etapa);
+            const paraIdx = JORNADA_COLS.findIndex((c) => c.id === to);
+            notify(
+              paraIdx < deIdx ? "Card voltou" : "Card avançou",
+              JORNADA_COLS.find((c) => c.id === to)?.label
+            );
           }
           return ok;
         }}
@@ -110,19 +114,52 @@ export default function JornadaPage() {
             <div className="flex flex-wrap gap-2 pt-3">
               <Button
                 size="sm"
+                variant="outline"
                 onClick={() => {
-                  const idx = JORNADA_COLS.findIndex(
-                    (c) => c.id === selected.etapa
+                  const prev = neighborStep(
+                    JORNADA_COLS.map((c) => c.id),
+                    selected.etapa,
+                    "voltar"
                   );
-                  const next = JORNADA_COLS[idx + 1];
+                  if (!prev) {
+                    notify("Já está na primeira etapa");
+                    return;
+                  }
+                  const ok = moveLead(selected.id, prev as JornadaColuna);
+                  if (ok) {
+                    const label =
+                      JORNADA_COLS.find((c) => c.id === prev)?.label ?? prev;
+                    notify("Voltou", label);
+                    setSelected({
+                      ...selected,
+                      etapa: prev as JornadaColuna,
+                    });
+                  } else notify("Movimento bloqueado");
+                }}
+              >
+                Voltar etapa
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const next = neighborStep(
+                    JORNADA_COLS.map((c) => c.id),
+                    selected.etapa,
+                    "avancar"
+                  );
                   if (!next) {
                     notify("Já está na última etapa");
                     return;
                   }
-                  const ok = moveLead(selected.id, next.id);
+                  const ok = moveLead(selected.id, next as JornadaColuna);
                   if (ok) {
-                    notify("Avançou", next.label);
-                    setSelected({ ...selected, etapa: next.id });
+                    const label =
+                      JORNADA_COLS.find((c) => c.id === next)?.label ?? next;
+                    notify("Avançou", label);
+                    setSelected({
+                      ...selected,
+                      etapa: next as JornadaColuna,
+                    });
                   } else notify("Movimento bloqueado");
                 }}
               >
