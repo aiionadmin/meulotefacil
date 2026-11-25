@@ -51,7 +51,7 @@ export default function QuadroRegularizacaoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Quadro: regularização e escritura"
-        description="Só avança. Empreendimentos só de loteamento não entram neste quadro."
+        description="Arraste para avançar ou voltar. Empreendimentos só de loteamento não entram neste quadro."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/processos">Processos</Link>
@@ -63,17 +63,20 @@ export default function QuadroRegularizacaoPage() {
         columns={COLS.map((c) => ({ ...c, droppable: true }))}
         cards={cards}
         onMove={(cardId, to) => {
+          const atual = state.regularization.find((r) => r.id === cardId);
           const ok = moverRegularizacao(
             cardId,
             to as RegularizationCase["etapa"]
           );
           if (!ok) {
-            notify(
-              "Movimento bloqueado",
-              "O card só pode avançar para etapas à frente."
-            );
+            notify("Movimento bloqueado", "Coluna inválida para este card.");
           } else {
-            notify("Etapa avançada");
+            const deIdx = COLS.findIndex((c) => c.id === atual?.etapa);
+            const paraIdx = COLS.findIndex((c) => c.id === to);
+            notify(
+              paraIdx < deIdx ? "Etapa voltou" : "Etapa avançada",
+              COLS.find((c) => c.id === to)?.label
+            );
           }
           return ok;
         }}

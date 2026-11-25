@@ -3,6 +3,8 @@ import {
   JORNADA_FORWARD_ORDER,
   REGULARIZACAO_FORWARD_ORDER,
   canMoveForward,
+  canMoveOnBoard,
+  neighborStep,
 } from "./kanban-forward";
 
 function assert(cond: boolean, msg: string) {
@@ -18,25 +20,41 @@ assert(
 );
 assert(
   !canMoveForward(JORNADA_FORWARD_ORDER, "em_atendimento", "novo_contato"),
-  "bloquear voltar"
+  "canMoveForward ainda bloqueia voltar"
 );
 assert(
-  canMoveForward(JORNADA_FORWARD_ORDER, "em_atendimento", "perdido"),
+  canMoveOnBoard(JORNADA_FORWARD_ORDER, "em_atendimento", "novo_contato"),
+  "canMoveOnBoard permite voltar"
+);
+assert(
+  canMoveOnBoard(JORNADA_FORWARD_ORDER, "novo_contato", "proposta_reserva"),
+  "pular etapas à frente"
+);
+assert(
+  canMoveOnBoard(JORNADA_FORWARD_ORDER, "em_atendimento", "perdido"),
   "saída perdido"
 );
 assert(
-  canMoveForward(JORNADA_FORWARD_ORDER, "escritura", "novo_contato", {
-    force: true,
-  }),
-  "admin force"
+  !canMoveOnBoard(JORNADA_FORWARD_ORDER, "em_atendimento", "em_atendimento"),
+  "mesmo status bloqueado"
 );
 assert(
-  canMoveForward(REGULARIZACAO_FORWARD_ORDER, "documentos", "prefeitura"),
-  "reg avançar"
+  canMoveOnBoard(REGULARIZACAO_FORWARD_ORDER, "cartorio", "documentos"),
+  "reg voltar"
 );
 assert(
-  !canMoveForward(REGULARIZACAO_FORWARD_ORDER, "cartorio", "documentos"),
-  "reg bloquear voltar"
+  neighborStep(JORNADA_FORWARD_ORDER, "em_atendimento", "voltar") ===
+    "novo_contato",
+  "vizinho voltar"
+);
+assert(
+  neighborStep(JORNADA_FORWARD_ORDER, "em_atendimento", "avancar") ===
+    "proposta_reserva",
+  "vizinho avançar"
+);
+assert(
+  neighborStep(JORNADA_FORWARD_ORDER, "novo_contato", "voltar") === null,
+  "sem voltar na primeira"
 );
 
-console.log("OK kanban-forward");
+console.log("OK kanban-forward (avancar+voltar)");
