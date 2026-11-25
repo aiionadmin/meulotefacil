@@ -11,7 +11,8 @@ export default function HomePage() {
   return (
     <>
       <ScrollHero />
-      <div className="after-scroll-hero bg-brand-cream">
+      {/* Ritmo: paper → ink → paper-muted → ink-deep → paper → mata-soft → ink-deep */}
+      <div className="after-scroll-hero bg-paper">
         <ServicosCards />
         <HowItWorks />
         <RegularizacoesGrid

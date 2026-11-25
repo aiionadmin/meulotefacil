@@ -11,6 +11,11 @@ export type FaseProcesso =
   | "aprovacao_crf"
   | "registro";
 
+export type NucleoVideo = {
+  label: string;
+  href: string;
+};
+
 export type Nucleo = {
   id: string;
   slug: string;
@@ -21,10 +26,22 @@ export type Nucleo = {
   tipo: TipoNucleo;
   lotes: number;
   lotesAprox?: boolean;
+  /** Área total, ex.: "24.461,57 m²" */
+  area?: string;
   status: StatusNucleo;
   fase?: FaseProcesso;
   faseLabel?: string;
+  /** Ex.: CRF nº 23, de 29/04/2025 */
   aprovacao?: string;
+  /** Publicação no Diário Oficial */
+  diarioOficial?: string;
+  /** Matrícula / cartório */
+  matricula?: string;
+  /** Texto completo no estilo do site de referência */
+  resumo?: string;
+  /** PDF da CRF em /public/docs/crf/ */
+  crfPdf?: string;
+  videos?: NucleoVideo[];
   imagem: string;
 };
 
@@ -54,7 +71,10 @@ export const nucleos: Nucleo[] = [
     status: "em_registro",
     fase: "registro",
     faseLabel: "CRF 04 de 20/02/2026; em registro no 3º RI",
-    aprovacao: "CRF 04 de 20/02/2026",
+    aprovacao: "CRF nº 04, de 20/02/2026",
+    diarioOficial: "Diário Oficial do Município de Campinas em 25/02/2026",
+    resumo:
+      "Classificação: REURB-S. Modalidade: Loteamento. Extensão: 105 lotes (aproximadamente). Aprovado através da CRF nº 04, de 20/02/2026, publicada no Diário Oficial do Município de Campinas em 25/02/2026, em fase de registro imobiliário junto ao 3º RI de Campinas.",
     imagem: img(1),
   },
   {
@@ -66,10 +86,14 @@ export const nucleos: Nucleo[] = [
     modalidade: "REURB-S",
     tipo: "Loteamento",
     lotes: 226,
+    area: "33.307,10 m²",
     status: "em_registro",
     fase: "registro",
     faseLabel: "CRF 41 de 18/12/2025; em registro no 2º RI",
-    aprovacao: "CRF 41 de 18/12/2025",
+    aprovacao: "CRF nº 41, de 18/12/2025",
+    diarioOficial: "Diário Oficial do Município de Campinas em 19/12/2025",
+    resumo:
+      "Classificação: REURB-S. Modalidade: Loteamento. Extensão: 226 lotes – 33.307,10 m². Aprovado através da CRF nº 41, de 18/12/2025, publicada no Diário Oficial do Município de Campinas em 19/12/2025, em fase de registro imobiliário junto ao 2º RI de Campinas.",
     imagem: img(2),
   },
   {
@@ -81,10 +105,16 @@ export const nucleos: Nucleo[] = [
     modalidade: "REURB-E",
     tipo: "Condomínio de lotes",
     lotes: 41,
+    area: "32.726,82 m²",
     status: "concluido",
     fase: "registro",
     faseLabel: "CRF 29 de 26/09/2025; matrícula 108.214, 2º RI",
-    aprovacao: "CRF 29 de 26/09/2025",
+    aprovacao: "CRF nº 29, de 26/09/2025",
+    diarioOficial: "Diário Oficial do Município de Campinas em 17/12/2025",
+    matricula: "Matrícula nº 108.214 – 2º RI de Campinas",
+    resumo:
+      "Classificação: REURB-E. Modalidade: Condomínio de lotes. Extensão: 41 unidades imobiliárias – 32.726,82 m². Aprovado através da CRF nº 29, de 26/09/2025, publicada no Diário Oficial do Município de Campinas em 17/12/2025, e registrado sob Matrícula nº 108.214 – 2º RI de Campinas.",
+    crfPdf: "/docs/crf/CRF-PORTAL-DA-MATA.pdf",
     imagem: img(3),
   },
   {
@@ -96,10 +126,16 @@ export const nucleos: Nucleo[] = [
     modalidade: "REURB-S",
     tipo: "Loteamento",
     lotes: 200,
+    area: "24.461,57 m²",
     status: "concluido",
     fase: "registro",
     faseLabel: "CRF 23 de 29/04/2025; matrícula 166.494, 2º RI",
-    aprovacao: "CRF 23 de 29/04/2025",
+    aprovacao: "CRF nº 23, de 29/04/2025",
+    diarioOficial: "Diário Oficial do Município de Campinas em 30/06/2025",
+    matricula: "Matrícula nº 166.494 – 2º RI de Campinas",
+    resumo:
+      "Classificação: REURB-S. Modalidade: Loteamento. Extensão: 200 lotes – 24.461,57 m². Aprovado através da CRF nº 23, de 29/04/2025, publicada no Diário Oficial do Município de Campinas em 30/06/2025 e registrado sob Matrícula nº 166.494 – 2º RI de Campinas.",
+    crfPdf: "/docs/crf/CRF-VILA-PAULA.pdf",
     imagem: img(1),
   },
   {
@@ -111,10 +147,16 @@ export const nucleos: Nucleo[] = [
     modalidade: "REURB-S",
     tipo: "Loteamento",
     lotes: 79,
+    area: "18.534,00 m²",
     status: "concluido",
     fase: "registro",
     faseLabel: "CRF 06 de 31/07/2024; matrícula 284.069, 3º RI",
-    aprovacao: "CRF 06 de 31/07/2024",
+    aprovacao: "CRF nº 06, de 31/07/2024",
+    diarioOficial: "Diário Oficial do Município de Campinas em 01/08/2024",
+    matricula: "Matrícula nº 284.069 – 3º RI de Campinas",
+    resumo:
+      "Classificação: REURB-S. Modalidade: Loteamento. Extensão: 79 lotes – 18.534,00 m². Aprovado através da CRF nº 06, de 31/07/2024, publicada no Diário Oficial do Município de Campinas em 01/08/2024 e registrado sob Matrícula nº 284.069 – 3º RI de Campinas.",
+    crfPdf: "/docs/crf/CRF-VILA-DIVA-2a-Fase.pdf",
     imagem: img(2),
   },
   {
@@ -126,10 +168,15 @@ export const nucleos: Nucleo[] = [
     modalidade: "REURB-S",
     tipo: "Loteamento",
     lotes: 1148,
+    area: "336.021,94 m²",
     status: "concluido",
     fase: "registro",
     faseLabel: "CRF 08 de 12/09/2023; matrícula 278.474, 3º RI",
-    aprovacao: "CRF 08 de 12/09/2023",
+    aprovacao: "CRF nº 08, de 12/09/2023",
+    diarioOficial: "Diário Oficial do Município de Campinas em 13/09/2023",
+    matricula: "Matrícula nº 278.474 – 3º RI de Campinas",
+    resumo:
+      "Classificação: REURB-S. Modalidade: Loteamento. Extensão: 1.148 lotes – 336.021,94 m². Aprovado através da CRF nº 08, de 12/09/2023, publicada no Diário Oficial do Município de Campinas em 13/09/2023 e registrado sob Matrícula nº 278.474 – 3º RI de Campinas.",
     imagem: img(3),
   },
   {
@@ -141,10 +188,16 @@ export const nucleos: Nucleo[] = [
     modalidade: "REURB-S",
     tipo: "Loteamento",
     lotes: 55,
+    area: "18.564,61 m²",
     status: "concluido",
     fase: "registro",
     faseLabel: "CRF 01 de 03/01/2023; matrícula 269.214, 3º RI",
-    aprovacao: "CRF 01 de 03/01/2023",
+    aprovacao: "CRF nº 01, de 03/01/2023",
+    diarioOficial: "Diário Oficial do Município de Campinas em 04/01/2023",
+    matricula: "Matrícula nº 269.214 – 3º RI de Campinas",
+    resumo:
+      "Classificação: REURB-S. Modalidade: Loteamento. Extensão: 55 lotes – 18.564,61 m². Aprovado através da CRF nº 01, de 03/01/2023, publicada no Diário Oficial do Município de Campinas em 04/01/2023 e registrado sob Matrícula nº 269.214 – 3º RI de Campinas.",
+    crfPdf: "/docs/crf/CRF-VILA-DIVA-1a-Fase.pdf",
     imagem: img(1),
   },
   {
@@ -277,6 +330,8 @@ export const nucleos: Nucleo[] = [
     status: "em_andamento",
     fase: "projetos",
     faseLabel: "Projetos; planta publicada 02/03/2026",
+    resumo:
+      "Classificação: REURB-S. Modalidade: Loteamento. Extensão: 06 lotes (aproximadamente). Projeto em fase de desenvolvimento, com planta de perímetro já aprovada e publicada no Diário Oficial de Campinas em 02/03/2026.",
     imagem: img(1),
   },
   {
@@ -483,9 +538,22 @@ export function lotesLabel(n: Nucleo) {
   const prefix = n.lotesAprox ? "~" : "";
   return `${prefix}${n.lotes.toLocaleString("pt-BR")} ${
     n.tipo === "Condomínio de lotes" || n.tipo === "Conjunto habitacional"
-      ? n.tipo === "Condomínio de lotes"
-        ? "unidades"
-        : "unidades"
+      ? "unidades"
       : "lotes"
   }`;
+}
+
+export function nucleosConcluidosOuRegistro() {
+  return nucleos.filter(
+    (n) => n.status === "concluido" || n.status === "em_registro"
+  );
+}
+
+export function nucleosEmAndamento() {
+  return nucleos.filter((n) => n.status === "em_andamento");
+}
+
+export function nucleoExtensaoLabel(n: Nucleo) {
+  const base = lotesLabel(n);
+  return n.area ? `${base} – ${n.area}` : base;
 }

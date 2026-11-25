@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,12 +8,19 @@ import { cn } from "@/lib/utils";
 export type EditorialTestimonialItem = {
   id: number;
   quote: string;
+  /** Papel genérico (ex.: “Morador”) — sem nomes pessoais em produção. */
   author: string;
   role: string;
   company: string;
   image: string;
+  /** Só itens `published: true` entram no site em produção. */
+  published?: boolean;
 };
 
+/**
+ * Depoimentos REURB anônimos (sem nomes fictícios).
+ * Rascunhos ficam com `published: false` até aprovação editorial.
+ */
 const defaultTestimonials: EditorialTestimonialItem[] = [
   {
     id: 1,
@@ -24,6 +31,7 @@ const defaultTestimonials: EditorialTestimonialItem[] = [
     company: "Vila Diva, Campinas",
     image:
       "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&h=200&q=80",
+    published: true,
   },
   {
     id: 2,
@@ -34,6 +42,7 @@ const defaultTestimonials: EditorialTestimonialItem[] = [
     company: "Vila Paula, Campinas",
     image:
       "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&h=200&q=80",
+    published: true,
   },
   {
     id: 3,
@@ -44,16 +53,33 @@ const defaultTestimonials: EditorialTestimonialItem[] = [
     company: "Campinas e região",
     image:
       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&h=200&q=80",
+    published: true,
   },
 ];
+
+function resolvePublished(
+  items: readonly EditorialTestimonialItem[],
+  showUnpublished: boolean
+) {
+  if (showUnpublished) return [...items];
+  return items.filter((t) => t.published === true);
+}
 
 export default function TestimonialsEditorial({
   testimonials = defaultTestimonials,
   className,
+  /** Dev/preview: incluir itens com published:false. */
+  showUnpublished = process.env.NEXT_PUBLIC_SHOW_UNPUBLISHED_TESTIMONIALS === "1",
 }: {
   testimonials?: EditorialTestimonialItem[];
   className?: string;
+  showUnpublished?: boolean;
 }) {
+  const visible = useMemo(
+    () => resolvePublished(testimonials, showUnpublished),
+    [testimonials, showUnpublished]
+  );
+
   const [active, setActive] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -67,16 +93,18 @@ export default function TestimonialsEditorial({
   };
 
   const handlePrev = () => {
-    const newIndex = active === 0 ? testimonials.length - 1 : active - 1;
+    if (visible.length === 0) return;
+    const newIndex = active === 0 ? visible.length - 1 : active - 1;
     handleChange(newIndex);
   };
 
   const handleNext = () => {
-    const newIndex = active === testimonials.length - 1 ? 0 : active + 1;
+    if (visible.length === 0) return;
+    const newIndex = active === visible.length - 1 ? 0 : active + 1;
     handleChange(newIndex);
   };
 
-  const current = testimonials[active] ?? testimonials[0];
+  const current = visible[active] ?? visible[0];
   if (!current) return null;
 
   return (
@@ -112,7 +140,7 @@ export default function TestimonialsEditorial({
               <div className="relative h-12 w-12 overflow-hidden rounded-full ring-2 ring-foreground/10 transition-all duration-300 group-hover:ring-foreground/30">
                 <Image
                   src={current.image}
-                  alt={current.author}
+                  alt=""
                   fill
                   className="object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
                   sizes="48px"
@@ -136,7 +164,7 @@ export default function TestimonialsEditorial({
       <div className="mt-12 flex items-center justify-between gap-4 sm:mt-16">
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-3">
-            {testimonials.map((t, index) => (
+            {visible.map((t, index) => (
               <button
                 key={t.id}
                 type="button"
@@ -158,7 +186,7 @@ export default function TestimonialsEditorial({
           </div>
           <span className="text-xs uppercase tracking-widest text-muted-foreground">
             {String(active + 1).padStart(2, "0")} /{" "}
-            {String(testimonials.length).padStart(2, "0")}
+            {String(visible.length).padStart(2, "0")}
           </span>
         </div>
 

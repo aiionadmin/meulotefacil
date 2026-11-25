@@ -26,7 +26,6 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  ArrowRight,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -159,10 +158,7 @@ export function AppSidebar({
                     )}
                     <Icon className="h-4 w-4 shrink-0" />
                     {showLabels ? (
-                      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                        <span className="truncate">{item.label}</span>
-                        <ArrowRight className="size-3.5 shrink-0 opacity-50" aria-hidden />
-                      </span>
+                      <span className="truncate">{item.label}</span>
                     ) : null}
                   </Link>
                 );

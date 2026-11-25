@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { Building2, Home, ArrowUpRight, type LucideIcon } from "lucide-react";
+import { Building2, Home, type LucideIcon } from "lucide-react";
 import { SectionHeading } from "@/components/site/SectionHeading";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { cn, prefersReducedMotion } from "@/lib/utils";
@@ -86,7 +86,6 @@ export function ServicosCards() {
             className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/70 transition-colors hover:text-ink lg:pb-1"
           >
             Ver todos os serviços
-            <ArrowUpRight className="size-4" aria-hidden />
           </Link>
         </div>
 
@@ -129,13 +128,6 @@ export function ServicosCards() {
                       )}
                     >
                       <Icon className="size-5" />
-                    </span>
-                    <span
-                      className={cn(
-                        "inline-flex size-9 items-center justify-center rounded-full border border-linha text-ink/40 transition-all duration-300 group-hover:border-ink/30 group-hover:bg-ink group-hover:text-paper"
-                      )}
-                    >
-                      <ArrowUpRight className="size-4" aria-hidden />
                     </span>
                   </div>
 
