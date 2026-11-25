@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Dark só com classe .dark — não espelha prefers-color-scheme do SO
+   (evita inputs pretos / labels claras em cards claros do site). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
   Design system — consultoria corporativa (etapa 1)
   Semântica: ink / paper / accent (+ mata, linha)
