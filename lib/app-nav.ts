@@ -19,9 +19,14 @@ export const APP_NAV: AppNavGroup[] = [
     id: "inicio",
     label: "1. Início",
     items: [
+      { href: "/dashboard/operacional", label: "Números gerais", description: "Dashboard operacional (Parte 5)" },
+      { href: "/dashboard/gerencial", label: "Gerencial", description: "Direção / Financeiro" },
       { href: "/dashboard", label: "Painel", description: "Carteira, obras, funil e alertas" },
       { href: "/notificacoes", label: "Notificações", description: "Não lidas e histórico" },
       { href: "/tarefas", label: "Minhas tarefas", description: "Tarefas do usuário" },
+      { href: "/demandas", label: "Demandas", description: "Pedidos operacionais" },
+      { href: "/portal/corretor", label: "Portal corretor", description: "Área externa" },
+      { href: "/portal/cliente", label: "Portal cliente", description: "Área externa" },
     ],
   },
   {
@@ -34,6 +39,7 @@ export const APP_NAV: AppNavGroup[] = [
       { href: "/quadros/compras", label: "Compras", description: "SC por status" },
       { href: "/quadros/obras", label: "Obras", description: "Status da obra" },
       { href: "/quadros/tarefas", label: "Tarefas", description: "Quadro de tarefas" },
+      { href: "/demandas", label: "Demandas", description: "Kanban de pedidos" },
     ],
   },
   {
@@ -50,6 +56,7 @@ export const APP_NAV: AppNavGroup[] = [
     label: "4. Empreendimentos",
     items: [
       { href: "/empreendimentos", label: "Empreendimentos e lotes", description: "Estoque, status, geração em massa" },
+      { href: "/empreendimentos/hub", label: "Visão única", description: "Resumo, lotes, vendas, demandas (Parte 5)" },
       { href: "/empreendimentos/planta", label: "Planta do loteamento", description: "Lotes clicáveis por status" },
     ],
   },
