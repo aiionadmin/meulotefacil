@@ -2,36 +2,26 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
   DataTable,
   StatusPill,
+  ModuleSection,
 } from "@/components/app/ModulePage";
-import {
-  DetailRow,
-  DetailSheet,
-  Field,
-  FilterBar,
-  FormDialog,
-  notify,
-} from "@/components/app/ModuleToolkit";
-import { brl } from "@/lib/data/sistema";
-import { useDemoStore, type NotaFiscal } from "@/lib/store/demo-store";
+import { FilterBar, notify } from "@/components/app/ModuleToolkit";
+import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { useFluxo } from "@/lib/store/fluxo-store";
 
 export default function FiscalPage() {
-  const { state, vincularNota, emitirNfse } = useDemoStore();
+  const { state, vincularNfe } = useFluxo();
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<NotaFiscal | null>(null);
-  const [form, setForm] = useState({ cliente: "Prefeitura de Amparo", valor: 15000 });
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return state.fiscal;
-    return state.fiscal.filter((n) =>
-      [n.tipo, n.numero, n.emitente, n.status]
+    return state.fiscal.filter((f) =>
+      [f.numero, f.emissor, f.tipo, f.status]
         .join(" ")
         .toLowerCase()
         .includes(term)
@@ -42,129 +32,86 @@ export default function FiscalPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Fiscal e contábil"
-        description="Captura de NFe, emissão de NFSe, vinculação a lançamentos e exportações."
-        actions={
-          <>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                notify(
-                  "Exportação DIMOB/SPED",
-                  "Arquivo demo gerado (sem envio real)"
-                )
-              }
-            >
-              Exportar
-            </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
-              Emitir NFSe
-            </Button>
-          </>
-        }
+        description="Fase 10 — NFe recebidas, NFSe emitidas; DIMOB/SPED sob demanda do contador."
       />
+
       <KpiGrid
         items={[
-          { label: "Notas", value: state.fiscal.length },
+          { label: "Documentos", value: state.fiscal.length },
           {
-            label: "Sem lançamento",
-            value: state.fiscal.filter((n) => n.status === "Sem lançamento")
-              .length,
+            label: "NFe pendentes",
+            value: state.fiscal.filter(
+              (f) => f.tipo === "nfe_recebida" && f.status === "pendente"
+            ).length,
           },
           {
-            label: "Emitidas",
-            value: state.fiscal.filter((n) => n.status === "Emitida").length,
-          },
-          {
-            label: "Vinculadas",
-            value: state.fiscal.filter((n) => n.status === "Vinculada").length,
+            label: "NFSe",
+            value: state.fiscal.filter((f) => f.tipo === "nfse_emitida").length,
           },
         ]}
       />
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar nota…" />
+
+      <FilterBar value={q} onChange={setQ} placeholder="Buscar número, emissor…" />
+
       <DataTable
-        onRowClick={(i) => setSelected(filtered[i])}
         columns={[
           { key: "tipo", label: "Tipo" },
           { key: "numero", label: "Número" },
-          { key: "emitente", label: "Emitente" },
+          { key: "emissor", label: "Emissor" },
+          { key: "emissao", label: "Emissão" },
           { key: "valor", label: "Valor" },
           { key: "status", label: "Status" },
+          { key: "acao", label: "" },
         ]}
-        rows={filtered.map((n) => ({
-          tipo: n.tipo,
-          numero: <span className="font-medium">{n.numero}</span>,
-          emitente: n.emitente,
-          valor: brl(n.valor),
-          status: (
-            <StatusPill
-              tone={
-                n.status === "Vinculada" || n.status === "Emitida"
-                  ? "ok"
-                  : "warn"
-              }
-            >
-              {n.status}
-            </StatusPill>
-          ),
+        rows={filtered.map((f) => ({
+          tipo: f.tipo === "nfe_recebida" ? "NFe recebida" : "NFSe emitida",
+          numero: f.numero,
+          emissor: f.emissor,
+          emissao: formatDateBR(f.emissao),
+          valor: formatBRL(f.valor),
+          status: <StatusPill tone="info">{f.status}</StatusPill>,
+          acao:
+            f.status === "pendente" ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  vincularNfe(f.id);
+                  notify("NFe vinculada ao lançamento");
+                }}
+              >
+                Vincular
+              </Button>
+            ) : (
+              "—"
+            ),
         }))}
       />
 
-      <FormDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Emitir NFSe"
-        submitLabel="Emitir"
-        onSubmit={() => {
-          const n = emitirNfse(form.cliente, Number(form.valor) || 0);
-          notify("NFSe emitida", `Nº ${n.numero}`);
-          setOpen(false);
-        }}
-      >
-        <Field label="Tomador">
-          <Input
-            value={form.cliente}
-            onChange={(e) => setForm({ ...form, cliente: e.target.value })}
-          />
-        </Field>
-        <Field label="Valor">
-          <Input
-            type="number"
-            value={form.valor}
-            onChange={(e) =>
-              setForm({ ...form, valor: Number(e.target.value) })
-            }
-          />
-        </Field>
-      </FormDialog>
-
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelected(null)}
-        title={selected ? `${selected.tipo} ${selected.numero}` : "Nota"}
-        footer={
-          selected && selected.status === "Sem lançamento" ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                vincularNota(selected.id);
-                setSelected({ ...selected, status: "Vinculada" });
-                notify("Nota vinculada ao financeiro");
-              }}
-            >
-              Vincular lançamento
-            </Button>
-          ) : null
-        }
-      >
-        {selected ? (
-          <>
-            <DetailRow label="Emitente" value={selected.emitente} />
-            <DetailRow label="Valor" value={brl(selected.valor)} />
-            <DetailRow label="Status" value={selected.status} />
-          </>
-        ) : null}
-      </DetailSheet>
+      <ModuleSection title="Exportações">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => notify("DIMOB", "Geração anual — confirmar layout com contador")}
+          >
+            Gerar DIMOB
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => notify("SPED", "Contribuições — confirmar com contador")}
+          >
+            SPED Contribuições
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => notify("Exportação", "Formato Domínio / Folhamatic")}
+          >
+            Exportação contábil
+          </Button>
+        </div>
+      </ModuleSection>
     </div>
   );
 }

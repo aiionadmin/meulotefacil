@@ -1,351 +1,191 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   ModuleHeader,
   KpiGrid,
   DataTable,
   StatusPill,
-  ModuleSection,
 } from "@/components/app/ModulePage";
 import {
-  DetailRow,
-  DetailSheet,
   Field,
   FilterBar,
   FormDialog,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { brl } from "@/lib/data/sistema";
-import { useDemoStore, type Contrato } from "@/lib/store/demo-store";
-
-const etapas = [
-  "1. Selecionar lotes",
-  "2. Comprador e promitentes",
-  "3. Adicionais e recados",
-  "4. Dados do lote",
-  "5. Cópia de plano",
-  "6. Plano de pagamento",
-  "7. Comissão e finalização",
-];
+import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { useFluxo } from "@/lib/store/fluxo-store";
 
 export default function VendasPage() {
-  const { state, addContrato, updateContrato, updateLote, addPessoa } =
-    useDemoStore();
+  const { state, addProposal, converterProposal } = useFluxo();
   const [q, setQ] = useState("");
-  const [step, setStep] = useState(0);
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Contrato | null>(null);
-  const disponiveis = state.lotes.filter(
-    (l) => l.status === "Disponível" && !l.bloqueiaVenda
-  );
   const [form, setForm] = useState({
-    loteId: disponiveis[0]?.id ?? "",
-    comprador: "",
-    corretor: "Ana Paula",
-    entrada: 20000,
+    leadId: state.leads[0]?.id ?? "",
+    cliente: "",
+    empNome: "Residencial Horizonte",
+    loteLabel: "A/02",
+    valor: 185000,
     parcelas: 120,
+    entrada: 20000,
+    validade: new Date().toISOString().slice(0, 10),
+    responsavel: "Comercial",
   });
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return state.contratos;
-    return state.contratos.filter((c) =>
-      [c.id, c.comprador, c.lote, c.status].join(" ").toLowerCase().includes(term)
+    if (!term) return state.proposals;
+    return state.proposals.filter((p) =>
+      [p.cliente, p.empNome, p.loteLabel, p.status]
+        .join(" ")
+        .toLowerCase()
+        .includes(term)
     );
-  }, [state.contratos, q]);
-
-  const lote = state.lotes.find((l) => l.id === form.loteId);
-
-  const finalizar = () => {
-    if (!lote || !form.comprador.trim()) return;
-    const valor = lote.valor;
-    const saldo = Math.max(0, valor - Number(form.entrada));
-    const contrato = addContrato({
-      comprador: form.comprador.trim(),
-      lote: `${lote.emp} ${lote.quadra}/${lote.lote}`,
-      valor,
-      status: "Aguardando assinatura",
-      parcelas: `0/${form.parcelas}`,
-      saldo,
-      corretor: form.corretor,
-    });
-    updateLote(lote.id, { status: "Reservado", bloqueiaVenda: true });
-    if (!state.pessoas.some((p) => p.nome === form.comprador.trim())) {
-      addPessoa({
-        nome: form.comprador.trim(),
-        doc: "pendente",
-        papeis: ["Comprador", "Cliente"],
-        cidade: "Campinas",
-        status: "Ativo",
-        contato: "pendente",
-      });
-    }
-    notify("Venda iniciada", contrato.id);
-    setOpen(false);
-    setStep(0);
-    setForm({
-      loteId: disponiveis.find((l) => l.id !== lote.id)?.id ?? "",
-      comprador: "",
-      corretor: "Ana Paula",
-      entrada: 20000,
-      parcelas: 120,
-    });
-  };
+  }, [state.proposals, q]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Vendas e contratos"
-        description="Assistente em 7 etapas, planos em séries, reajuste, comissões e funil comercial."
+        title="Propostas e reservas"
+        description="Fase 8 — simular plano, reservar lote e converter em venda/contrato."
         actions={
-          <Button
-            size="sm"
-            onClick={() => {
-              setStep(0);
-              setOpen(true);
-            }}
-            disabled={!disponiveis.length}
-          >
-            Iniciar venda
-          </Button>
+          <>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/contratos">Contratos</Link>
+            </Button>
+            <Button size="sm" onClick={() => setOpen(true)}>
+              Nova proposta
+            </Button>
+          </>
         }
       />
+
       <KpiGrid
         items={[
-          { label: "Contratos", value: state.contratos.length },
+          { label: "Propostas", value: state.proposals.length },
           {
-            label: "Ativos",
-            value: state.contratos.filter((c) => c.status === "Ativo").length,
+            label: "Abertas",
+            value: state.proposals.filter((p) => p.status === "aberta").length,
           },
           {
-            label: "Aguardando",
-            value: state.contratos.filter((c) =>
-              c.status.includes("Aguardando")
-            ).length,
+            label: "Reservadas",
+            value: state.proposals.filter((p) => p.status === "reservada").length,
           },
-          { label: "Lotes disponíveis", value: disponiveis.length },
+          {
+            label: "Convertidas",
+            value: state.proposals.filter((p) => p.status === "convertida").length,
+          },
         ]}
       />
 
-      <ModuleSection title="Assistente de venda">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          {etapas.map((e, i) => (
-            <Card
-              key={e}
-              className={
-                open && step === i ? "border-brand-accent-strong" : undefined
-              }
-            >
-              <CardContent className="py-4 text-sm font-medium text-ink">
-                {e}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </ModuleSection>
+      <FilterBar value={q} onChange={setQ} placeholder="Buscar cliente, lote…" />
 
-      <ModuleSection title="Contratos">
-        <FilterBar value={q} onChange={setQ} placeholder="Buscar contrato…" />
-        <DataTable
-          onRowClick={(i) => setSelected(filtered[i])}
-          columns={[
-            { key: "id", label: "Contrato" },
-            { key: "comprador", label: "Comprador" },
-            { key: "lote", label: "Lote" },
-            { key: "valor", label: "Valor" },
-            { key: "parcelas", label: "Parcelas" },
-            { key: "saldo", label: "Saldo" },
-            { key: "corretor", label: "Corretor" },
-            { key: "status", label: "Status" },
-          ]}
-          rows={filtered.map((c) => ({
-            id: <span className="font-medium">{c.id}</span>,
-            comprador: c.comprador,
-            lote: c.lote,
-            valor: brl(c.valor),
-            parcelas: c.parcelas,
-            saldo: brl(c.saldo),
-            corretor: c.corretor,
-            status: (
-              <StatusPill
-                tone={
-                  c.status === "Ativo" || c.status === "Quitado"
-                    ? "ok"
-                    : c.status === "Renegociado"
-                      ? "warn"
-                      : "info"
-                }
+      <DataTable
+        columns={[
+          { key: "cliente", label: "Cliente" },
+          { key: "lote", label: "Lote" },
+          { key: "valor", label: "Valor" },
+          { key: "validade", label: "Validade" },
+          { key: "status", label: "Status" },
+          { key: "acao", label: "" },
+        ]}
+        rows={filtered.map((p) => ({
+          cliente: p.cliente,
+          lote: `${p.empNome} · ${p.loteLabel}`,
+          valor: formatBRL(p.valor),
+          validade: formatDateBR(p.validade),
+          status: <StatusPill tone="info">{p.status}</StatusPill>,
+          acao:
+            p.status === "aberta" || p.status === "reservada" ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  converterProposal(p.id);
+                  notify("Convertida · card → Contrato");
+                }}
               >
-                {c.status}
-              </StatusPill>
+                Converter
+              </Button>
+            ) : (
+              "—"
             ),
-          }))}
-        />
-      </ModuleSection>
+        }))}
+      />
 
       <FormDialog
         open={open}
         onOpenChange={setOpen}
-        title={`Assistente de venda · etapa ${step + 1}/7`}
-        submitLabel={step === 6 ? "Finalizar venda" : "Próxima etapa"}
+        title="Nova proposta"
         onSubmit={() => {
-          if (step < 6) {
-            if (step === 0 && !form.loteId) return;
-            if (step === 1 && !form.comprador.trim()) return;
-            setStep((s) => s + 1);
-            return;
-          }
-          finalizar();
+          const lead = state.leads.find((l) => l.id === form.leadId);
+          addProposal({
+            ...form,
+            cliente: form.cliente || lead?.nome || "Cliente",
+            leadId: form.leadId || undefined,
+          });
+          notify("Proposta criada");
+          setOpen(false);
         }}
       >
-        {step === 0 && (
-          <Field label="Lote disponível">
-            <select
-              className={fieldControlClass}
-              value={form.loteId}
-              onChange={(e) => setForm({ ...form, loteId: e.target.value })}
-            >
-              {disponiveis.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.emp} {l.quadra}/{l.lote} · {brl(l.valor)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
-        {step === 1 && (
-          <>
-            <Field label="Comprador">
-              <Input
-                value={form.comprador}
-                onChange={(e) =>
-                  setForm({ ...form, comprador: e.target.value })
-                }
-                list="compradores-demo"
-                required
-              />
-              <datalist id="compradores-demo">
-                {state.pessoas
-                  .filter((p) => p.papeis.includes("Comprador"))
-                  .map((p) => (
-                    <option key={p.id} value={p.nome} />
-                  ))}
-              </datalist>
-            </Field>
-            <Field label="Corretor">
-              <Input
-                value={form.corretor}
-                onChange={(e) => setForm({ ...form, corretor: e.target.value })}
-              />
-            </Field>
-          </>
-        )}
-        {step === 2 && (
-          <p className="text-sm text-ink/80">
-            Adicionais e recados podem ser registrados após a assinatura. Nesta
-            demo, a etapa avança sem campos obrigatórios.
-          </p>
-        )}
-        {step === 3 && lote && (
-          <div className="space-y-2 text-sm">
-            <DetailRow label="Empreendimento" value={lote.emp} />
-            <DetailRow label="Quadra/Lote" value={`${lote.quadra}/${lote.lote}`} />
-            <DetailRow label="Área" value={`${lote.area} m²`} />
-            <DetailRow label="Valor" value={brl(lote.valor)} />
-          </div>
-        )}
-        {step === 4 && (
-          <p className="text-sm text-ink/80">
-            Cópia de plano: será usado o plano padrão do empreendimento
-            (série de prestações mensais).
-          </p>
-        )}
-        {step === 5 && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Entrada (R$)">
-              <Input
-                type="number"
-                value={form.entrada}
-                onChange={(e) =>
-                  setForm({ ...form, entrada: Number(e.target.value) })
-                }
-              />
-            </Field>
-            <Field label="Nº de parcelas">
-              <Input
-                type="number"
-                value={form.parcelas}
-                onChange={(e) =>
-                  setForm({ ...form, parcelas: Number(e.target.value) })
-                }
-              />
-            </Field>
-          </div>
-        )}
-        {step === 6 && lote && (
-          <div className="space-y-2 text-sm">
-            <p>
-              Confirme a venda de <strong>{lote.emp} {lote.quadra}/{lote.lote}</strong>{" "}
-              para <strong>{form.comprador}</strong>.
-            </p>
-            <DetailRow label="Valor" value={brl(lote.valor)} />
-            <DetailRow label="Entrada" value={brl(form.entrada)} />
-            <DetailRow
-              label="Saldo"
-              value={brl(Math.max(0, lote.valor - form.entrada))}
-            />
-            <DetailRow label="Parcelas" value={`${form.parcelas}x`} />
-            <DetailRow label="Corretor" value={form.corretor} />
-          </div>
-        )}
-        {step > 0 && (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit"
-            onClick={() => setStep((s) => Math.max(0, s - 1))}
+        <Field label="Lead">
+          <select
+            className={fieldControlClass}
+            value={form.leadId}
+            onChange={(e) => {
+              const lead = state.leads.find((l) => l.id === e.target.value);
+              setForm({
+                ...form,
+                leadId: e.target.value,
+                cliente: lead?.nome ?? form.cliente,
+                empNome: lead?.empInteresse ?? form.empNome,
+              });
+            }}
           >
-            Voltar
-          </Button>
-        )}
+            {state.leads.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.nome}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Lote">
+          <Input
+            value={form.loteLabel}
+            onChange={(e) => setForm({ ...form, loteLabel: e.target.value })}
+          />
+        </Field>
+        <Field label="Valor">
+          <Input
+            type="number"
+            value={form.valor}
+            onChange={(e) =>
+              setForm({ ...form, valor: Number(e.target.value) || 0 })
+            }
+          />
+        </Field>
+        <Field label="Entrada">
+          <Input
+            type="number"
+            value={form.entrada}
+            onChange={(e) =>
+              setForm({ ...form, entrada: Number(e.target.value) || 0 })
+            }
+          />
+        </Field>
+        <Field label="Parcelas">
+          <Input
+            type="number"
+            value={form.parcelas}
+            onChange={(e) =>
+              setForm({ ...form, parcelas: Number(e.target.value) || 1 })
+            }
+          />
+        </Field>
       </FormDialog>
-
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelected(null)}
-        title={selected?.id ?? "Contrato"}
-        footer={
-          selected && selected.status.includes("Aguardando") ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                updateContrato(selected.id, { status: "Ativo" });
-                setSelected({ ...selected, status: "Ativo" });
-                notify("Contrato ativado", selected.id);
-              }}
-            >
-              Confirmar assinatura
-            </Button>
-          ) : null
-        }
-      >
-        {selected ? (
-          <>
-            <DetailRow label="Comprador" value={selected.comprador} />
-            <DetailRow label="Lote" value={selected.lote} />
-            <DetailRow label="Valor" value={brl(selected.valor)} />
-            <DetailRow label="Parcelas" value={selected.parcelas} />
-            <DetailRow label="Saldo" value={brl(selected.saldo)} />
-            <DetailRow label="Corretor" value={selected.corretor} />
-            <DetailRow label="Status" value={selected.status} />
-          </>
-        ) : null}
-      </DetailSheet>
     </div>
   );
 }

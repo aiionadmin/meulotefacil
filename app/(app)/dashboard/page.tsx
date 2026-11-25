@@ -39,14 +39,14 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <ModuleHeader
         title="Painel unificado"
-        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fases 1–7 ativas (acesso → carteira → import → financeiro → obras).`}
+        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fases 1–10 ativas (acesso → carteira → operações → jornada/cobrança → fiscal).`}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
-              <Link href="/importacao">Importação</Link>
+              <Link href="/quadros/jornada">Jornada</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/contratos">Nova venda</Link>
+              <Link href="/leads">Novo lead</Link>
             </Button>
           </>
         }

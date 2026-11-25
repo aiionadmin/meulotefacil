@@ -28,19 +28,21 @@ export const APP_NAV: AppNavGroup[] = [
     id: "quadros",
     label: "2. Quadros",
     items: [
-      { href: "/quadros/jornada", label: "Jornada do cliente", description: "Cards por etapa (Fase 3; dnd na 8)" },
-      { href: "/quadros/cobranca", label: "Cobrança", stub: true },
-      { href: "/quadros/regularizacao", label: "Regularização e escritura", stub: true },
-      { href: "/quadros/compras", label: "Compras", stub: true },
-      { href: "/quadros/obras", label: "Obras", stub: true },
-      { href: "/quadros/tarefas", label: "Tarefas", stub: true },
+      { href: "/quadros/jornada", label: "Jornada do cliente", description: "Kanban com regra de arraste (Fase 8)" },
+      { href: "/quadros/cobranca", label: "Cobrança", description: "Faixas de atraso (Fase 9)" },
+      { href: "/quadros/regularizacao", label: "Regularização e escritura", description: "Processo por lote (Fase 9)" },
+      { href: "/quadros/compras", label: "Compras", description: "SC por status" },
+      { href: "/quadros/obras", label: "Obras", description: "Status da obra" },
+      { href: "/quadros/tarefas", label: "Tarefas", description: "Quadro de tarefas" },
     ],
   },
   {
     id: "comercial",
     label: "3. Comercial",
     items: [
-      { href: "/contratos", label: "Efetuar venda / contratos", description: "Venda gera contrato e parcelas (Fase 3)" },
+      { href: "/leads", label: "Leads", description: "Origem e funil (Fase 8)" },
+      { href: "/vendas", label: "Propostas e reservas", description: "Converter em contrato" },
+      { href: "/contratos", label: "Efetuar venda / contratos", description: "Venda gera parcelas" },
     ],
   },
   {
@@ -72,14 +74,17 @@ export const APP_NAV: AppNavGroup[] = [
     id: "cobranca",
     label: "7. Cobrança e jurídico",
     items: [
-      { href: "/quadros/cobranca", label: "Cobrança (quadro)", stub: true },
+      { href: "/cobranca", label: "Inadimplentes e acordos", description: "Régua e contatos (Fase 9)" },
+      { href: "/juridico", label: "Processos judiciais", description: "Ações e prazos" },
+      { href: "/quadros/cobranca", label: "Quadro cobrança", description: "Kanban por faixa" },
     ],
   },
   {
     id: "regularizacao",
     label: "8. Regularização",
     items: [
-      { href: "/processos", label: "Processos", description: "Demo REURB" },
+      { href: "/quadros/regularizacao", label: "Quadro regularização", description: "Etapas por lote (Fase 9)" },
+      { href: "/processos", label: "Processos REURB", description: "Portfólio legado" },
       { href: "/nucleos", label: "Núcleos", description: "Portfólio" },
       { href: "/documentos", label: "Documentos", description: "Checklist do morador" },
       { href: "/protocolo", label: "Protocolo", description: "Consulta por número" },
@@ -111,7 +116,7 @@ export const APP_NAV: AppNavGroup[] = [
     id: "fiscal",
     label: "12. Fiscal",
     items: [
-      { href: "/fiscal", label: "Fiscal e contábil", description: "Demo provisório até Fase 10" },
+      { href: "/fiscal", label: "NFe / NFSe / exportações", description: "Fase 10" },
     ],
   },
   {
@@ -129,7 +134,7 @@ export const APP_NAV: AppNavGroup[] = [
     id: "relatorios",
     label: "14. Relatórios e arquivos",
     items: [
-      { href: "/relatorios", label: "Central de relatórios", description: "Demo provisório até Fase 10" },
+      { href: "/relatorios", label: "Central de relatórios", description: "Favoritos e execução (Fase 10)" },
       { href: "/arquivos", label: "Arquivos", description: "Repositório com tags" },
     ],
   },
@@ -153,11 +158,12 @@ export const APP_FLAT_NAV = APP_NAV.flatMap((g) =>
 );
 
 export const NOVO_ATALHOS = [
+  { href: "/leads", label: "Lead" },
+  { href: "/vendas", label: "Proposta" },
   { href: "/cadastros/pessoas?novo=1", label: "Pessoa" },
   { href: "/contratos", label: "Venda / contrato" },
   { href: "/tarefas?novo=1", label: "Tarefa" },
   { href: "/boletos", label: "Boleto" },
-  { href: "/empreendimentos", label: "Empreendimento" },
   { href: "/compras", label: "Solicitação de compra" },
   { href: "/financeiro", label: "Lançamento a pagar" },
 ] as const;
