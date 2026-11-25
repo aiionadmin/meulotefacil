@@ -9,6 +9,13 @@ import {
   type ReactNode,
 } from "react";
 import {
+  comissoesDoCorretor,
+  criarReserva,
+  expirarReservas,
+  podeReservarLote,
+  totaisComissao,
+} from "@/lib/domain/corretor-comissao-reserva";
+import {
   PARTE5_STORAGE_KEY,
   demandasDoCliente,
   demandasDoCorretor,
@@ -20,6 +27,7 @@ import type {
   DemandaPrioridade,
   DemandaStatus,
   Parte5State,
+  ReservaLote,
 } from "@/lib/domain/parte5-types";
 
 
@@ -58,6 +66,23 @@ type Parte5Api = {
   setPortalCliente: (clienteId: string, nome: string, cpf: string) => void;
   vincularSc: (demandaId: string, purchaseRequestId: string) => boolean;
   vincularFaturamento: (demandaId: string, faturamentoId: string) => boolean;
+  comissoesDoCorretor: (corretorId?: string) => ReturnType<
+    typeof comissoesDoCorretor
+  >;
+  totaisComissao: (corretorId?: string) => ReturnType<typeof totaisComissao>;
+  reservarLote: (input: {
+    lotId: string;
+    empNome: string;
+    quadra: string;
+    lote: string;
+    lotStatus: string;
+    clienteNome?: string;
+    prazoDias?: number;
+  }) => { ok: true; reserva: ReservaLote } | { ok: false; motivo: string };
+  expirarReservasVencidas: (
+    hoje?: string
+  ) => { expiradas: number; lotesLiberados: string[] };
+  minhasReservas: (corretorId?: string) => ReservaLote[];
 };
 
 const Ctx = createContext<Parte5Api | null>(null);
@@ -84,6 +109,10 @@ export function Parte5StoreProvider({ children }: { children: ReactNode }) {
           materiaisVenda: parsed.materiaisVenda?.length
             ? parsed.materiaisVenda
             : seed.materiaisVenda,
+          comissoes: parsed.comissoes?.length
+            ? parsed.comissoes
+            : seed.comissoes,
+          reservas: parsed.reservas?.length ? parsed.reservas : seed.reservas,
         });
       }
     } catch {
@@ -200,6 +229,60 @@ export function Parte5StoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      comissoesDoCorretor: (corretorId) =>
+        comissoesDoCorretor(
+          state.comissoes,
+          corretorId ?? state.portalCorretor.corretorId
+        ),
+      totaisComissao: (corretorId) =>
+        totaisComissao(
+          comissoesDoCorretor(
+            state.comissoes,
+            corretorId ?? state.portalCorretor.corretorId
+          )
+        ),
+      reservarLote: (input) => {
+        const hoje = todayIso();
+        const gate = podeReservarLote(
+          state.reservas,
+          input.lotId,
+          input.lotStatus,
+          hoje
+        );
+        if (!gate.ok) return gate;
+        const reserva = criarReserva({
+          id: uid("rsv"),
+          lotId: input.lotId,
+          empNome: input.empNome,
+          quadra: input.quadra,
+          lote: input.lote,
+          corretorId: state.portalCorretor.corretorId,
+          corretorNome: state.portalCorretor.nome,
+          clienteNome: input.clienteNome,
+          hoje,
+          prazoDias: input.prazoDias,
+        });
+        setState((s) => ({
+          ...s,
+          reservas: [reserva, ...s.reservas],
+        }));
+        return { ok: true as const, reserva };
+      },
+      expirarReservasVencidas: (hoje) => {
+        const dia = hoje ?? todayIso();
+        const { reservas, lotesLiberados } = expirarReservas(
+          state.reservas,
+          dia
+        );
+        const expiradas = lotesLiberados.length;
+        if (expiradas === 0) return { expiradas: 0, lotesLiberados: [] };
+        setState((s) => ({ ...s, reservas }));
+        return { expiradas, lotesLiberados };
+      },
+      minhasReservas: (corretorId) => {
+        const id = corretorId ?? state.portalCorretor.corretorId;
+        return state.reservas.filter((r) => r.corretorId === id);
       },
     }),
     [state, ready]
