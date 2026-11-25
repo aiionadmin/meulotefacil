@@ -1,12 +1,15 @@
 /** Tipos Fases 2–4 — empreendimentos, contratos, recebimentos (docs/especificacao.md §6–7, §12). */
 
 export type LotStatus =
+  | "advogado"
+  | "caucionado"
   | "disponivel"
-  | "reservado"
-  | "vendido"
-  | "quitado"
   | "escritura"
-  | "bloqueado";
+  | "invadido"
+  | "juridico"
+  | "quitado"
+  | "reservado"
+  | "vendido";
 
 export type DevelopmentStatus =
   | "em_orcamento"
@@ -53,7 +56,19 @@ export type Development = {
   status: DevelopmentStatus;
   cidade: string;
   uf: string;
+  cep?: string;
   areaTotal?: string;
+  codigoMunicipio?: string;
+  padrao?: string;
+  confrontacao?: string;
+  matriculaNumero?: string;
+  matriculaData?: string;
+  adminRazao?: string;
+  adminCnpj?: string;
+  adminEndereco?: string;
+  contaCorrentePadrao?: string;
+  numeracaoPropria?: boolean;
+  recadoPadrao?: string;
   qtdQuadras: number;
   qtdLotes: number;
   diasMora: number;
@@ -62,6 +77,63 @@ export type Development = {
   diaMulta: number;
   observacoes?: string;
   empresaId?: string;
+};
+
+export type EmpSocio = {
+  id: string;
+  developmentId: string;
+  nome: string;
+  documento: string;
+  percentual: number;
+};
+
+export type PaymentPlan = {
+  id: string;
+  nome: string;
+  developmentId?: string;
+  entradas: number;
+  prestacoes: number;
+  moedaRef: string;
+  moedaResiduo: string;
+  dataBase: string;
+  series: string;
+  ativo: boolean;
+};
+
+export type IndexQuote = {
+  id: string;
+  indice: string;
+  competencia: string;
+  fator: number;
+};
+
+export type Cartorio = {
+  id: string;
+  nome: string;
+  cidade: string;
+  uf: string;
+  contato?: string;
+};
+
+export type Escritura = {
+  id: string;
+  contractId: string;
+  cartorioId: string;
+  protocolo: string;
+  status: "em_andamento" | "registrada" | "pendente";
+  data?: string;
+};
+
+export type CaixaMovimento = {
+  id: string;
+  data: string;
+  contratoNumero?: string;
+  cliente: string;
+  valor: number;
+  forma: string;
+  autenticacao: string;
+  vias: 1 | 2;
+  estornado?: boolean;
 };
 
 export type Lot = {
@@ -92,6 +164,10 @@ export type PriceTable = {
   developmentId: string;
   nome: string;
   valorM2: number;
+  jurosPct: number;
+  entradaPct: number;
+  opcoesParcelas: number[];
+  comissaoPct: number;
   ativa: boolean;
 };
 
@@ -214,6 +290,21 @@ export type JourneyCard = {
 };
 
 export type CarteiraState = {
+  socios: EmpSocio[];
+  paymentPlans: PaymentPlan[];
+  indices: IndexQuote[];
+  cartorios: Cartorio[];
+  escrituras: Escritura[];
+  caixa: CaixaMovimento[];
+  comissoes: {
+    id: string;
+    corretorNome: string;
+    vendaRef: string;
+    valorPrevisto: number;
+    valorLiberado: number;
+    valorPago: number;
+    status: "prevista" | "liberada" | "paga";
+  }[];
   developments: Development[];
   lots: Lot[];
   priceTables: PriceTable[];

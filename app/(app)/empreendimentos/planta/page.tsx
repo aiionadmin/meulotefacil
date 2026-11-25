@@ -21,7 +21,10 @@ const COLORS: Record<LotStatus, string> = {
   vendido: "bg-sky-700/90 hover:bg-sky-700",
   quitado: "bg-teal-800/90 hover:bg-teal-800",
   escritura: "bg-indigo-700/90 hover:bg-indigo-700",
-  bloqueado: "bg-rose-800/90 hover:bg-rose-800",
+  advogado: "bg-rose-800/90 hover:bg-rose-800",
+  caucionado: "bg-rose-700/90 hover:bg-rose-700",
+  invadido: "bg-rose-900/90 hover:bg-rose-900",
+  juridico: "bg-orange-800/90 hover:bg-orange-800",
 };
 
 export default function PlantaPage() {

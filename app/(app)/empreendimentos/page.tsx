@@ -23,6 +23,7 @@ import {
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
+import { statusLabel } from "@/lib/status/labels";
 
 const STATUS_TONE: Record<LotStatus, "ok" | "warn" | "danger" | "info" | "neutral"> = {
   disponivel: "ok",
@@ -30,8 +31,23 @@ const STATUS_TONE: Record<LotStatus, "ok" | "warn" | "danger" | "info" | "neutra
   vendido: "info",
   quitado: "ok",
   escritura: "info",
-  bloqueado: "danger",
+  advogado: "danger",
+  caucionado: "danger",
+  invadido: "danger",
+  juridico: "danger",
 };
+
+const LOT_STATUSES: LotStatus[] = [
+  "advogado",
+  "caucionado",
+  "disponivel",
+  "escritura",
+  "invadido",
+  "juridico",
+  "quitado",
+  "reservado",
+  "vendido",
+];
 
 export default function EmpreendimentosPage() {
   const {
@@ -56,6 +72,19 @@ export default function EmpreendimentosPage() {
     status: "em_andamento" as Development["status"],
     cidade: "Campinas",
     uf: "SP",
+    cep: "",
+    areaTotal: "",
+    codigoMunicipio: "",
+    padrao: "",
+    confrontacao: "",
+    matriculaNumero: "",
+    matriculaData: "",
+    adminRazao: "",
+    adminCnpj: "",
+    adminEndereco: "",
+    contaCorrentePadrao: "",
+    numeracaoPropria: false,
+    recadoPadrao: "",
     qtdQuadras: 4,
     qtdLotes: 0,
     diasMora: 0,
@@ -71,7 +100,7 @@ export default function EmpreendimentosPage() {
     valor: 180000,
   });
   const [statusForm, setStatusForm] = useState({
-    status: "bloqueado" as LotStatus,
+    status: "juridico" as LotStatus,
     motivo: "",
   });
 
@@ -208,7 +237,7 @@ export default function EmpreendimentosPage() {
           valor: formatBRL(l.valor),
           status: (
             <StatusPill tone={STATUS_TONE[l.status]}>
-              {l.status}
+              {statusLabel(l.status)}
             </StatusPill>
           ),
           comprador: l.compradorNome ?? "—",
@@ -310,6 +339,106 @@ export default function EmpreendimentosPage() {
             onChange={(e) => setEmpForm({ ...empForm, cidade: e.target.value })}
           />
         </Field>
+        <Field label="UF">
+          <Input
+            value={empForm.uf}
+            onChange={(e) => setEmpForm({ ...empForm, uf: e.target.value })}
+            maxLength={2}
+          />
+        </Field>
+        <Field label="CEP">
+          <Input
+            value={empForm.cep}
+            onChange={(e) => setEmpForm({ ...empForm, cep: e.target.value })}
+          />
+        </Field>
+        <Field label="Área total">
+          <Input
+            value={empForm.areaTotal}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, areaTotal: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Código município">
+          <Input
+            value={empForm.codigoMunicipio}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, codigoMunicipio: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Padrão">
+          <Input
+            value={empForm.padrao}
+            onChange={(e) => setEmpForm({ ...empForm, padrao: e.target.value })}
+          />
+        </Field>
+        <Field label="Confrontação">
+          <Input
+            value={empForm.confrontacao}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, confrontacao: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Matrícula (número)">
+          <Input
+            value={empForm.matriculaNumero}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, matriculaNumero: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Matrícula (data)">
+          <Input
+            type="date"
+            value={empForm.matriculaData}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, matriculaData: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Administradora (razão)">
+          <Input
+            value={empForm.adminRazao}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, adminRazao: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Administradora (CNPJ)">
+          <Input
+            value={empForm.adminCnpj}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, adminCnpj: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Administradora (endereço)">
+          <Input
+            value={empForm.adminEndereco}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, adminEndereco: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Conta corrente padrão">
+          <Input
+            value={empForm.contaCorrentePadrao}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, contaCorrentePadrao: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Recado padrão">
+          <Input
+            value={empForm.recadoPadrao}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, recadoPadrao: e.target.value })
+            }
+          />
+        </Field>
       </FormDialog>
 
       <FormDialog
@@ -400,14 +529,7 @@ export default function EmpreendimentosPage() {
             }
           >
             {(
-              [
-                "disponivel",
-                "reservado",
-                "vendido",
-                "bloqueado",
-                "quitado",
-                "escritura",
-              ] as LotStatus[]
+              LOT_STATUSES
             ).map((s) => (
               <option key={s} value={s}>
                 {s}

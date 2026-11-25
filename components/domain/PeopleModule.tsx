@@ -55,6 +55,17 @@ export function PeopleModule({
     tipo: "fisica" as Person["tipo"],
     nome: "",
     documento: "",
+    sexo: "",
+    nascimento: "",
+    nacionalidade: "Brasileira",
+    profissao: "",
+    rg: "",
+    renda: 0,
+    estadoCivil: "",
+    regimeBens: "",
+    conjugeNome: "",
+    enderecoResidencial: "",
+    procuradorNome: "",
     papel: (papelFilter ?? "cliente") as PersonPapel,
     cidade: "Campinas",
     uf: "SP",
@@ -206,6 +217,16 @@ export function PeopleModule({
             tipo: form.tipo,
             status: "ativo",
             nome: form.nome.trim(),
+            sexo: form.sexo || undefined,
+            nascimento: form.nascimento || undefined,
+            nacionalidade: form.nacionalidade || undefined,
+            profissao: form.profissao || undefined,
+            rg: form.rg || undefined,
+            estadoCivil: form.estadoCivil || undefined,
+            regimeBens: form.regimeBens || undefined,
+            conjugeNome: form.conjugeNome || undefined,
+            enderecoResidencial: form.enderecoResidencial || undefined,
+            procuradorNome: form.procuradorNome || undefined,
             documento:
               form.documento ||
               (form.tipo === "fisica" ? "pendente" : "pendente"),
@@ -221,6 +242,17 @@ export function PeopleModule({
             tipo: "fisica",
             nome: "",
             documento: "",
+    sexo: "",
+    nascimento: "",
+    nacionalidade: "Brasileira",
+    profissao: "",
+    rg: "",
+    renda: 0,
+    estadoCivil: "",
+    regimeBens: "",
+    conjugeNome: "",
+    enderecoResidencial: "",
+    procuradorNome: "",
             papel: papelFilter ?? "cliente",
             cidade: "Campinas",
             uf: "SP",
@@ -300,6 +332,73 @@ export function PeopleModule({
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+        </Field>
+        <Field label="Sexo">
+          <Input
+            value={form.sexo}
+            onChange={(e) => setForm({ ...form, sexo: e.target.value })}
+          />
+        </Field>
+        <Field label="Nascimento">
+          <Input
+            type="date"
+            value={form.nascimento}
+            onChange={(e) => setForm({ ...form, nascimento: e.target.value })}
+          />
+        </Field>
+        <Field label="Nacionalidade">
+          <Input
+            value={form.nacionalidade}
+            onChange={(e) =>
+              setForm({ ...form, nacionalidade: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Profissão">
+          <Input
+            value={form.profissao}
+            onChange={(e) => setForm({ ...form, profissao: e.target.value })}
+          />
+        </Field>
+        <Field label="RG">
+          <Input
+            value={form.rg}
+            onChange={(e) => setForm({ ...form, rg: e.target.value })}
+          />
+        </Field>
+        <Field label="Estado civil">
+          <Input
+            value={form.estadoCivil}
+            onChange={(e) => setForm({ ...form, estadoCivil: e.target.value })}
+          />
+        </Field>
+        <Field label="Regime de bens">
+          <Input
+            value={form.regimeBens}
+            onChange={(e) => setForm({ ...form, regimeBens: e.target.value })}
+          />
+        </Field>
+        <Field label="Cônjuge">
+          <Input
+            value={form.conjugeNome}
+            onChange={(e) => setForm({ ...form, conjugeNome: e.target.value })}
+          />
+        </Field>
+        <Field label="Endereço residencial">
+          <Input
+            value={form.enderecoResidencial}
+            onChange={(e) =>
+              setForm({ ...form, enderecoResidencial: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Procurador">
+          <Input
+            value={form.procuradorNome}
+            onChange={(e) =>
+              setForm({ ...form, procuradorNome: e.target.value })
+            }
           />
         </Field>
       </FormDialog>

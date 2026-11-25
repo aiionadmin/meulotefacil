@@ -69,6 +69,23 @@ export type Person = {
   qualificacao?: number;
   observacoes?: string;
   createdAt: string;
+  /** H08 — cadastro completo do comprador */
+  sexo?: string;
+  nascimento?: string;
+  nacionalidade?: string;
+  naturalidade?: string;
+  filiacao?: string;
+  profissao?: string;
+  rg?: string;
+  renda?: number;
+  estadoCivil?: string;
+  regimeBens?: string;
+  conjugeNome?: string;
+  conjugeDocumento?: string;
+  enderecoResidencial?: string;
+  enderecoComercial?: string;
+  procuradorNome?: string;
+  procuradorDocumento?: string;
 };
 
 export type LookupList = {
