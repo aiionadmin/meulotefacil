@@ -294,6 +294,6 @@ html[data-hero-scroll="inside"] .site-header {
   margin-top: calc(var(--hero-next-lift, 0px) * -1);
   border-top-left-radius: var(--hero-next-radius, 0px);
   border-top-right-radius: var(--hero-next-radius, 0px);
-  overflow: hidden;
+  /* Sem overflow:hidden — ele cria scrollport e mata position:sticky (trilhos Método etc.) */
   transition: border-radius 0.05s linear;
 }

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function ServicosPage() {
   return (
-    <div className="pt-24">
+    <div className="pt-6">
       <ServicosCards />
     </div>
   );

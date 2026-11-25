@@ -1,28 +1,23 @@
 "use client";
 
 import RidgelineDitherFooter from "@/components/ui/ridgeline-dither-footer";
-import { LaLogo, Logo } from "@/components/brand/Logo";
+import { Logo } from "@/components/brand/Logo";
 import { INSTITUTIONAL } from "@/lib/institutional";
 import { FOOTER_COLS, SITE_NAV } from "@/lib/site-nav";
 
 /**
  * Site footer, Ridgeline Dither Footer (21st) adaptado a ink/paper/Montserrat.
- * Logos oficiais MLF + LA.
+ * Logo oficial MLF (sem marca LA).
  */
 export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <div className="[&_.rdf-bar]:relative [&_.rdf-bar]:z-[3] [&_.rdf-bar]:bg-gradient-to-b [&_.rdf-bar]:from-[#f3f1ec] [&_.rdf-bar]:via-[#f3f1ec]/92 [&_.rdf-bar]:to-transparent [&_.rdf-bar]:pb-10 [&_.rdf-tag]:text-[#2f3733] [&_.rdf-col-title]:text-ink [&_.rdf-logo>span:last-child]:sr-only [&_.rdf-link]:after:ml-1.5 [&_.rdf-link]:after:content-['→'] [&_.rdf-link]:after:text-[0.95em] [&_.rdf-link]:after:opacity-70 [&_.rdf-link]:text-ink">
+    <div className="[&_.rdf-bar]:relative [&_.rdf-bar]:z-[3] [&_.rdf-bar]:bg-gradient-to-b [&_.rdf-bar]:from-[#f3f1ec] [&_.rdf-bar]:via-[#f3f1ec]/92 [&_.rdf-bar]:to-transparent [&_.rdf-bar]:pb-10 [&_.rdf-tag]:text-[#2f3733] [&_.rdf-col-title]:text-ink [&_.rdf-logo>span:last-child]:sr-only [&_.rdf-link]:after:content-none [&_.rdf-link]:text-ink">
     <RidgelineDitherFooter
       name={INSTITUTIONAL.name}
       brandHref="/"
-      logo={
-        <div className="inline-flex items-center gap-4">
-          <Logo variant="full" tone="ink" className="scale-90" />
-          <LaLogo tone="color" className="opacity-90" />
-        </div>
-      }
+      logo={<Logo variant="full" tone="ink" className="scale-90" />}
       tagline={`${INSTITUTIONAL.missao} Atuação em ${INSTITUTIONAL.atuacao.join(", ")} (SP), desde ${INSTITUTIONAL.founded}.`}
       columns={[
         {

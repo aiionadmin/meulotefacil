@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -47,65 +46,18 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
-  /** Seta à direita — use em CTAs que levam a outra página / destino. */
-  arrow?: boolean;
-}
-
-function withArrow(
-  children: React.ReactNode,
-  arrow?: boolean
-): React.ReactNode {
-  if (!arrow) return children;
-  return (
-    <>
-      {children}
-      <ArrowRight aria-hidden className="size-4 shrink-0" />
-    </>
-  );
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      className,
-      variant,
-      size,
-      asChild = false,
-      arrow,
-      children,
-      ...props
-    },
-    ref
-  ) => {
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    // CTAs com asChild (Link/a) levam a outra página — seta por padrão
-    const showArrow = arrow ?? asChild;
-
-    if (asChild && showArrow && React.isValidElement(children)) {
-      const child = children as React.ReactElement<{ children?: React.ReactNode }>;
-      return (
-        <Comp
-          className={cn(buttonVariants({ variant, size, className }))}
-          ref={ref}
-          {...props}
-        >
-          {React.cloneElement(
-            child,
-            undefined,
-            withArrow(child.props.children, true)
-          )}
-        </Comp>
-      );
-    }
 
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
-      >
-        {withArrow(children, showArrow)}
-      </Comp>
+      />
     );
   }
 );

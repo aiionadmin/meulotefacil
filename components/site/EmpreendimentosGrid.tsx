@@ -106,7 +106,7 @@ export function EmpreendimentosGrid({
               href="/empreendimentos"
               className="inline-flex font-semibold text-brand-orange hover:underline"
             >
-              Ver todos os empreendimentos →
+              Ver todos os empreendimentos
             </Link>
           </div>
         )}
