@@ -89,21 +89,22 @@ export const APP_NAV: AppNavGroup[] = [
     id: "obras",
     label: "9. Obras",
     items: [
-      { href: "/obras", label: "Obras e orçamento", description: "Demo provisório até Fase 7" },
+      { href: "/obras", label: "Obras e orçamento", description: "Gestão de custos e árvore (Fase 7)" },
     ],
   },
   {
     id: "compras",
     label: "10. Compras",
     items: [
-      { href: "/compras", label: "Compras", description: "Demo provisório até Fase 7" },
+      { href: "/compras", label: "Solicitações e OC", description: "Fluxo SC → OC → a pagar (Fase 7)" },
     ],
   },
   {
     id: "financeiro",
     label: "11. Financeiro",
     items: [
-      { href: "/financeiro", label: "Financeiro", description: "Demo provisório até Fase 6" },
+      { href: "/financeiro", label: "Pagar, receber e contas", description: "Fase 6" },
+      { href: "/importacao", label: "Importação / conferência", description: "Fase 5 — LoteWin / Mais Controle" },
     ],
   },
   {
@@ -157,5 +158,6 @@ export const NOVO_ATALHOS = [
   { href: "/tarefas?novo=1", label: "Tarefa" },
   { href: "/boletos", label: "Boleto" },
   { href: "/empreendimentos", label: "Empreendimento" },
-  { href: "/compras", label: "Solicitação de compra", stub: true },
+  { href: "/compras", label: "Solicitação de compra" },
+  { href: "/financeiro", label: "Lançamento a pagar" },
 ] as const;

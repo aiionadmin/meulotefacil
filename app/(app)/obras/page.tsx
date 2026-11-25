@@ -8,6 +8,7 @@ import {
   KpiGrid,
   DataTable,
   StatusPill,
+  ModuleSection,
 } from "@/components/app/ModulePage";
 import {
   DetailRow,
@@ -17,167 +18,154 @@ import {
   FormDialog,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { brl } from "@/lib/data/sistema";
-import { useDemoStore, type Obra } from "@/lib/store/demo-store";
+import { formatBRL } from "@/lib/masks/br";
+import { useOperacoes } from "@/lib/store/operacoes-store";
+import type { WorkSite } from "@/lib/domain/operacoes-types";
 
 export default function ObrasPage() {
-  const { state, updateObra } = useDemoStore();
+  const { state, updateWorkProgress } = useOperacoes();
   const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<Obra | null>(null);
+  const [selected, setSelected] = useState<WorkSite | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [fisico, setFisico] = useState(0);
   const [realizado, setRealizado] = useState(0);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return state.obras;
-    return state.obras.filter((o) =>
+    if (!term) return state.works;
+    return state.works.filter((o) =>
       [o.nome, o.status].join(" ").toLowerCase().includes(term)
     );
-  }, [state.obras, q]);
+  }, [state.works, q]);
 
-  const orcado = state.obras.reduce((a, o) => a + o.orcado, 0);
-  const real = state.obras.reduce((a, o) => a + o.realizado, 0);
+  const orcado = state.works.reduce((a, o) => a + o.orcado, 0);
+  const real = state.works.reduce((a, o) => a + o.realizado, 0);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Obras e orçamento"
-        description="Insumos, orçamento, avanço físico-financeiro e comparação orçado × realizado."
+        description="Fase 7 — gestão de custos por empreendimento (centro de custo compartilhado)."
       />
+
       <KpiGrid
         items={[
+          { label: "Obras", value: state.works.length },
+          { label: "Orçado", value: formatBRL(orcado) },
+          { label: "Realizado", value: formatBRL(real) },
           {
-            label: "Obras ativas",
-            value: state.obras.filter((o) => o.status === "Em execução").length,
-          },
-          { label: "Orçado", value: brl(orcado) },
-          { label: "Realizado", value: brl(real) },
-          {
-            label: "Saldo orçamentário",
-            value: brl(orcado - real),
+            label: "Saldo",
+            value: formatBRL(orcado - real),
           },
         ]}
       />
+
       <FilterBar value={q} onChange={setQ} placeholder="Buscar obra…" />
+
       <DataTable
-        onRowClick={(i) => setSelected(filtered[i])}
         columns={[
           { key: "nome", label: "Obra" },
-          { key: "fisico", label: "Físico %" },
+          { key: "status", label: "Status" },
+          { key: "fisico", label: "Físico" },
           { key: "orcado", label: "Orçado" },
           { key: "realizado", label: "Realizado" },
           { key: "saldo", label: "Saldo" },
-          { key: "status", label: "Status" },
         ]}
         rows={filtered.map((o) => ({
-          nome: <span className="font-medium">{o.nome}</span>,
-          fisico: `${o.fisico}%`,
-          orcado: brl(o.orcado),
-          realizado: brl(o.realizado),
-          saldo: brl(o.saldo),
-          status: (
-            <StatusPill tone={o.status === "Concluída" ? "ok" : "info"}>
-              {o.status}
-            </StatusPill>
+          nome: (
+            <button
+              type="button"
+              className="font-medium hover:text-brand-orange"
+              onClick={() => setSelected(o)}
+            >
+              {o.nome}
+            </button>
           ),
+          status: <StatusPill tone="info">{o.status}</StatusPill>,
+          fisico: `${o.fisico}%`,
+          orcado: formatBRL(o.orcado),
+          realizado: formatBRL(o.realizado),
+          saldo: formatBRL(o.orcado - o.realizado),
         }))}
       />
 
       <DetailSheet
         open={!!selected}
         onOpenChange={(o) => !o && setSelected(null)}
-        title={selected?.nome ?? "Obra"}
+        title={selected?.nome ?? ""}
         footer={
-          selected && selected.status !== "Concluída" ? (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setFisico(selected.fisico);
-                  setRealizado(selected.realizado);
-                  setEditOpen(true);
-                }}
-              >
-                Atualizar avanço
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  updateObra(selected.id, {
-                    status: "Concluída",
-                    fisico: 100,
-                    saldo: Math.max(0, selected.orcado - selected.realizado),
-                  });
-                  setSelected({
-                    ...selected,
-                    status: "Concluída",
-                    fisico: 100,
-                  });
-                  notify("Obra concluída");
-                }}
-              >
-                Marcar concluída
-              </Button>
-            </>
+          selected ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setFisico(selected.fisico);
+                setRealizado(selected.realizado);
+                setEditOpen(true);
+              }}
+            >
+              Atualizar progresso
+            </Button>
           ) : null
         }
       >
         {selected ? (
-          <>
+          <div className="space-y-4">
+            <DetailRow label="Orçamento" value={selected.budgetStatus} />
             <DetailRow label="Físico" value={`${selected.fisico}%`} />
-            <DetailRow label="Orçado" value={brl(selected.orcado)} />
-            <DetailRow label="Realizado" value={brl(selected.realizado)} />
-            <DetailRow label="Saldo" value={brl(selected.saldo)} />
-            <DetailRow label="Status" value={selected.status} />
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-paper-muted">
-              <div
-                className="h-full bg-brand-accent-strong"
-                style={{ width: `${selected.fisico}%` }}
+            <DetailRow label="Orçado" value={formatBRL(selected.orcado)} />
+            <DetailRow label="Realizado" value={formatBRL(selected.realizado)} />
+            <ModuleSection title="Árvore do orçamento">
+              <DataTable
+                columns={[
+                  { key: "codigo", label: "Cód." },
+                  { key: "desc", label: "Item" },
+                  { key: "orcado", label: "Orçado" },
+                  { key: "real", label: "Real" },
+                  { key: "pct", label: "%" },
+                ]}
+                rows={selected.nodes.map((n) => ({
+                  codigo: n.codigo,
+                  desc: n.descricao,
+                  orcado: formatBRL(n.orcado),
+                  real: formatBRL(n.realizado),
+                  pct:
+                    n.orcado > 0
+                      ? `${Math.round((n.realizado / n.orcado) * 100)}%`
+                      : "—",
+                }))}
               />
-            </div>
-          </>
+            </ModuleSection>
+          </div>
         ) : null}
       </DetailSheet>
 
       <FormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        title="Atualizar avanço"
-        submitLabel="Salvar"
+        title="Atualizar evolução"
         onSubmit={() => {
           if (!selected) return;
-          const saldo = Math.max(0, selected.orcado - realizado);
-          updateObra(selected.id, {
+          updateWorkProgress(selected.id, {
             fisico: Math.min(100, Math.max(0, fisico)),
             realizado,
-            saldo,
           });
-          setSelected({
-            ...selected,
-            fisico: Math.min(100, Math.max(0, fisico)),
-            realizado,
-            saldo,
-          });
-          notify("Avanço atualizado");
+          notify("Progresso atualizado");
           setEditOpen(false);
+          setSelected(null);
         }}
       >
-        <Field label="Avanço físico (%)">
+        <Field label="Evolução física (%)">
           <Input
             type="number"
-            min={0}
-            max={100}
             value={fisico}
-            onChange={(e) => setFisico(Number(e.target.value))}
+            onChange={(e) => setFisico(Number(e.target.value) || 0)}
           />
         </Field>
         <Field label="Realizado (R$)">
           <Input
             type="number"
             value={realizado}
-            onChange={(e) => setRealizado(Number(e.target.value))}
+            onChange={(e) => setRealizado(Number(e.target.value) || 0)}
           />
         </Field>
       </FormDialog>

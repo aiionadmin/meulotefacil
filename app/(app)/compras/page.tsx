@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   ModuleHeader,
   KpiGrid,
@@ -20,211 +19,263 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { useDemoStore, type Compra } from "@/lib/store/demo-store";
-
-const fluxo = [
-  "Solicitação",
-  "Cotação",
-  "Ordem de compra",
-  "Lançamento financeiro",
-];
+import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { useOperacoes } from "@/lib/store/operacoes-store";
+import type { PurchaseRequest } from "@/lib/domain/operacoes-types";
 
 export default function ComprasPage() {
-  const { state, addCompra, avancarCompra, aprovarCompra } = useDemoStore();
+  const {
+    state,
+    addPurchase,
+    avancarPurchase,
+    aprovarPurchase,
+    gerarOrdemCompra,
+  } = useOperacoes();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Compra | null>(null);
+  const [selected, setSelected] = useState<PurchaseRequest | null>(null);
   const [form, setForm] = useState({
-    centro: "Horizonte",
-    urgencia: "Normal",
+    descricao: "",
+    centroCusto: "Residencial Horizonte",
+    necessidade: new Date().toISOString().slice(0, 10),
+    urgente: false,
     itens: 3,
+    valorEstimado: 10000,
   });
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return state.compras;
-    return state.compras.filter((c) =>
-      [c.id, c.tipo, c.centro, c.status].join(" ").toLowerCase().includes(term)
+    if (!term) return state.purchases;
+    return state.purchases.filter((p) =>
+      [p.numero, p.descricao, p.status, p.centroCusto]
+        .join(" ")
+        .toLowerCase()
+        .includes(term)
     );
-  }, [state.compras, q]);
+  }, [state.purchases, q]);
+
+  const emAprovacao = state.purchases.filter(
+    (p) => p.status === "em_aprovacao"
+  ).length;
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Compras"
-        description="Fluxo SC → Cotação → OC → lançamento financeiro, com alçada de aprovação."
+        description="Fase 7 — solicitação → aprovação → ordem → lançamento a pagar."
         actions={
           <Button size="sm" onClick={() => setOpen(true)}>
             Nova solicitação
           </Button>
         }
       />
+
       <KpiGrid
         items={[
-          { label: "Documentos", value: state.compras.length },
+          { label: "Solicitações", value: state.purchases.length },
+          { label: "Em aprovação", value: emAprovacao },
+          { label: "Ordens", value: state.orders.length },
           {
-            label: "Solicitações",
-            value: state.compras.filter((c) => c.tipo === "Solicitação").length,
-          },
-          {
-            label: "Cotações",
-            value: state.compras.filter((c) => c.tipo === "Cotação").length,
-          },
-          {
-            label: "OCs",
-            value: state.compras.filter((c) => c.tipo.includes("Ordem")).length,
+            label: "Aguardando OC",
+            value: state.orders.filter((o) => o.status === "aguardando").length,
           },
         ]}
       />
 
-      <ModuleSection title="Fluxo">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {fluxo.map((f) => (
-            <Card key={f}>
-              <CardContent className="py-4 text-sm font-medium text-ink">
-                {f}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <FilterBar value={q} onChange={setQ} placeholder="Buscar SC, descrição…" />
+
+      <ModuleSection title="Solicitações">
+        <DataTable
+          columns={[
+            { key: "numero", label: "Nº" },
+            { key: "desc", label: "Descrição" },
+            { key: "centro", label: "Centro" },
+            { key: "nec", label: "Necessidade" },
+            { key: "valor", label: "Estimado" },
+            { key: "status", label: "Status" },
+          ]}
+          rows={filtered.map((p) => ({
+            numero: (
+              <button
+                type="button"
+                className="font-medium hover:text-brand-orange"
+                onClick={() => setSelected(p)}
+              >
+                {p.numero}
+              </button>
+            ),
+            desc: (
+              <span>
+                {p.descricao}
+                {p.urgente ? (
+                  <StatusPill tone="danger"> urgente</StatusPill>
+                ) : null}
+              </span>
+            ),
+            centro: p.centroCusto,
+            nec: formatDateBR(p.necessidade),
+            valor: formatBRL(p.valorEstimado),
+            status: (
+              <StatusPill tone="info">{p.status.replace(/_/g, " ")}</StatusPill>
+            ),
+          }))}
+        />
       </ModuleSection>
 
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar compra…" />
-      <DataTable
-        onRowClick={(i) => setSelected(filtered[i])}
-        columns={[
-          { key: "id", label: "Código" },
-          { key: "tipo", label: "Tipo" },
-          { key: "centro", label: "Centro" },
-          { key: "itens", label: "Itens" },
-          { key: "urgencia", label: "Urgência" },
-          { key: "status", label: "Status" },
-        ]}
-        rows={filtered.map((c) => ({
-          id: <span className="font-medium">{c.id}</span>,
-          tipo: c.tipo,
-          centro: c.centro,
-          itens: c.itens,
-          urgencia: c.urgencia,
-          status: (
-            <StatusPill
-              tone={
-                c.status === "Aprovada"
-                  ? "ok"
-                  : c.status.includes("aprovação")
-                    ? "warn"
-                    : "info"
-              }
-            >
-              {c.status}
-            </StatusPill>
-          ),
-        }))}
-      />
-
-      <FormDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Nova solicitação de compra"
-        submitLabel="Criar SC"
-        onSubmit={() => {
-          addCompra({
-            tipo: "Solicitação",
-            centro: form.centro,
-            status: "Em aprovação",
-            urgencia: form.urgencia,
-            itens: Number(form.itens) || 1,
-          });
-          notify("Solicitação criada");
-          setOpen(false);
-        }}
-      >
-        <Field label="Centro / obra">
-          <select
-            className={fieldControlClass}
-            value={form.centro}
-            onChange={(e) => setForm({ ...form, centro: e.target.value })}
-          >
-            {["Horizonte", "Colinas", "Aurora", "Vila Paula", "Empresa"].map(
-              (c) => (
-                <option key={c}>{c}</option>
-              )
-            )}
-          </select>
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Urgência">
-            <select
-              className={fieldControlClass}
-              value={form.urgencia}
-              onChange={(e) => setForm({ ...form, urgencia: e.target.value })}
-            >
-              <option>Normal</option>
-              <option>Média</option>
-              <option>Alta</option>
-            </select>
-          </Field>
-          <Field label="Itens">
-            <Input
-              type="number"
-              min={1}
-              value={form.itens}
-              onChange={(e) =>
-                setForm({ ...form, itens: Number(e.target.value) })
-              }
-            />
-          </Field>
-        </div>
-      </FormDialog>
+      <ModuleSection title="Ordens de compra">
+        <DataTable
+          columns={[
+            { key: "numero", label: "Nº" },
+            { key: "forn", label: "Fornecedor" },
+            { key: "centro", label: "Centro" },
+            { key: "valor", label: "Valor" },
+            { key: "status", label: "Status" },
+          ]}
+          rows={state.orders.map((o) => ({
+            numero: o.numero,
+            forn: o.fornecedor,
+            centro: o.centroCusto,
+            valor: formatBRL(o.valor),
+            status: <StatusPill tone="ok">{o.status}</StatusPill>,
+          }))}
+        />
+      </ModuleSection>
 
       <DetailSheet
         open={!!selected}
         onOpenChange={(o) => !o && setSelected(null)}
-        title={selected?.id ?? "Compra"}
-        footer={
-          selected ? (
-            <>
-              {selected.status === "Em aprovação" ||
-              selected.tipo === "Ordem de compra" ? (
+        title={selected?.numero ?? ""}
+      >
+        {selected ? (
+          <div className="space-y-3">
+            <DetailRow label="Descrição" value={selected.descricao} />
+            <DetailRow label="Centro" value={selected.centroCusto} />
+            <DetailRow label="Solicitante" value={selected.solicitante} />
+            <DetailRow label="Itens" value={String(selected.itens)} />
+            <DetailRow label="Estimado" value={formatBRL(selected.valorEstimado)} />
+            <DetailRow label="Status" value={selected.status} />
+            <div className="flex flex-wrap gap-2 pt-2">
+              {selected.status === "em_aprovacao" ? (
                 <Button
                   size="sm"
-                  variant="outline"
                   onClick={() => {
-                    aprovarCompra(selected.id);
-                    setSelected({ ...selected, status: "Aprovada" });
-                    notify("Documento aprovado", selected.id);
+                    aprovarPurchase(selected.id);
+                    notify("Solicitação aprovada");
+                    setSelected(null);
                   }}
                 >
                   Aprovar
                 </Button>
               ) : null}
-              {selected.tipo !== "Ordem de compra" ||
-              selected.status === "Em aprovação" ? (
+              {selected.status !== "concluida" &&
+              selected.status !== "recusada" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    avancarPurchase(selected.id);
+                    notify("Status avançado");
+                    setSelected(null);
+                  }}
+                >
+                  Avançar fluxo
+                </Button>
+              ) : null}
+              {selected.status === "a_atender" ||
+              selected.status === "em_andamento" ? (
                 <Button
                   size="sm"
                   onClick={() => {
-                    avancarCompra(selected.id);
+                    gerarOrdemCompra(
+                      selected.id,
+                      "Fornecedor Demo Ltda"
+                    );
+                    notify("OC gerada + lançamento a pagar");
                     setSelected(null);
-                    notify("Fluxo avançado");
                   }}
                 >
-                  Avançar etapa
+                  Gerar OC
                 </Button>
               ) : null}
-            </>
-          ) : null
-        }
-      >
-        {selected ? (
-          <>
-            <DetailRow label="Tipo" value={selected.tipo} />
-            <DetailRow label="Centro" value={selected.centro} />
-            <DetailRow label="Itens" value={selected.itens} />
-            <DetailRow label="Urgência" value={selected.urgencia} />
-            <DetailRow label="Status" value={selected.status} />
-          </>
+            </div>
+          </div>
         ) : null}
       </DetailSheet>
+
+      <FormDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Nova solicitação de compra"
+        onSubmit={() => {
+          if (!form.descricao) {
+            notify("Informe a descrição");
+            return;
+          }
+          addPurchase(form);
+          notify("Solicitação criada");
+          setOpen(false);
+        }}
+      >
+        <Field label="Descrição *">
+          <Input
+            value={form.descricao}
+            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+          />
+        </Field>
+        <Field label="Centro de custo">
+          <select
+            className={fieldControlClass}
+            value={form.centroCusto}
+            onChange={(e) =>
+              setForm({ ...form, centroCusto: e.target.value })
+            }
+          >
+            <option>Residencial Horizonte</option>
+            <option>Jardins do Sol</option>
+            <option>Empresa</option>
+          </select>
+        </Field>
+        <Field label="Necessidade">
+          <Input
+            type="date"
+            value={form.necessidade}
+            onChange={(e) =>
+              setForm({ ...form, necessidade: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Itens">
+          <Input
+            type="number"
+            value={form.itens}
+            onChange={(e) =>
+              setForm({ ...form, itens: Number(e.target.value) || 1 })
+            }
+          />
+        </Field>
+        <Field label="Valor estimado">
+          <Input
+            type="number"
+            value={form.valorEstimado}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                valorEstimado: Number(e.target.value) || 0,
+              })
+            }
+          />
+        </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.urgente}
+            onChange={(e) =>
+              setForm({ ...form, urgente: e.target.checked })
+            }
+          />
+          Urgente
+        </label>
+      </FormDialog>
     </div>
   );
 }

@@ -15,11 +15,13 @@ import { formatBRL } from "@/lib/masks/br";
 import { useDemoStore } from "@/lib/store/demo-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useOperacoes } from "@/lib/store/operacoes-store";
 
 export default function DashboardPage() {
   const { state } = useDemoStore();
   const { state: f1, currentUser } = useFase1();
   const { state: cart, saldoDevedor } = useCarteira();
+  const { state: ops } = useOperacoes();
   const abertoCarteira = cart.installments
     .filter((p) => p.status !== "paga" && p.status !== "cancelada")
     .reduce(
@@ -37,11 +39,11 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <ModuleHeader
         title="Painel unificado"
-        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fases 1–4 ativas (acesso, estoque, carteira, boletos).`}
+        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fases 1–7 ativas (acesso → carteira → import → financeiro → obras).`}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
-              <Link href="/empreendimentos">Lotes</Link>
+              <Link href="/importacao">Importação</Link>
             </Button>
             <Button asChild size="sm">
               <Link href="/contratos">Nova venda</Link>
@@ -49,6 +51,37 @@ export default function DashboardPage() {
           </>
         }
       />
+
+      <ModuleSection title="Operações (Fases 5–7)">
+        <KpiGrid
+          items={[
+            {
+              label: "Saldo contas",
+              value: formatBRL(
+                ops.accounts.reduce((a, c) => a + c.saldo, 0)
+              ),
+            },
+            {
+              label: "A pagar",
+              value: formatBRL(
+                ops.payables
+                  .filter((p) => p.status !== "pago")
+                  .reduce((a, p) => a + p.valor, 0)
+              ),
+            },
+            {
+              label: "Obras",
+              value: ops.works.length,
+              hint: `${ops.purchases.filter((p) => p.status === "em_aprovacao").length} SC em aprovação`,
+            },
+            {
+              label: "Import OK",
+              value: ops.importQueue.filter((e) => e.status === "ok").length,
+              hint: `${ops.importQueue.length} entidades`,
+            },
+          ]}
+        />
+      </ModuleSection>
 
       <ModuleSection title="Carteira e estoque (Fases 2–4)">
         <KpiGrid
