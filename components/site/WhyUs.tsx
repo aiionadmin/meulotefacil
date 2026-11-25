@@ -54,7 +54,7 @@ export function WhyUs() {
     >
       <div className="site-container">
         <SectionHeading
-          number="05"
+          number="04"
           eyebrow="Institucional"
           title="Três pilares da Meu Lote Fácil"
           dark

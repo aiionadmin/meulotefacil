@@ -2,7 +2,6 @@ import { ScrollHero } from "@/components/hero/ScrollHero";
 import { HowItWorks } from "@/components/site/HowItWorks";
 import { ServicosCards } from "@/components/site/ServicosCards";
 import { RegularizacoesGrid } from "@/components/site/RegularizacoesGrid";
-import { ConsultaBairro } from "@/components/site/ConsultaBairro";
 import { WhyUs } from "@/components/site/WhyUs";
 import { Testimonials } from "@/components/site/Testimonials";
 import { FAQ } from "@/components/site/FAQ";
@@ -21,7 +20,6 @@ export default function HomePage() {
           subtitle="Concluídas, em registro e em andamento, veja o portfólio completo."
           sectionNumber="03"
         />
-        <ConsultaBairro />
         <WhyUs />
         <Testimonials />
         <FAQ />

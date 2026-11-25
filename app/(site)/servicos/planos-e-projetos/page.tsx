@@ -71,7 +71,7 @@ export default function PlanosProjetosPage() {
             </a>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/consulta">Consultar meu bairro</Link>
+            <Link href="/regularizacao">Ver regularizações</Link>
           </Button>
         </div>
       </article>

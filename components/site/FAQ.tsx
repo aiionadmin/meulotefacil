@@ -52,7 +52,7 @@ export function FAQ() {
     <section className="border-b border-linha bg-brand-cream py-20 lg:py-28">
       <div className="site-container grid gap-10 lg:grid-cols-2">
         <SectionHeading
-          number="07"
+          number="06"
           eyebrow="FAQ"
           title="Perguntas frequentes"
           subtitle="Ainda com dúvida? Fale conosco pelo WhatsApp."
