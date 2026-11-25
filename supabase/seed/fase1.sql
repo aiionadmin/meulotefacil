@@ -44,7 +44,7 @@ begin
 
   insert into public.users (id, organization_id, profile_id, nome, email, status, chave)
   values
-    (admin_user, org_id, admin_profile, 'Admin Demo', 'demo@meulotefacil.com.br', 'ativo', true),
+    (admin_user, org_id, admin_profile, 'Administrador', 'admin@meulotefacil.com.br', 'ativo', true),
     (gen_random_uuid(), org_id, fin_profile, 'Financeiro', 'financeiro@meulotefacil.com.br', 'ativo', false),
     (gen_random_uuid(), org_id, com_profile, 'Comercial', 'vendas@meulotefacil.com.br', 'ativo', false)
   on conflict do nothing;
@@ -87,12 +87,15 @@ begin
 
   insert into public.people (id, organization_id, tipo, status, nome, documento, celular, email)
   values
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc0', org_id, 'fisica', 'ativo', 'Ana Souza', '321.654.987-00', '(19) 99111-2200', 'ana.souza@email.com'),
     ('cccccccc-cccc-cccc-cccc-ccccccccccc1', org_id, 'fisica', 'ativo', 'Bruno Lima', '123.456.789-00', '(19) 99100-1001', 'bruno@email.com'),
     ('cccccccc-cccc-cccc-cccc-ccccccccccc2', org_id, 'juridica', 'ativo', 'Construtora Horizonte Ltda', '12.345.678/0001-90', '(19) 3232-4400', 'compras@horizonte.com'),
     ('cccccccc-cccc-cccc-cccc-ccccccccccc3', org_id, 'fisica', 'ativo', 'Ana Paula Corretores', '987.654.321-00', '(19) 98888-2200', 'ana@corretores.com')
   on conflict do nothing;
 
   insert into public.person_roles (person_id, papel) values
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc0', 'comprador'),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc0', 'cliente'),
     ('cccccccc-cccc-cccc-cccc-ccccccccccc1', 'comprador'),
     ('cccccccc-cccc-cccc-cccc-ccccccccccc1', 'cliente'),
     ('cccccccc-cccc-cccc-cccc-ccccccccccc2', 'fornecedor'),
@@ -118,4 +121,50 @@ begin
     (org_id, 'obras', 'Obras'),
     (org_id, 'tarefas', 'Tarefas')
   on conflict do nothing;
+
+  -- A04 — permissões depois dos perfis (idempotente)
+  insert into public.profile_permissions (profile_id, rotina, ver, inserir_alterar, remover)
+  select p.id, r.rotina, r.ver, r.inserir_alterar, r.remover
+  from public.profiles p
+  cross join lateral (
+    values
+      ('administrador', 'dashboard', true, true, true),
+      ('administrador', 'cadastros.pessoas', true, true, true),
+      ('administrador', 'cadastros.listas', true, true, true),
+      ('administrador', 'empreendimentos', true, true, true),
+      ('administrador', 'carteira', true, true, true),
+      ('administrador', 'boletos', true, true, true),
+      ('administrador', 'vendas', true, true, true),
+      ('administrador', 'leads', true, true, true),
+      ('administrador', 'cobranca', true, true, true),
+      ('administrador', 'juridico', true, true, true),
+      ('administrador', 'financeiro', true, true, true),
+      ('administrador', 'compras', true, true, true),
+      ('administrador', 'obras', true, true, true),
+      ('administrador', 'fiscal', true, true, true),
+      ('administrador', 'relatorios', true, true, true),
+      ('administrador', 'tarefas', true, true, true),
+      ('administrador', 'arquivos', true, true, true),
+      ('administrador', 'configuracoes', true, true, true),
+      ('administrador', 'auditoria', true, true, true),
+      ('administrador', 'usuarios', true, true, true),
+      ('direcao', 'dashboard', true, true, false),
+      ('direcao', 'relatorios', true, true, false),
+      ('direcao', 'auditoria', true, false, false),
+      ('financeiro', 'dashboard', true, true, false),
+      ('financeiro', 'financeiro', true, true, false),
+      ('financeiro', 'boletos', true, true, false),
+      ('financeiro', 'carteira', true, true, false),
+      ('comercial', 'dashboard', true, true, false),
+      ('comercial', 'leads', true, true, false),
+      ('comercial', 'vendas', true, true, false),
+      ('corretor', 'dashboard', true, true, false),
+      ('corretor', 'leads', true, true, false),
+      ('corretor', 'vendas', true, true, false)
+  ) as r(perfil, rotina, ver, inserir_alterar, remover)
+  where p.codigo = r.perfil
+  on conflict (profile_id, rotina) do update
+    set ver = excluded.ver,
+        inserir_alterar = excluded.inserir_alterar,
+        remover = excluded.remover;
 end $$;

@@ -1,11 +1,15 @@
 /** Navegação — 15 menus (docs/especificacao.md §2). */
 
+import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
+
 export type AppNavItem = {
   href: string;
   label: string;
   description?: string;
   /** Fase ainda não entregue — mostra stub */
   stub?: boolean;
+  /** Só visível com ferramentas de demo (A03) */
+  demoOnly?: boolean;
 };
 
 export type AppNavGroup = {
@@ -148,12 +152,25 @@ export const APP_NAV: AppNavGroup[] = [
       { href: "/configuracoes/alcadas", label: "Alçadas" },
       { href: "/configuracoes/listas", label: "Listas de apoio" },
       { href: "/configuracoes/auditoria", label: "Auditoria" },
-      { href: "/configuracoes", label: "Parâmetros (legado demo)" },
+      {
+        href: "/configuracoes",
+        label: "Parâmetros",
+        description: "Tela legada de toggles — substituída no Bloco J",
+        demoOnly: true,
+      },
     ],
   },
 ];
 
-export const APP_FLAT_NAV = APP_NAV.flatMap((g) =>
+export function getAppNav(): AppNavGroup[] {
+  const allowDemo = isDemoToolsAllowed();
+  return APP_NAV.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => allowDemo || !i.demoOnly),
+  })).filter((g) => g.items.length > 0);
+}
+
+export const APP_FLAT_NAV = getAppNav().flatMap((g) =>
   g.items.map((item) => ({ ...item, group: g.label }))
 );
 

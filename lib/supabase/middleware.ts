@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "./client";
 import { publicUrl } from "@/lib/http/public-origin";
+import {
+  isDemoLoginAllowed,
+  isProductionRuntime,
+} from "@/lib/runtime/demo-mode";
 
 const APP_PREFIXES = [
   "/dashboard",
@@ -53,10 +57,13 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const demoCookie = request.cookies.get("mlf_demo_session")?.value;
-  const hasDemo = demoCookie === "1";
+  const hasDemo = isDemoLoginAllowed() && demoCookie === "1";
 
-  // Sem Supabase: demo aberto — não redireciona o sistema para login
+  // Produção: sem cookie demo e sem Supabase → bloqueia app
   if (!isSupabaseConfigured()) {
+    if (isProductionRuntime() && isAppRoute(pathname)) {
+      return redirectTo(request, "/auth/login", pathname);
+    }
     if (isAuthRoute(pathname) && hasDemo && !pathname.includes("/callback")) {
       return redirectTo(request, "/dashboard");
     }

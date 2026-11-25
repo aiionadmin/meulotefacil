@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { setDemoSession } from "@/lib/auth-demo";
+import { isDemoLoginAllowed } from "@/lib/runtime/demo-mode";
 
 const schema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -28,6 +29,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const configured = isSupabaseConfigured();
+  const demoAllowed = isDemoLoginAllowed();
 
   const {
     register,
@@ -38,8 +40,8 @@ export function LoginForm() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      email: "demo@meulotefacil.com.br",
-      password: "demo123",
+      email: demoAllowed ? "demo@meulotefacil.com.br" : "",
+      password: demoAllowed ? "demo123" : "",
       remember: true,
     },
   });
@@ -61,8 +63,14 @@ export function LoginForm() {
           setLoading(false);
           return;
         }
-      } else {
+      } else if (demoAllowed) {
         setDemoSession();
+      } else {
+        setError(
+          "Autenticação indisponível. Configure o Supabase Auth em produção."
+        );
+        setLoading(false);
+        return;
       }
       router.push(next);
       router.refresh();
@@ -73,6 +81,7 @@ export function LoginForm() {
   };
 
   const demoLogin = () => {
+    if (!demoAllowed) return;
     setDemoSession();
     router.push(next);
     router.refresh();
@@ -94,10 +103,16 @@ export function LoginForm() {
         Acesse o sistema unificado de regularização, carteira e gestão.
       </p>
 
-      {!configured && (
+      {!configured && demoAllowed && (
         <p className="mt-4 rounded-sm border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-ink">
-          Supabase não configurado, use o <strong>modo demo</strong> para
-          explorar o sistema.
+          Supabase não configurado — use o modo demonstração apenas em
+          desenvolvimento.
+        </p>
+      )}
+      {!configured && !demoAllowed && (
+        <p className="mt-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-ink">
+          Configure <code>NEXT_PUBLIC_SUPABASE_URL</code> e a chave anônima.
+          O login de demonstração está desligado em produção.
         </p>
       )}
 
@@ -146,9 +161,11 @@ export function LoginForm() {
       </form>
 
       <div className="mt-4 space-y-3">
-        <Button type="button" variant="outline" className="w-full" onClick={demoLogin}>
-          Entrar em modo demo
-        </Button>
+        {demoAllowed && (
+          <Button type="button" variant="outline" className="w-full" onClick={demoLogin}>
+            Entrar em modo demo
+          </Button>
+        )}
         {configured && (
           <Button type="button" variant="secondary" className="w-full" onClick={googleLogin}>
             Entrar com Google

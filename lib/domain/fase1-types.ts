@@ -112,6 +112,18 @@ export type AuditEvent = {
   usuarioNome: string;
   rotina: string;
   acao: string;
+  registroTipo?: string;
+  registroId?: string;
+  antes?: unknown;
+  depois?: unknown;
+};
+
+export type ProfilePermission = {
+  profileId: string;
+  rotina: string;
+  ver: boolean;
+  inserirAlterar: boolean;
+  remover: boolean;
 };
 
 export type ApprovalRule = {
@@ -133,5 +145,6 @@ export type Fase1State = {
   notifications: AppNotification[];
   audit: AuditEvent[];
   approvalRules: ApprovalRule[];
+  permissions: ProfilePermission[];
   currentUserId: string;
 };

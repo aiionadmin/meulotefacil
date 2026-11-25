@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
-import { APP_NAV } from "@/lib/app-nav";
+import { getAppNav } from "@/lib/app-nav";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "/dashboard": LayoutDashboard,
@@ -125,7 +125,7 @@ export function AppSidebar({
       </div>
 
       <nav className="flex-1 space-y-4 overflow-y-auto p-3">
-        {APP_NAV.map((group) => (
+        {getAppNav().map((group) => (
           <div key={group.id}>
             {showLabels ? (
               <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-brand-cream/70">

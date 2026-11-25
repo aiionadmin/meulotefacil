@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -30,8 +29,12 @@ import {
   tarefasMock,
   usuariosMock,
 } from "@/lib/data/sistema";
-
-const STORAGE_KEY = "mlf-demo-store-v1";
+import { useStorePersist } from "@/lib/persist/use-store-persist";
+import { saveSnapshot } from "@/lib/persist/snapshots";
+import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
+import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
+import { recordAudit } from "@/lib/audit/client-audit";
+import { isDevSeedAllowed } from "@/lib/runtime/demo-mode";
 
 export type Pessoa = (typeof pessoasMock)[number];
 export type Usuario = (typeof usuariosMock)[number];
@@ -95,25 +98,26 @@ function seedConfigToggles() {
 }
 
 function seedState(): DemoState {
+  const allow = isDevSeedAllowed();
   return {
-    pessoas: [...pessoasMock],
-    usuarios: [...usuariosMock],
-    auditoria: [...auditoriaMock],
-    empreendimentos: [...empreendimentosSistema],
-    lotes: [...lotesSistema],
-    contratos: [...contratosMock],
-    parcelas: [...parcelasCarteira],
-    boletos: [...boletosMock],
-    reajustes: [...reajustesMock],
-    operacoes: [...operacoesContrato],
-    obras: [...obrasMock],
-    compras: [...comprasMock],
-    pagar: [...financeiroPagar],
-    receber: [...financeiroReceber],
-    contas: [...contasBancarias],
-    fiscal: [...fiscalMock],
-    tarefas: [...tarefasMock],
-    arquivos: [...arquivosMock],
+    pessoas: allow ? [...pessoasMock] : [],
+    usuarios: allow ? [...usuariosMock] : [],
+    auditoria: allow ? [...auditoriaMock] : [],
+    empreendimentos: allow ? [...empreendimentosSistema] : [],
+    lotes: allow ? [...lotesSistema] : [],
+    contratos: allow ? [...contratosMock] : [],
+    parcelas: allow ? [...parcelasCarteira] : [],
+    boletos: allow ? [...boletosMock] : [],
+    reajustes: allow ? [...reajustesMock] : [],
+    operacoes: allow ? [...operacoesContrato] : [],
+    obras: allow ? [...obrasMock] : [],
+    compras: allow ? [...comprasMock] : [],
+    pagar: allow ? [...financeiroPagar] : [],
+    receber: allow ? [...financeiroReceber] : [],
+    contas: allow ? [...contasBancarias] : [],
+    fiscal: allow ? [...fiscalMock] : [],
+    tarefas: allow ? [...tarefasMock] : [],
+    arquivos: allow ? [...arquivosMock] : [],
     configToggles: seedConfigToggles(),
     empresa: {
       razao: "Meu Lote Fácil Ltda",
@@ -121,8 +125,8 @@ function seedState(): DemoState {
       oab: "Dr. Silva · OAB/SP 123456",
     },
     perfil: {
-      nome: "Admin Demo",
-      email: "demo@meulotefacil.com.br",
+      nome: "Administrador",
+      email: "admin@meulotefacil.com.br",
     },
     favoritosRelatorios: ["Posição financeira", "Inadimplência"],
     relatoriosGerados: [],
@@ -189,35 +193,36 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<DemoState>(() => seedState());
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as DemoState;
-        setState({ ...seedState(), ...parsed });
-      }
-    } catch {
-      /* ignore corrupt store */
-    }
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state, ready]);
+  useStorePersist({
+    storeKey: "demo",
+    ready,
+    setReady,
+    state,
+    setState,
+    seed: seedState,
+  });
 
   const reset = useCallback(() => {
+    if (!isDemoToolsAllowed()) return;
     const next = seedState();
     setState(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    void saveSnapshot("demo", next, DEMO_ORG_ID);
   }, []);
 
-  const log = useCallback((rotina: string, acao: string, usuario = "Admin Demo") => {
+  const log = useCallback((rotina: string, acao: string, usuario = "Sistema") => {
     setState((s) => ({
       ...s,
-      auditoria: [{ quando: nowLabel(), usuario, rotina, acao }, ...s.auditoria].slice(0, 40),
+      auditoria: [
+        { quando: nowLabel(), usuario, rotina, acao },
+        ...s.auditoria,
+      ].slice(0, 40),
     }));
+    void recordAudit({
+      organizationId: DEMO_ORG_ID,
+      usuarioNome: usuario,
+      rotina,
+      acao,
+    });
   }, []);
 
   const value = useMemo<DemoStoreValue>(() => {

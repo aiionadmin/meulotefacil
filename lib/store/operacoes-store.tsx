@@ -3,23 +3,22 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import {
-  OPERACOES_STORAGE_KEY,
-  seedOperacoes,
-} from "@/lib/domain/operacoes-seed";
+import { unifiedOperacoesSeed } from "@/lib/domain/unified-seed";
 import type {
   OperacoesState,
   Payable,
-  PurchaseRequest,
   PurchaseStatus,
   Receivable,
   WorkSite,
 } from "@/lib/domain/operacoes-types";
+import { useStorePersist } from "@/lib/persist/use-store-persist";
+import { saveSnapshot } from "@/lib/persist/snapshots";
+import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
+import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -80,32 +79,29 @@ type OperacoesApi = {
 const Ctx = createContext<OperacoesApi | null>(null);
 
 export function OperacoesStoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<OperacoesState>(() => seedOperacoes());
+  const [state, setState] = useState<OperacoesState>(() =>
+    unifiedOperacoesSeed()
+  );
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(OPERACOES_STORAGE_KEY);
-      if (raw) setState({ ...seedOperacoes(), ...JSON.parse(raw) });
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(OPERACOES_STORAGE_KEY, JSON.stringify(state));
-  }, [state, ready]);
+  useStorePersist({
+    storeKey: "operacoes",
+    ready,
+    setReady,
+    state,
+    setState,
+    seed: unifiedOperacoesSeed,
+  });
 
   const api = useMemo<OperacoesApi>(
     () => ({
       state,
       ready,
       reset: () => {
-        const next = seedOperacoes();
+        if (!isDemoToolsAllowed()) return;
+        const next = unifiedOperacoesSeed();
         setState(next);
-        localStorage.setItem(OPERACOES_STORAGE_KEY, JSON.stringify(next));
+        void saveSnapshot("operacoes", next, DEMO_ORG_ID);
       },
       baixarPagar: (id) => {
         setState((s) => {
