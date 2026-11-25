@@ -3,14 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import {
   Bell,
   Menu,
-  Moon,
   Plus,
   Search,
-  Sun,
   LogOut,
   User,
   Settings,
@@ -49,7 +46,6 @@ const commands = APP_FLAT_NAV.map((i) => ({
 export function AppTopbar({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const { currentUser, currentProfileName, state } = useFase1();
   const [open, setOpen] = useState(false);
   const parts = pathname.split("/").filter(Boolean);
@@ -156,15 +152,6 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
               <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-brand-accent-strong" />
             ) : null}
           </Link>
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Alternar tema"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

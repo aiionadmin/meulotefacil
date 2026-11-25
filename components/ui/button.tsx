@@ -13,14 +13,14 @@ const buttonVariants = cva(
           "bg-brand-navy text-brand-cream hover:bg-brand-navy-deep",
         secondary:
           "bg-transparent text-brand-navy border border-brand-navy/25 hover:border-brand-navy hover:bg-brand-navy/[0.04]",
-        /** Superfícies claras (paper/card) — texto ink legível */
+        /** Superfícies claras (paper/card) — texto legível */
         ghost:
-          "bg-transparent text-ink border border-ink/20 hover:bg-ink/[0.04] hover:border-ink/35",
+          "bg-transparent text-foreground border border-border hover:bg-muted/60 hover:border-border",
         /** Superfícies escuras (navy/ink) — texto paper/cream */
         ghostDark:
           "bg-transparent text-brand-cream border border-brand-cream/40 hover:bg-brand-cream/10",
         outline:
-          "border border-brand-navy/20 bg-transparent text-brand-ink hover:border-mata hover:text-mata",
+          "border border-border bg-transparent text-foreground hover:border-mata hover:text-mata",
         cream:
           "bg-brand-cream text-brand-navy border border-brand-navy/10 hover:bg-white",
         link: "text-latossolo underline-offset-4 hover:underline",

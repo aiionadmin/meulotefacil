@@ -16,7 +16,7 @@ export function ModuleHeader({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="font-display text-2xl text-ink">{title}</h1>
+        <h1 className="font-display text-2xl text-foreground">{title}</h1>
         {description ? (
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             {description}
@@ -43,7 +43,7 @@ export function KpiGrid({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-display text-2xl text-ink sm:text-3xl">
+            <p className="font-display text-2xl text-foreground sm:text-3xl">
               {item.value}
             </p>
             {item.hint ? (
@@ -80,14 +80,14 @@ export function DataTable({
   return (
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-linha bg-paper-muted/60">
+        <table className="w-full min-w-[640px] text-left text-sm text-foreground">
+          <thead className="border-b border-border bg-muted/70">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={cn(
-                    "px-4 py-3 font-medium text-muted-foreground",
+                    "px-4 py-3 font-medium text-foreground/80",
                     col.className
                   )}
                 >
@@ -102,7 +102,7 @@ export function DataTable({
                 key={i}
                 onClick={onRowClick ? () => onRowClick(i) : undefined}
                 className={cn(
-                  "border-b border-linha/70 last:border-0 hover:bg-paper-muted/40",
+                  "border-b border-border/70 last:border-0 hover:bg-muted/40",
                   onRowClick && "cursor-pointer"
                 )}
               >
@@ -128,11 +128,11 @@ export function StatusPill({
   tone?: "neutral" | "ok" | "warn" | "danger" | "info";
 }) {
   const styles = {
-    neutral: "bg-paper-muted text-ink",
-    ok: "bg-emerald-50 text-emerald-800",
-    warn: "bg-amber-50 text-amber-900",
-    danger: "bg-red-50 text-red-800",
-    info: "bg-sky-50 text-sky-900",
+    neutral: "bg-muted text-foreground",
+    ok: "bg-emerald-100 text-emerald-900",
+    warn: "bg-amber-100 text-amber-950",
+    danger: "bg-red-100 text-red-900",
+    info: "bg-sky-100 text-sky-950",
   } as const;
   return <Badge className={cn("font-medium", styles[tone])}>{children}</Badge>;
 }
@@ -154,7 +154,7 @@ export function ModuleSection({
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg text-ink">{title}</h2>
+          <h2 className="font-display text-lg text-foreground">{title}</h2>
           {description ? (
             <p className="text-sm text-muted-foreground">{description}</p>
           ) : null}

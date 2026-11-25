@@ -20,7 +20,7 @@ export function PhaseStub({
           `Esta tela entra na ${phase} da especificação unificada. A estrutura de menu já está pronta.`
         }
       />
-      <div className="rounded-sm border border-dashed border-linha bg-white p-8 text-sm text-ink/80">
+      <div className="rounded-sm border border-dashed border-border bg-card p-8 text-sm text-foreground/80">
         <p>
           Consulte <code className="text-xs">docs/especificacao.md</code> e a
           ordem em §13.1. Enquanto isso, use Cadastros, Arquivos e

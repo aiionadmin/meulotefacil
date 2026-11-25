@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { DemoStoreProvider } from "@/lib/store/demo-store";
@@ -16,8 +16,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Remove dark residual (toggle antigo) — o sistema fica em tema claro legível
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+    try {
+      localStorage.removeItem("theme");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <ThemeProvider attribute="class" forcedTheme="light" defaultTheme="light" enableSystem={false}>
       <Fase1StoreProvider>
         <CarteiraStoreProvider>
           <OperacoesStoreProvider>
