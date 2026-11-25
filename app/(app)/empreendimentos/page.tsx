@@ -52,6 +52,7 @@ export default function EmpreendimentosPage() {
     codigo: "",
     nome: "",
     tipo: "loteamento" as Development["tipo"],
+    modalidade: "loteamento" as Development["modalidade"],
     status: "em_andamento" as Development["status"],
     cidade: "Campinas",
     uf: "SP",
@@ -133,6 +134,7 @@ export default function EmpreendimentosPage() {
             { key: "codigo", label: "Código" },
             { key: "nome", label: "Nome" },
             { key: "tipo", label: "Tipo" },
+            { key: "modalidade", label: "Modalidade" },
             { key: "cidade", label: "Cidade" },
             { key: "status", label: "Status" },
             { key: "lotes", label: "Lotes" },
@@ -141,6 +143,7 @@ export default function EmpreendimentosPage() {
             codigo: d.codigo,
             nome: d.nome,
             tipo: d.tipo,
+            modalidade: (d.modalidade ?? "loteamento").replace(/_/g, " "),
             cidade: `${d.cidade}/${d.uf}`,
             status: <StatusPill tone="info">{d.status.replace(/_/g, " ")}</StatusPill>,
             lotes: state.lots.filter((l) => l.developmentId === d.id).length,
@@ -277,6 +280,29 @@ export default function EmpreendimentosPage() {
             onChange={(e) => setEmpForm({ ...empForm, nome: e.target.value })}
             required
           />
+        </Field>
+        <Field label="Modalidade *">
+          <select
+            className={fieldControlClass}
+            value={empForm.modalidade}
+            onChange={(e) =>
+              setEmpForm({
+                ...empForm,
+                modalidade: e.target.value as Development["modalidade"],
+                tipo:
+                  e.target.value === "regularizacao"
+                    ? "regularizacao"
+                    : "loteamento",
+              })
+            }
+            required
+          >
+            <option value="loteamento">Loteamento</option>
+            <option value="regularizacao">Regularização</option>
+            <option value="loteamento_e_regularizacao">
+              Loteamento e regularização
+            </option>
+          </select>
         </Field>
         <Field label="Cidade">
           <Input

@@ -20,6 +20,12 @@ export type DevelopmentTipo =
   | "avcb"
   | "construcao";
 
+/** C03 — modalidade do empreendimento (liga/desliga abas). */
+export type DevelopmentModalidade =
+  | "loteamento"
+  | "regularizacao"
+  | "loteamento_e_regularizacao";
+
 export type ContractStatus =
   | "ativo"
   | "quitado"
@@ -43,6 +49,7 @@ export type Development = {
   codigo: string;
   nome: string;
   tipo: DevelopmentTipo;
+  modalidade: DevelopmentModalidade;
   status: DevelopmentStatus;
   cidade: string;
   uf: string;
@@ -54,6 +61,7 @@ export type Development = {
   taxaMulta: number;
   diaMulta: number;
   observacoes?: string;
+  empresaId?: string;
 };
 
 export type Lot = {

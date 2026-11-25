@@ -26,6 +26,8 @@ export default function UsuariosConfigPage() {
     nome: "",
     email: "",
     profileId: state.profiles[0]?.id ?? "",
+    todasEmpresas: true,
+    verObras: true,
   });
 
   const filtered = useMemo(() => {
@@ -145,6 +147,30 @@ export default function UsuariosConfigPage() {
               </option>
             ))}
           </select>
+        </Field>
+        <Field label="Visibilidade de empresas (C01)">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.todasEmpresas}
+              onChange={(e) =>
+                setForm({ ...form, todasEmpresas: e.target.checked })
+              }
+            />
+            Todas as empresas
+          </label>
+        </Field>
+        <Field label="Visibilidade de obras">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.verObras}
+              onChange={(e) =>
+                setForm({ ...form, verObras: e.target.checked })
+              }
+            />
+            Ver todas as obras / empreendimentos
+          </label>
         </Field>
       </FormDialog>
     </div>

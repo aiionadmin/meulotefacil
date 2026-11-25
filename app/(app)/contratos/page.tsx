@@ -1,31 +1,38 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
   StatusPill,
 } from "@/components/app/ModulePage";
 import {
   DetailRow,
   DetailSheet,
   Field,
-  FilterBar,
   FormDialog,
-  fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Contract } from "@/lib/domain/carteira-types";
 
+const STATUS_COLS = [
+  { id: "ativo", label: "Ativo" },
+  { id: "quitado", label: "Quitado" },
+  { id: "cancelado", label: "Cancelado" },
+  { id: "renegociado", label: "Renegociado" },
+  { id: "transferido", label: "Transferido" },
+  { id: "trocado", label: "Trocado" },
+];
+
 export default function ContratosPage() {
   const { state, saldoDevedor, addContract, registrarOperacao } = useCarteira();
-  const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Contract | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -42,31 +49,35 @@ export default function ContratosPage() {
     (l) => l.developmentId === form.developmentId && l.status === "disponivel"
   );
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return state.contracts;
-    return state.contracts.filter((c) =>
-      [c.numero, c.compradorNome, c.empNome, c.quadra, c.lote, c.status]
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
-    );
-  }, [state.contracts, q]);
-
   const ativos = state.contracts.filter((c) => c.status === "ativo").length;
   const aReceber = state.contracts
     .filter((c) => c.status === "ativo")
     .reduce((a, c) => a + saldoDevedor(c.id), 0);
 
+  const toCard = useCallback(
+    (c: Contract) => ({
+      id: c.id,
+      columnId: c.status,
+      title: `${c.numero} · ${c.compradorNome}`,
+      subtitle: `${c.empNome} · ${c.quadra}/${c.lote}`,
+      badge: formatBRL(c.preco),
+      meta: c.status,
+    }),
+    []
+  );
+
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Contratos"
-        description="venda, plano de parcelas e operações sobre o contrato."
+        description="Nascem da proposta aprovada (C12). Kanban por situação."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
               <Link href="/carteira">Ficha financeira</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/vendas">Propostas</Link>
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               Nova venda
@@ -83,41 +94,73 @@ export default function ContratosPage() {
         ]}
       />
 
-      <FilterBar
-        value={q}
-        onChange={setQ}
-        placeholder="Buscar número, comprador, lote…"
-      />
-
-      <DataTable
-        columns={[
-          { key: "numero", label: "Nº" },
-          { key: "cliente", label: "Cliente" },
-          { key: "lote", label: "Lote" },
-          { key: "preco", label: "Preço" },
-          { key: "saldo", label: "Saldo" },
-          { key: "status", label: "Situação" },
+      <ProcessBoard
+        storageKey="contratos"
+        columns={STATUS_COLS}
+        rows={state.contracts}
+        toCard={toCard}
+        columnTotals={(_, items) =>
+          items.reduce((a, c) => a + c.preco, 0)
+        }
+        onOpen={(id) => {
+          setSelected(state.contracts.find((c) => c.id === id) ?? null);
+        }}
+        onMove={() => {
+          notify("Altere situação pela ficha / operação");
+          return false;
+        }}
+        exportName="contratos"
+        listColumns={[
+          {
+            key: "numero",
+            label: "Nº",
+            filter: { type: "text" },
+            getValue: (c) => c.numero,
+          },
+          {
+            key: "cliente",
+            label: "Cliente",
+            filter: { type: "text" },
+            getValue: (c) => c.compradorNome,
+          },
+          {
+            key: "lote",
+            label: "Lote",
+            filter: { type: "text" },
+            getValue: (c) => `${c.empNome} · ${c.quadra}/${c.lote}`,
+          },
+          {
+            key: "preco",
+            label: "Preço",
+            filter: { type: "range" },
+            getValue: (c) => c.preco,
+            render: (c) => formatBRL(c.preco),
+          },
+          {
+            key: "saldo",
+            label: "Saldo",
+            filter: { type: "range" },
+            getValue: (c) => saldoDevedor(c.id),
+            render: (c) => formatBRL(saldoDevedor(c.id)),
+          },
+          {
+            key: "status",
+            label: "Situação",
+            filter: {
+              type: "status",
+              options: STATUS_COLS.map((s) => ({
+                value: s.id,
+                label: s.label,
+              })),
+            },
+            getValue: (c) => c.status,
+            render: (c) => (
+              <StatusPill tone={c.status === "ativo" ? "ok" : "neutral"}>
+                {c.status}
+              </StatusPill>
+            ),
+          },
         ]}
-        rows={filtered.map((c) => ({
-          numero: (
-            <button
-              type="button"
-              className="font-medium hover:text-brand-orange"
-              onClick={() => setSelected(c)}
-            >
-              {c.numero}
-            </button>
-          ),
-          cliente: c.compradorNome,
-          lote: `${c.empNome} · ${c.quadra}/${c.lote}`,
-          preco: formatBRL(c.preco),
-          saldo: formatBRL(saldoDevedor(c.id)),
-          status: (
-            <StatusPill tone={c.status === "ativo" ? "ok" : "neutral"}>
-              {c.status}
-            </StatusPill>
-          ),
-        }))}
       />
 
       <DetailSheet
@@ -127,15 +170,16 @@ export default function ContratosPage() {
       >
         {selected ? (
           <div className="space-y-3">
-            <DetailRow label="Lote" value={`${selected.quadra}/${selected.lote}`} />
-            <DetailRow label="Preço" value={formatBRL(selected.preco)} />
-            <DetailRow label="Saldo" value={formatBRL(saldoDevedor(selected.id))} />
-            <DetailRow label="Reajuste" value={selected.tipoReajuste} />
-            <DetailRow label="Multa" value={`${(selected.multaPct * 100).toFixed(0)}%`} />
             <DetailRow
-              label="Mora"
-              value={`${(selected.taxaMoraMes * 100).toFixed(0)}% a.m.`}
+              label="Lote"
+              value={`${selected.quadra}/${selected.lote}`}
             />
+            <DetailRow label="Preço" value={formatBRL(selected.preco)} />
+            <DetailRow
+              label="Saldo"
+              value={formatBRL(saldoDevedor(selected.id))}
+            />
+            <DetailRow label="Reajuste" value={selected.tipoReajuste} />
             <div className="flex flex-wrap gap-2 pt-2">
               <Button size="sm" asChild>
                 <Link href={`/carteira?contrato=${selected.id}`}>Ficha</Link>
@@ -179,40 +223,36 @@ export default function ContratosPage() {
         }}
       >
         <Field label="Empreendimento">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
+            options={state.developments.map((d) => ({
+              value: d.id,
+              label: d.nome,
+              meta: d.modalidade,
+            }))}
             value={form.developmentId}
-            onChange={(e) =>
-              setForm({ ...form, developmentId: e.target.value, lotId: "" })
+            onChange={(v) =>
+              setForm({ ...form, developmentId: v, lotId: "" })
             }
-          >
-            {state.developments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nome}
-              </option>
-            ))}
-          </select>
+          />
         </Field>
         <Field label="Lote disponível *">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
+            options={disponiveis.map((l) => ({
+              value: l.id,
+              label: `${l.quadra}/${l.lote}`,
+              meta: formatBRL(l.valor),
+            }))}
             value={form.lotId}
-            onChange={(e) => {
-              const lot = disponiveis.find((l) => l.id === e.target.value);
+            onChange={(v) => {
+              const lot = disponiveis.find((l) => l.id === v);
               setForm({
                 ...form,
-                lotId: e.target.value,
+                lotId: v,
                 preco: lot?.valor ?? form.preco,
               });
             }}
-          >
-            <option value="">Selecione</option>
-            {disponiveis.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.quadra}/{l.lote} · {formatBRL(l.valor)}
-              </option>
-            ))}
-          </select>
+            placeholder="Buscar lote…"
+          />
         </Field>
         <Field label="Comprador *">
           <Input

@@ -10,20 +10,9 @@ import {
   type KanbanCard,
   type KanbanColumn,
 } from "@/components/kanban/KanbanBoard";
+import { getViewPref, setViewPref } from "@/lib/ui/view-pref";
 
 export type BoardViewMode = "kanban" | "lista";
-
-const STORAGE_PREFIX = "mlf_board_view:";
-
-function readStored(key: string): BoardViewMode {
-  if (typeof window === "undefined") return "kanban";
-  try {
-    const v = window.localStorage.getItem(STORAGE_PREFIX + key);
-    return v === "lista" ? "lista" : "kanban";
-  } catch {
-    return "kanban";
-  }
-}
 
 export function ViewModeToggle({
   value,
@@ -166,7 +155,8 @@ function BoardList({
 }
 
 /**
- * Quadro com alternância Kanban ↔ Lista (preferência por página no localStorage).
+ * Quadro com alternância Kanban ↔ Lista (C18).
+ * Preferência por página em memória de sessão (sem localStorage).
  */
 export function BoardViews({
   storageKey,
@@ -185,21 +175,18 @@ export function BoardViews({
   defaultView?: BoardViewMode;
   toolbarExtra?: React.ReactNode;
 }) {
+  const prefKey = `board:${storageKey}`;
   const [mode, setMode] = useState<BoardViewMode>(defaultView);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setMode(readStored(storageKey));
+    setMode(getViewPref(prefKey, defaultView));
     setHydrated(true);
-  }, [storageKey]);
+  }, [prefKey, defaultView]);
 
   const setView = (next: BoardViewMode) => {
     setMode(next);
-    try {
-      window.localStorage.setItem(STORAGE_PREFIX + storageKey, next);
-    } catch {
-      /* ignore */
-    }
+    setViewPref(prefKey, next);
   };
 
   return (

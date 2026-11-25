@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ModuleHeader,
@@ -12,9 +12,9 @@ import {
 import {
   DetailRow,
   DetailSheet,
-  FilterBar,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { BankSlip } from "@/lib/domain/carteira-types";
@@ -36,11 +36,32 @@ export default function BoletosPage() {
     );
   }, [state.bankSlips, q]);
 
+  const toCard = useCallback(
+    (b: BankSlip) => ({
+      id: b.id,
+      columnId: b.status,
+      title: b.nossoNumero,
+      subtitle: `Ctr ${b.contratoNumero}`,
+      badge: formatBRL(b.valor),
+      meta: b.banco,
+    }),
+    []
+  );
+
+  const STATUS_COLS = [
+    { id: "gerado", label: "Gerado" },
+    { id: "remessa", label: "Remessa" },
+    { id: "registrado", label: "Registrado" },
+    { id: "pago", label: "Pago" },
+    { id: "baixado", label: "Baixado" },
+    { id: "cancelado", label: "Cancelado" },
+  ];
+
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Boletos e remessa"
-        description="emissão, remessa CNAB e retorno."
+        description="Emissão, remessa CNAB e retorno — Kanban | Lista (C19)."
         actions={
           <>
             <Button
@@ -100,37 +121,26 @@ export default function BoletosPage() {
         ]}
       />
 
-      <FilterBar
-        value={q}
-        onChange={setQ}
-        placeholder="Buscar nosso número, contrato…"
-      />
-
-      <DataTable
-        columns={[
-          { key: "nn", label: "Nosso nº" },
-          { key: "contrato", label: "Contrato" },
-          { key: "banco", label: "Banco" },
-          { key: "venc", label: "Vencimento" },
-          { key: "valor", label: "Valor" },
-          { key: "status", label: "Status" },
+      <ProcessBoard
+        storageKey="boletos"
+        columns={STATUS_COLS}
+        rows={filtered}
+        toCard={toCard}
+        columnTotals={(_, items) => items.reduce((a, b) => a + b.valor, 0)}
+        onOpen={(id) => setSelected(state.bankSlips.find((b) => b.id === id) ?? null)}
+        onMove={() => {
+          notify("Use remessa / retorno para mudar status");
+          return false;
+        }}
+        exportName="boletos"
+        listColumns={[
+          { key: "nn", label: "Nosso nº", filter: { type: "text" }, getValue: (b) => b.nossoNumero },
+          { key: "contrato", label: "Contrato", filter: { type: "text" }, getValue: (b) => b.contratoNumero },
+          { key: "banco", label: "Banco", filter: { type: "text" }, getValue: (b) => b.banco },
+          { key: "venc", label: "Vencimento", filter: { type: "period" }, getValue: (b) => b.vencimento, render: (b) => formatDateBR(b.vencimento) },
+          { key: "valor", label: "Valor", filter: { type: "range" }, getValue: (b) => b.valor, render: (b) => formatBRL(b.valor) },
+          { key: "status", label: "Status", filter: { type: "status", options: STATUS_COLS.map((c) => ({ value: c.id, label: c.label })) }, getValue: (b) => b.status, render: (b) => <StatusPill tone="info">{b.status}</StatusPill> },
         ]}
-        rows={filtered.map((b) => ({
-          nn: (
-            <button
-              type="button"
-              className="font-medium hover:text-brand-orange"
-              onClick={() => setSelected(b)}
-            >
-              {b.nossoNumero}
-            </button>
-          ),
-          contrato: b.contratoNumero,
-          banco: b.banco,
-          venc: formatDateBR(b.vencimento),
-          valor: formatBRL(b.valor),
-          status: <StatusPill tone="info">{b.status}</StatusPill>,
-        }))}
       />
 
       <ModuleSection title="Arquivos de remessa">

@@ -53,7 +53,7 @@ export default function PlantaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Planta do loteamento"
-        description="Lotes clicáveis por status."
+        description="PDF do projeto (folhas/versões), zoom e áreas por lote — C05. Grade colorida permanece como consulta."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/empreendimentos">Voltar à grade</Link>
@@ -73,6 +73,36 @@ export default function PlantaPage() {
             </option>
           ))}
         </select>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              notify(
+                "PDF/planta recebido",
+                `${f.name} · v1 · folha 1 (persistência Supabase na próxima rodada)`
+              );
+            }}
+          />
+          <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
+            Upload PDF do projeto
+          </span>
+        </label>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            notify(
+              "Modo edição de áreas",
+              "Marque polígonos por lote sobre a planta (stub C05)"
+            )
+          }
+        >
+          Editar áreas
+        </Button>
         <div className="flex flex-wrap gap-2 text-xs">
           {(Object.keys(COLORS) as LotStatus[]).map((s) => (
             <span key={s} className="inline-flex items-center gap-1.5">
@@ -84,7 +114,10 @@ export default function PlantaPage() {
       </div>
 
       <div className="relative overflow-hidden rounded-sm border border-border bg-[linear-gradient(135deg,#e8f0e4_0%,#d4e4d8_40%,#c5d5c8_100%)] p-6">
-        <p className="mb-4 font-display text-lg text-ink">{emp?.nome}</p>
+        <p className="mb-1 font-display text-lg text-ink">{emp?.nome}</p>
+        <p className="mb-4 text-xs text-ink/60">
+          Consulta por status · clique abre a ficha do lote
+        </p>
         <div className="space-y-6">
           {byQuadra.map(([quadra, itens]) => (
             <div key={quadra}>

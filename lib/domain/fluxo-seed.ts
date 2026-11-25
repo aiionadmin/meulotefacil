@@ -2,16 +2,21 @@ import type { FluxoState } from "./fluxo-types";
 
 export const FLUXO_STORAGE_KEY = "mlf-fluxo-store-v1";
 
+/** C06 — Cobrança sai do caminho da Jornada (fica no quadro próprio). */
 export const JORNADA_COLS = [
   { id: "novo_contato" as const, label: "Novo contato", manual: true },
   { id: "em_atendimento" as const, label: "Em atendimento", manual: true },
   { id: "proposta_reserva" as const, label: "Proposta e reserva", manual: false },
   { id: "contrato" as const, label: "Contrato", manual: false },
   { id: "carteira_em_dia" as const, label: "Carteira em dia", manual: false },
-  { id: "cobranca" as const, label: "Cobrança e jurídico", manual: false },
   { id: "quitado" as const, label: "Quitado", manual: false },
   { id: "escritura" as const, label: "Escritura e entrega", manual: false },
 ];
+
+export const JORNADA_ORDER = JORNADA_COLS.map((c) => c.id);
+
+/** Estados finais fora do fluxo (C07). */
+export const JORNADA_FINAIS = ["perdido", "cancelado", "distrato"] as const;
 
 export function seedFluxo(): FluxoState {
   return {
@@ -23,9 +28,24 @@ export function seedFluxo(): FluxoState {
         email: "pedro@email.com",
         empInteresse: "Residencial Horizonte",
         origem: "whatsapp",
+        campanha: "Black Friday lotes",
+        corretor: "Carla Corretora",
+        tipoInteresse: "lote",
+        finalidade: "moradia",
+        faixaValor: "150-250k",
+        entradaDisponivel: 25000,
+        parcelaCabe: 1800,
+        formaPagamento: "parcelado",
+        cidade: "Campinas",
+        bairro: "Barão Geraldo",
+        visitou: false,
+        canalPreferido: "whatsapp",
+        score: 45,
+        classificacao: "morno",
         responsavel: "Atendimento",
         etapa: "novo_contato",
         criadoEm: "2026-11-22",
+        etapaDesde: "2026-11-22T10:00:00.000Z",
       },
       {
         id: "ld-2",
@@ -33,10 +53,28 @@ export function seedFluxo(): FluxoState {
         telefone: "(19) 98822-3344",
         empInteresse: "Jardins do Sol",
         origem: "anuncio",
+        campanha: "Meta Ads Nov",
+        corretor: "Carla Corretora",
+        tipoInteresse: "lote",
+        finalidade: "investimento",
+        faixaValor: "200-300k",
+        entradaDisponivel: 40000,
+        parcelaCabe: 2200,
+        formaPagamento: "parcelado",
+        prazoDecidir: "2026-12-10",
+        cidade: "Campinas",
+        bairro: "Sousas",
+        visitou: true,
+        dataVisita: "2026-11-20",
+        melhorHorario: "tarde",
+        canalPreferido: "telefone",
+        score: 85,
+        classificacao: "quente",
         responsavel: "Carla Corretora",
         etapa: "em_atendimento",
         criadoEm: "2026-11-18",
         ultimoContato: "2026-11-24",
+        etapaDesde: "2026-11-18T14:00:00.000Z",
       },
       {
         id: "ld-3",
@@ -44,9 +82,12 @@ export function seedFluxo(): FluxoState {
         telefone: "(19) 97700-1100",
         empInteresse: "Residencial Horizonte",
         origem: "site",
+        score: 60,
+        classificacao: "morno",
         responsavel: "Comercial",
         etapa: "proposta_reserva",
         criadoEm: "2026-11-10",
+        etapaDesde: "2026-11-10T09:00:00.000Z",
       },
       {
         id: "ld-4",
@@ -55,8 +96,12 @@ export function seedFluxo(): FluxoState {
         empInteresse: "Residencial Horizonte",
         origem: "indicacao",
         responsavel: "Carla Corretora",
-        etapa: "cobranca",
+        etapa: "contrato",
+        emAtraso: true,
+        score: 70,
+        classificacao: "quente",
         criadoEm: "2025-12-01",
+        etapaDesde: "2026-01-15T09:00:00.000Z",
       },
       {
         id: "ld-5",
@@ -66,7 +111,10 @@ export function seedFluxo(): FluxoState {
         origem: "manual",
         responsavel: "Comercial",
         etapa: "carteira_em_dia",
+        score: 50,
+        classificacao: "morno",
         criadoEm: "2026-02-20",
+        etapaDesde: "2026-03-01T09:00:00.000Z",
       },
     ],
     proposals: [

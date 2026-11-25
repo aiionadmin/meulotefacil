@@ -1,34 +1,44 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
   StatusPill,
 } from "@/components/app/ModulePage";
 import {
   Field,
-  FilterBar,
   FormDialog,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFluxo } from "@/lib/store/fluxo-store";
+import { useCarteira } from "@/lib/store/carteira-store";
+import type { Proposal } from "@/lib/domain/fluxo-types";
+
+const STATUS_COLS = [
+  { id: "aberta", label: "Aberta" },
+  { id: "reservada", label: "Reservada" },
+  { id: "convertida", label: "Convertida" },
+  { id: "cancelada", label: "Cancelada" },
+];
 
 export default function VendasPage() {
   const { state, addProposal, converterProposal } = useFluxo();
-  const [q, setQ] = useState("");
+  const { state: carteira, addContract, changeLotStatus } = useCarteira();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     leadId: state.leads[0]?.id ?? "",
     cliente: "",
-    empNome: "Residencial Horizonte",
-    loteLabel: "A/02",
+    developmentId: carteira.developments[0]?.id ?? "",
+    lotId: "",
+    servicoRegularizacao: false,
     valor: 185000,
     parcelas: 120,
     entrada: 20000,
@@ -36,22 +46,34 @@ export default function VendasPage() {
     responsavel: "Comercial",
   });
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return state.proposals;
-    return state.proposals.filter((p) =>
-      [p.cliente, p.empNome, p.loteLabel, p.status]
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
-    );
-  }, [state.proposals, q]);
+  const disponiveis = useMemo(
+    () =>
+      carteira.lots.filter(
+        (l) =>
+          l.developmentId === form.developmentId && l.status === "disponivel"
+      ),
+    [carteira.lots, form.developmentId]
+  );
+
+  const emp = carteira.developments.find((d) => d.id === form.developmentId);
+
+  const toCard = useCallback(
+    (p: Proposal) => ({
+      id: p.id,
+      columnId: p.status,
+      title: p.cliente,
+      subtitle: `${p.empNome} · ${p.loteLabel}`,
+      badge: formatBRL(p.valor),
+      meta: p.responsavel,
+    }),
+    []
+  );
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Propostas e reservas"
-        description="simular plano, reservar lote e converter em venda/contrato."
+        description="Empreendimento e lote disponíveis obrigatórios. Converter gera contrato."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -73,47 +95,127 @@ export default function VendasPage() {
           },
           {
             label: "Reservadas",
-            value: state.proposals.filter((p) => p.status === "reservada").length,
+            value: state.proposals.filter((p) => p.status === "reservada")
+              .length,
           },
           {
             label: "Convertidas",
-            value: state.proposals.filter((p) => p.status === "convertida").length,
+            value: state.proposals.filter((p) => p.status === "convertida")
+              .length,
           },
         ]}
       />
 
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar cliente, lote…" />
-
-      <DataTable
-        columns={[
-          { key: "cliente", label: "Cliente" },
-          { key: "lote", label: "Lote" },
-          { key: "valor", label: "Valor" },
-          { key: "validade", label: "Validade" },
-          { key: "status", label: "Status" },
-          { key: "acao", label: "" },
-        ]}
-        rows={filtered.map((p) => ({
-          cliente: p.cliente,
-          lote: `${p.empNome} · ${p.loteLabel}`,
-          valor: formatBRL(p.valor),
-          validade: formatDateBR(p.validade),
-          status: <StatusPill tone="info">{p.status}</StatusPill>,
-          acao:
-            p.status === "aberta" || p.status === "reservada" ? (
-              <Button
-                size="sm"
-                onClick={() => {
-                  converterProposal(p.id);
-                  notify("Convertida · card → Contrato");
-                }}
-              >
-                Converter
-              </Button>
-            ) : (
-              "—"
+      <ProcessBoard
+        storageKey="propostas"
+        columns={STATUS_COLS}
+        rows={state.proposals}
+        toCard={toCard}
+        columnTotals={(_, items) =>
+          items.reduce((a, p) => a + p.valor, 0)
+        }
+        onMove={() => {
+          notify("Use Converter / Cancelar na ficha");
+          return false;
+        }}
+        exportName="propostas"
+        listColumns={[
+          {
+            key: "cliente",
+            label: "Cliente",
+            filter: { type: "text" },
+            getValue: (p) => p.cliente,
+          },
+          {
+            key: "emp",
+            label: "Empreendimento",
+            filter: { type: "text" },
+            getValue: (p) => p.empNome,
+          },
+          {
+            key: "lote",
+            label: "Lote",
+            filter: { type: "text" },
+            getValue: (p) => p.loteLabel,
+          },
+          {
+            key: "valor",
+            label: "Valor",
+            filter: { type: "range" },
+            getValue: (p) => p.valor,
+            render: (p) => formatBRL(p.valor),
+          },
+          {
+            key: "validade",
+            label: "Validade",
+            filter: { type: "period" },
+            getValue: (p) => p.validade,
+            render: (p) => formatDateBR(p.validade),
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: STATUS_COLS.map((c) => ({
+                value: c.id,
+                label: c.label,
+              })),
+            },
+            getValue: (p) => p.status,
+            render: (p) => (
+              <div className="flex items-center gap-2">
+                <StatusPill tone="info">{p.status}</StatusPill>
+                {p.status === "aberta" || p.status === "reservada" ? (
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const converted = converterProposal(p.id);
+                      if (!converted) return;
+                      const lot = carteira.lots.find(
+                        (l) =>
+                          l.id === p.lotId ||
+                          (`${l.quadra}/${l.lote}` === p.loteLabel &&
+                            l.empNome === p.empNome)
+                      );
+                      const dev =
+                        carteira.developments.find(
+                          (d) => d.id === p.developmentId
+                        ) ??
+                        carteira.developments.find((d) => d.nome === p.empNome);
+                      if (dev && lot) {
+                        addContract({
+                          developmentId: dev.id,
+                          lotId: lot.id,
+                          compradorNome: p.cliente,
+                          preco: p.valor,
+                          entrada: p.entrada,
+                          qtdParcelas: p.parcelas,
+                          valorParcela:
+                            Math.round(
+                              ((p.valor - p.entrada) / Math.max(1, p.parcelas)) *
+                                100
+                            ) / 100,
+                        });
+                        changeLotStatus([lot.id], "vendido", "Proposta convertida");
+                      }
+                      notify("Contrato gerado da proposta aprovada");
+                    }}
+                  >
+                    Converter
+                  </Button>
+                ) : null}
+              </div>
             ),
-        }))}
+          },
+        ]}
+        bulkActions={[
+          {
+            label: "Exportar",
+            onClick: () => notify("Exportação em lote"),
+          },
+        ]}
       />
 
       <FormDialog
@@ -121,43 +223,110 @@ export default function VendasPage() {
         onOpenChange={setOpen}
         title="Nova proposta"
         onSubmit={() => {
+          if (!form.developmentId) {
+            notify("Empreendimento obrigatório");
+            return;
+          }
+          if (!form.servicoRegularizacao && !form.lotId) {
+            notify("Selecione um lote disponível ou serviço de regularização");
+            return;
+          }
           const lead = state.leads.find((l) => l.id === form.leadId);
+          const lot = carteira.lots.find((l) => l.id === form.lotId);
           addProposal({
-            ...form,
-            cliente: form.cliente || lead?.nome || "Cliente",
             leadId: form.leadId || undefined,
+            cliente: form.cliente || lead?.nome || "Cliente",
+            empNome: emp?.nome ?? "",
+            developmentId: form.developmentId,
+            lotId: form.lotId || undefined,
+            loteLabel: form.servicoRegularizacao
+              ? "Serviço REURB"
+              : lot
+                ? `${lot.quadra}/${lot.lote}`
+                : "",
+            servicoRegularizacao: form.servicoRegularizacao,
+            valor: form.valor,
+            parcelas: form.parcelas,
+            entrada: form.entrada,
+            validade: form.validade,
+            responsavel: form.responsavel,
           });
+          if (lot) {
+            changeLotStatus([lot.id], "reservado", "Proposta/reserva");
+          }
           notify("Proposta criada");
           setOpen(false);
         }}
       >
         <Field label="Lead">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
+            options={state.leads.map((l) => ({
+              value: l.id,
+              label: l.nome,
+              meta: l.empInteresse,
+            }))}
             value={form.leadId}
-            onChange={(e) => {
-              const lead = state.leads.find((l) => l.id === e.target.value);
+            onChange={(v) => {
+              const lead = state.leads.find((l) => l.id === v);
               setForm({
                 ...form,
-                leadId: e.target.value,
+                leadId: v,
                 cliente: lead?.nome ?? form.cliente,
-                empNome: lead?.empInteresse ?? form.empNome,
               });
             }}
-          >
-            {state.leads.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.nome}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Lote">
-          <Input
-            value={form.loteLabel}
-            onChange={(e) => setForm({ ...form, loteLabel: e.target.value })}
           />
         </Field>
+        <Field label="Empreendimento *">
+          <SearchSelect
+            options={carteira.developments.map((d) => ({
+              value: d.id,
+              label: d.nome,
+              meta: d.modalidade,
+            }))}
+            value={form.developmentId}
+            onChange={(v) =>
+              setForm({ ...form, developmentId: v, lotId: "" })
+            }
+          />
+        </Field>
+        <Field label="Serviço de regularização">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.servicoRegularizacao}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  servicoRegularizacao: e.target.checked,
+                  lotId: e.target.checked ? "" : form.lotId,
+                })
+              }
+            />
+            Sem lote (serviço)
+          </label>
+        </Field>
+        {!form.servicoRegularizacao ? (
+          <Field label="Quadra / Lote disponível *">
+            <SearchSelect
+              options={disponiveis.map((l) => ({
+                value: l.id,
+                label: `${l.quadra}/${l.lote}`,
+                meta: formatBRL(l.valor),
+              }))}
+              value={form.lotId}
+              onChange={(v) => {
+                const lot = disponiveis.find((l) => l.id === v);
+                setForm({
+                  ...form,
+                  lotId: v,
+                  valor: lot?.valor ?? form.valor,
+                });
+              }}
+              placeholder="Buscar lote disponível…"
+              emptyLabel="Nenhum lote disponível"
+            />
+          </Field>
+        ) : null}
         <Field label="Valor">
           <Input
             type="number"
@@ -183,6 +352,14 @@ export default function VendasPage() {
             onChange={(e) =>
               setForm({ ...form, parcelas: Number(e.target.value) || 1 })
             }
+          />
+        </Field>
+        <Field label="Validade">
+          <Input
+            type="date"
+            className={fieldControlClass}
+            value={form.validade}
+            onChange={(e) => setForm({ ...form, validade: e.target.value })}
           />
         </Field>
       </FormDialog>
