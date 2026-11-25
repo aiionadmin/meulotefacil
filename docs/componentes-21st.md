@@ -30,6 +30,6 @@ Se o registry falhar (auth), usar shadcn/ui base + composição própria no mesm
 |-------|-----|--------|
 | Hero shell | `https://21st.dev/r/aceternity/hero-section` | Pendente (Home) |
 | Number ticker | `https://21st.dev/r/magicui/number-ticker` | Pendente |
-| Timeline | `https://21st.dev/r/aceternity/timeline` | Pendente |
+| Timeline | `https://21st.dev/r/uiable/feature-24-milestone-timeline` | Integrado em `/quem-somos` (`milestone-timeline.tsx` + `LinhaDoTempo.tsx`) |
 | Features | `https://21st.dev/r/aceternity/feature-sections` | Pendente |
 | Cards notícias | `https://21st.dev/r/aceternity/card-hover-effect` | Pendente |
