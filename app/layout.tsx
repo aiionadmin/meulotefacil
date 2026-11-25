@@ -18,6 +18,14 @@ export const metadata: Metadata = {
   },
   description:
     "Regularização fundiária de ponta a ponta, do diagnóstico ao registro em cartório, em Campinas e região, desde 2005. REURB-S e REURB-E.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   openGraph: {
     type: "website",
     locale: "pt_BR",
