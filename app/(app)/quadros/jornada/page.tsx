@@ -9,7 +9,7 @@ import {
   DetailSheet,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { BoardViews } from "@/components/kanban/BoardViews";
 import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import type { JornadaColuna, Lead } from "@/lib/domain/fluxo-types";
@@ -56,7 +56,8 @@ export default function JornadaPage() {
         }
       />
 
-      <KanbanBoard
+      <BoardViews
+        storageKey="jornada"
         columns={columns}
         cards={cards}
         onMove={(cardId, to) => {

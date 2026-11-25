@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { BoardViews } from "@/components/kanban/BoardViews";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { notify } from "@/components/app/ModuleToolkit";
 
@@ -30,7 +30,8 @@ export default function QuadroRegularizacaoPage() {
           </Button>
         }
       />
-      <KanbanBoard
+      <BoardViews
+        storageKey="regularizacao"
         columns={COLS}
         cards={state.regularization.map((r) => ({
           id: r.id,

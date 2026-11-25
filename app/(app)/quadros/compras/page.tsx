@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { BoardViews } from "@/components/kanban/BoardViews";
 import { useOperacoes } from "@/lib/store/operacoes-store";
 import { notify } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
@@ -31,7 +31,8 @@ export default function QuadroComprasPage() {
           </Button>
         }
       />
-      <KanbanBoard
+      <BoardViews
+        storageKey="compras"
         columns={COLS}
         cards={state.purchases.map((p) => ({
           id: p.id,

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { BoardViews } from "@/components/kanban/BoardViews";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { notify } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
@@ -31,7 +31,8 @@ export default function QuadroCobrancaPage() {
           </Button>
         }
       />
-      <KanbanBoard
+      <BoardViews
+        storageKey="cobranca"
         columns={COLS}
         cards={state.collection.map((c) => ({
           id: c.id,
@@ -47,7 +48,7 @@ export default function QuadroCobrancaPage() {
             notify("Movido para acordo");
             return true;
           }
-          notify("Use a lista para ações de cobrança nesta demo");
+          notify("Use a lista de cobrança para as demais ações nesta demo");
           return false;
         }}
       />

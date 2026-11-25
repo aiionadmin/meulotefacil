@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { BoardViews } from "@/components/kanban/BoardViews";
 import { useOperacoes } from "@/lib/store/operacoes-store";
 import { formatBRL } from "@/lib/masks/br";
 
@@ -28,8 +28,9 @@ export default function QuadroObrasPage() {
           </Button>
         }
       />
-      <KanbanBoard
-        columns={COLS}
+      <BoardViews
+        storageKey="obras"
+        columns={COLS.map((c) => ({ ...c, droppable: false }))}
         cards={state.works.map((w) => ({
           id: w.id,
           columnId: w.status,

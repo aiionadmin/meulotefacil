@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { BoardViews } from "@/components/kanban/BoardViews";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { notify } from "@/components/app/ModuleToolkit";
 
@@ -23,11 +23,12 @@ export default function QuadroTarefasPage() {
         description="Mesmas tarefas do menu Início, em colunas."
         actions={
           <Button size="sm" variant="outline" asChild>
-            <Link href="/tarefas">Lista / kanban clássico</Link>
+            <Link href="/tarefas">Minhas tarefas</Link>
           </Button>
         }
       />
-      <KanbanBoard
+      <BoardViews
+        storageKey="tarefas"
         columns={COLS}
         cards={state.tasks.map((t) => ({
           id: t.id,
