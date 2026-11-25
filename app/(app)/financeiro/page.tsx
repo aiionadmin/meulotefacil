@@ -24,6 +24,8 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { podeConciliar } from "@/lib/domain/alcadas";
 import type {
   CondicaoPagamento,
   FormaPagamento,
@@ -46,7 +48,12 @@ function PagamentosInner() {
     baixarPagamento,
     estornarPagamento,
     conciliarPagamento,
+    desconciliarPagamento,
   } = useFinanceiro();
+  const { state: f1, currentUser } = useFase1();
+  const perfil =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ??
+    "Administrador";
   const [q, setQ] = useState("");
   const [sit, setSit] = useState<Situacao>(() => parseSit(search.get("sit")));
   const [selected, setSelected] = useState<Pagamento | null>(null);
@@ -331,11 +338,33 @@ function PagamentosInner() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
+                    const gate = podeConciliar(f1.approvalRules, perfil, false);
+                    if (!gate.ok) {
+                      notify(gate.motivo ?? "Sem alçada");
+                      return;
+                    }
                     conciliarPagamento(live.id);
                     notify("Conciliado");
                   }}
                 >
                   Conciliar
+                </Button>
+              ) : null}
+              {live.conciliado ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const gate = podeConciliar(f1.approvalRules, perfil, true);
+                    if (!gate.ok) {
+                      notify(gate.motivo ?? "Sem alçada");
+                      return;
+                    }
+                    desconciliarPagamento(live.id);
+                    notify("Desconciliado");
+                  }}
+                >
+                  Desconciliar
                 </Button>
               ) : null}
             </div>

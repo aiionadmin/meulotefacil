@@ -397,6 +397,7 @@ export function seedFinanceiro(): FinanceiroState {
       },
     ],
     transferencias: [],
+    ofxImports: [],
     notas: [
       {
         id: "nf-1",

@@ -78,7 +78,14 @@ export default function ContasPage() {
           ]}
           rows={state.contas.map((c) => ({
             banco: `${c.banco} · ${c.tipo}`,
-            nome: c.nome,
+            nome: (
+              <Link
+                href={`/financeiro/contas/${c.id}`}
+                className="font-medium hover:text-brand-orange"
+              >
+                {c.nome}
+              </Link>
+            ),
             prop: c.proprietario,
             saldo: formatBRL(c.saldo),
             ini: formatDateBR(c.dataInicial),
