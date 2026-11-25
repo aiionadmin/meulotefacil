@@ -14,7 +14,7 @@ export const metadata: Metadata = {
  */
 export default function RegularizacaoPage() {
   return (
-    <div className="bg-paper pt-24">
+    <div className="bg-paper pt-6">
       <section className="site-container py-12 sm:py-16">
         <SectionHeading
           number="01"

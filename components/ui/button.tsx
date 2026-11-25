@@ -47,7 +47,7 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
-  /** Seta à direita — use em CTAs que levam a outra página / destino. */
+  /** Seta à direita — só quando `arrow` for true (não é mais padrão). */
   arrow?: boolean;
 }
 
@@ -71,15 +71,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant,
       size,
       asChild = false,
-      arrow,
+      arrow = false,
       children,
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button";
-    // CTAs com asChild (Link/a) levam a outra página — seta por padrão
-    const showArrow = arrow ?? asChild;
+    const showArrow = Boolean(arrow);
 
     if (asChild && showArrow && React.isValidElement(children)) {
       const child = children as React.ReactElement<{ children?: React.ReactNode }>;

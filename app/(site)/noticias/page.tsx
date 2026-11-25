@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 /** Stub de listagem, MDX na etapa Notícias. */
 export default function NoticiasPage() {
   return (
-    <div className="bg-paper pt-24">
+    <div className="bg-paper pt-6">
       <section className="site-container py-20 sm:py-28">
         <SectionHeading
           number="01"

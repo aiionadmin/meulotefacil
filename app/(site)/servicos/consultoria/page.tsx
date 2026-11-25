@@ -15,7 +15,7 @@ export default function ConsultoriaPage() {
   );
 
   return (
-    <div className="bg-paper pt-24">
+    <div className="bg-paper pt-6">
       <section className="bg-brand-navy px-4 py-16 text-brand-cream sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-widest text-brand-orange">

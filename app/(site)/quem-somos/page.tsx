@@ -20,7 +20,7 @@ const timeline = [
 /** Conteúdo legado de /sobre, redesign editorial na etapa Quem somos. */
 export default function QuemSomosPage() {
   return (
-    <div className="bg-paper pt-24">
+    <div className="bg-paper pt-6">
       <section className="bg-ink px-4 py-20 text-paper sm:px-6 lg:px-8">
         <div className="site-container max-w-3xl text-center">
           <Logo variant="full" tone="orange" className="mx-auto justify-center" />
