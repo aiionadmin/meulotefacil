@@ -202,7 +202,7 @@ export function NucleosMapSection() {
     <section className="border-b border-linha bg-paper py-20 lg:py-28">
       <div className="site-container">
         <SectionHeading
-          number="04"
+          number="06"
           eyebrow="Mapa"
           title="Onde estamos regularizando"
           subtitle="10 núcleos concluídos ou em registro e 17 em andamento, em 4 cidades. Passe o mouse no mapa para ver os marcadores."
