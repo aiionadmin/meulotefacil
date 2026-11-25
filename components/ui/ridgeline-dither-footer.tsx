@@ -311,14 +311,6 @@ const RDF_CSS = `
   position: relative; display: grid; grid-template-rows: auto auto minmax(var(--rdf-scene-min), 1fr);
   width: 100%; max-width: var(--rdf-max); margin: 0 auto;
 }
-.rdf-frame::before, .rdf-frame::after {
-  content: ""; position: absolute; top: 0; bottom: 0; width: 1px; z-index: 3; pointer-events: none;
-  background: var(--rdf-line); transform: scaleY(0); transform-origin: 50% 0;
-  transition: transform 1.4s cubic-bezier(.2,.7,.1,1);
-}
-.rdf-frame::before { left: 0; }
-.rdf-frame::after { right: 0; transition-delay: .08s; }
-.rdf-in .rdf-frame::before, .rdf-in .rdf-frame::after { transform: scaleY(1); }
 
 .rdf-r {
   opacity: 0; transform: translateY(12px); filter: blur(5px);
@@ -415,7 +407,7 @@ const RDF_CSS = `
   .rdf-scene { margin-top: -40px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rdf-r, .rdf-frame::before, .rdf-frame::after, .rdf-link, .rdf-link::before, .rdf-social a, .rdf-mark rect { transition: none; }
+  .rdf-r, .rdf-link, .rdf-link::before, .rdf-social a, .rdf-mark rect { transition: none; }
   .rdf-r { filter: none; }
   .rdf-credit:hover .rdf-heart { animation: none; }
 }
