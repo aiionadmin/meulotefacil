@@ -125,7 +125,7 @@ function TarefasInner() {
             status: "a_fazer",
             prioridade: form.prioridade,
             prazo: form.prazo,
-            responsavelNome: "Admin Demo",
+            responsavelNome: "Administrador",
           });
           notify("Tarefa criada");
           setOpen(false);

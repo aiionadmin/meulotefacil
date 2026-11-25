@@ -17,12 +17,34 @@ import { ModuleHeader } from "@/components/app/ModulePage";
 import { notify } from "@/components/app/ModuleToolkit";
 import { configGrupos } from "@/lib/data/sistema";
 import { useDemoStore } from "@/lib/store/demo-store";
+import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
 
 export default function ConfiguracoesPage() {
   const { state, setConfigToggle, saveEmpresa, savePerfil, reset } =
     useDemoStore();
   const [perfil, setPerfil] = useState(state.perfil);
   const [empresa, setEmpresa] = useState(state.empresa);
+  const demoTools = isDemoToolsAllowed();
+
+  if (!demoTools) {
+    return (
+      <div className="space-y-6">
+        <ModuleHeader
+          title="Parâmetros"
+          description="Os grupos de parâmetros passam a telas funcionais no Bloco J (Empresa, Encargos, Caixa, Vendas, Boletos, Reajuste, Financeiro, Compras, Obras, Aparência)."
+        />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Tela legada desligada</CardTitle>
+            <CardDescription>
+              Em produção esta tela de toggles demo não fica disponível. Use
+              Empresa, Usuários, Perfis e Alçadas no menu de Configurações.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -35,7 +57,7 @@ export default function ConfiguracoesPage() {
             variant="outline"
             onClick={() => {
               reset();
-              notify("Dados demo restaurados");
+              notify("Dados de desenvolvimento restaurados");
             }}
           >
             Restaurar demo

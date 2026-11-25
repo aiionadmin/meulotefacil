@@ -1,5 +1,7 @@
 import type { Fase1State } from "./fase1-types";
+import { defaultPermissionsForProfile } from "@/lib/permissions/routines";
 
+/** @deprecated A01 — persistência via store_snapshots, não localStorage. */
 export const FASE1_STORAGE_KEY = "mlf-fase1-store-v1";
 
 export function seedFase1(): Fase1State {
@@ -34,8 +36,8 @@ export function seedFase1(): Fase1State {
     users: [
       {
         id: "u-admin",
-        nome: "Admin Demo",
-        email: "demo@meulotefacil.com.br",
+        nome: "Administrador",
+        email: "admin@meulotefacil.com.br",
         status: "ativo",
         chave: true,
         profileId: "pf-admin",
@@ -61,6 +63,19 @@ export function seedFase1(): Fase1State {
       },
     ],
     people: [
+      {
+        id: "p-ana",
+        tipo: "fisica",
+        status: "ativo",
+        nome: "Ana Souza",
+        documento: "321.654.987-00",
+        papeis: ["comprador", "cliente"],
+        celular: "(19) 99111-2200",
+        email: "ana.souza@email.com",
+        cidade: "Campinas",
+        uf: "SP",
+        createdAt: "2026-06-01T12:00:00.000Z",
+      },
       {
         id: "p1",
         tipo: "fisica",
@@ -205,14 +220,14 @@ export function seedFase1(): Fase1State {
         status: "em_andamento",
         prioridade: "media",
         prazo: "30/11/2026",
-        responsavelNome: "Admin Demo",
+        responsavelNome: "Administrador",
       },
     ],
     notifications: [
       {
         id: "n1",
-        titulo: "Bem-vindo à Fase 1",
-        corpo: "Acesso, pessoas, arquivos e auditoria estão ativos no demo.",
+        titulo: "Bem-vindo ao Meu Lote Fácil",
+        corpo: "Acesso, pessoas, arquivos e auditoria estão ativos.",
         lida: false,
         link: "/cadastros/pessoas",
         createdAt: "2026-11-25T12:00:00.000Z",
@@ -229,10 +244,10 @@ export function seedFase1(): Fase1State {
     audit: [
       {
         id: "a1",
-        quando: "25/11/2026, 09:00:00",
-        usuarioNome: "Admin Demo",
+        quando: "2026-11-25T12:00:00.000Z",
+        usuarioNome: "Sistema",
         rotina: "Sistema",
-        acao: "Seed Fase 1 carregado",
+        acao: "Carga inicial do ambiente",
       },
     ],
     approvalRules: [
@@ -241,6 +256,12 @@ export function seedFase1(): Fase1State {
       { id: "ar3", tipo: "Desconto acima do limite", perfilNome: "Direção", valorMinimo: 5, ativo: true },
       { id: "ar4", tipo: "Conciliação bancária", perfilNome: "Financeiro", ativo: true },
     ],
+    permissions: profiles.flatMap((p) =>
+      defaultPermissionsForProfile(p.codigo).map((row) => ({
+        profileId: p.id,
+        ...row,
+      }))
+    ),
     currentUserId: "u-admin",
   };
 }

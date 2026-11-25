@@ -27,6 +27,15 @@ export function brl(value: number) {
 
 export const pessoasMock = [
   {
+    id: "p-ana",
+    nome: "Ana Souza",
+    doc: "321.654.987-00",
+    papeis: ["Comprador", "Cliente"],
+    cidade: "Campinas",
+    status: "Ativo",
+    contato: "(19) 99111-2200",
+  },
+  {
     id: "p1",
     nome: "Bruno Lima",
     doc: "123.456.789-00",

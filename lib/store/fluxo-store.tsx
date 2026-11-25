@@ -3,12 +3,12 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { FLUXO_STORAGE_KEY, JORNADA_COLS, seedFluxo } from "@/lib/domain/fluxo-seed";
+import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
+import { unifiedFluxoSeed } from "@/lib/domain/unified-seed";
 import type {
   Agreement,
   FluxoState,
@@ -17,6 +17,10 @@ import type {
   LeadOrigem,
   Proposal,
 } from "@/lib/domain/fluxo-types";
+import { useStorePersist } from "@/lib/persist/use-store-persist";
+import { saveSnapshot } from "@/lib/persist/snapshots";
+import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
+import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -69,32 +73,27 @@ const MANUAL_COLS: ReadonlySet<JornadaColuna> = new Set(
 const Ctx = createContext<FluxoApi | null>(null);
 
 export function FluxoStoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<FluxoState>(() => seedFluxo());
+  const [state, setState] = useState<FluxoState>(() => unifiedFluxoSeed());
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(FLUXO_STORAGE_KEY);
-      if (raw) setState({ ...seedFluxo(), ...JSON.parse(raw) });
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(FLUXO_STORAGE_KEY, JSON.stringify(state));
-  }, [state, ready]);
+  useStorePersist({
+    storeKey: "fluxo",
+    ready,
+    setReady,
+    state,
+    setState,
+    seed: unifiedFluxoSeed,
+  });
 
   const api = useMemo<FluxoApi>(
     () => ({
       state,
       ready,
       reset: () => {
-        const next = seedFluxo();
+        if (!isDemoToolsAllowed()) return;
+        const next = unifiedFluxoSeed();
         setState(next);
-        localStorage.setItem(FLUXO_STORAGE_KEY, JSON.stringify(next));
+        void saveSnapshot("fluxo", next, DEMO_ORG_ID);
       },
       addLead: (data) => {
         const lead: Lead = {
@@ -128,7 +127,7 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
               de,
               para,
               quando: nowLabel(),
-              usuario: "Admin Demo",
+              usuario: "Sistema",
               motivo: opts?.motivo,
             },
             ...s.cardMoves,
@@ -149,7 +148,7 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
               de: s.leads.find((l) => l.id === id)?.etapa ?? "?",
               para: "perdido",
               quando: nowLabel(),
-              usuario: "Admin Demo",
+              usuario: "Sistema",
               motivo,
             },
             ...s.cardMoves,

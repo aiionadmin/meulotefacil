@@ -4,12 +4,11 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { CARTEIRA_STORAGE_KEY, seedCarteira } from "@/lib/domain/carteira-seed";
+import { unifiedCarteiraSeed } from "@/lib/domain/unified-seed";
 import type {
   BankSlip,
   CarteiraState,
@@ -22,6 +21,10 @@ import type {
 } from "@/lib/domain/carteira-types";
 import { calcAtraso } from "@/lib/money/atraso";
 import { aplicarFatorReajuste } from "@/lib/money/reajuste";
+import { useStorePersist } from "@/lib/persist/use-store-persist";
+import { saveSnapshot } from "@/lib/persist/snapshots";
+import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
+import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -84,23 +87,17 @@ type CarteiraApi = {
 const Ctx = createContext<CarteiraApi | null>(null);
 
 export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<CarteiraState>(() => seedCarteira());
+  const [state, setState] = useState<CarteiraState>(() => unifiedCarteiraSeed());
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(CARTEIRA_STORAGE_KEY);
-      if (raw) setState({ ...seedCarteira(), ...JSON.parse(raw) });
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(CARTEIRA_STORAGE_KEY, JSON.stringify(state));
-  }, [state, ready]);
+  useStorePersist({
+    storeKey: "carteira",
+    ready,
+    setReady,
+    state,
+    setState,
+    seed: unifiedCarteiraSeed,
+  });
 
   const saldoDevedor = useCallback(
     (contractId: string) =>
@@ -124,9 +121,10 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
       state,
       ready,
       reset: () => {
-        const next = seedCarteira();
+        if (!isDemoToolsAllowed()) return;
+        const next = unifiedCarteiraSeed();
         setState(next);
-        localStorage.setItem(CARTEIRA_STORAGE_KEY, JSON.stringify(next));
+        void saveSnapshot("carteira", next, DEMO_ORG_ID);
       },
       addDevelopment: (data) => {
         const dev: Development = {

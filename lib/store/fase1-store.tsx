@@ -4,29 +4,30 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { FASE1_STORAGE_KEY, seedFase1 } from "@/lib/domain/fase1-seed";
+import { unifiedFase1Seed } from "@/lib/domain/unified-seed";
 import type {
   AppFile,
-  AppNotification,
   AppTask,
   AppUser,
   Fase1State,
   Organization,
   Person,
   PersonPapel,
+  ProfilePermission,
 } from "@/lib/domain/fase1-types";
+import { useStorePersist } from "@/lib/persist/use-store-persist";
+import { saveSnapshot } from "@/lib/persist/snapshots";
+import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
+import { recordAudit } from "@/lib/audit/client-audit";
+import { can, type PermissionFlags } from "@/lib/permissions/routines";
+import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function nowLabel() {
-  return new Date().toLocaleString("pt-BR");
 }
 
 type Fase1Api = {
@@ -34,6 +35,7 @@ type Fase1Api = {
   ready: boolean;
   currentUser: AppUser | undefined;
   currentProfileName: string;
+  can: (rotina: string, acao: keyof PermissionFlags) => boolean;
   reset: () => void;
   saveOrganization: (org: Organization) => void;
   addPerson: (data: Omit<Person, "id" | "createdAt">) => Person;
@@ -49,66 +51,121 @@ type Fase1Api = {
   markAllNotificationsRead: () => void;
   toggleLookupItem: (listId: string, codigo: string) => void;
   toggleApprovalRule: (id: string) => void;
+  setProfilePermission: (
+    profileId: string,
+    rotina: string,
+    flags: PermissionFlags
+  ) => void;
 };
 
 const Ctx = createContext<Fase1Api | null>(null);
 
 export function Fase1StoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<Fase1State>(() => seedFase1());
+  const [state, setState] = useState<Fase1State>(() => unifiedFase1Seed());
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(FASE1_STORAGE_KEY);
-      if (raw) setState({ ...seedFase1(), ...JSON.parse(raw) });
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
-  }, []);
+  useStorePersist({
+    storeKey: "fase1",
+    ready,
+    setReady,
+    state,
+    setState,
+    seed: unifiedFase1Seed,
+    merge: (seed, saved) => ({
+      ...seed,
+      ...saved,
+      permissions: saved.permissions?.length
+        ? saved.permissions
+        : seed.permissions,
+    }),
+  });
 
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(FASE1_STORAGE_KEY, JSON.stringify(state));
-  }, [state, ready]);
-
-  const log = useCallback((rotina: string, acao: string) => {
-    setState((s) => {
-      const user = s.users.find((u) => u.id === s.currentUserId);
-      return {
-        ...s,
-        audit: [
-          {
-            id: uid("aud"),
-            quando: nowLabel(),
-            usuarioNome: user?.nome ?? "Sistema",
-            rotina,
-            acao,
-          },
-          ...s.audit,
-        ].slice(0, 80),
-      };
-    });
-  }, []);
+  const pushAudit = useCallback(
+    (
+      rotina: string,
+      acao: string,
+      opts?: {
+        registroTipo?: string;
+        registroId?: string;
+        antes?: unknown;
+        depois?: unknown;
+      }
+    ) => {
+      setState((s) => {
+        const user = s.users.find((u) => u.id === s.currentUserId);
+        const event = {
+          id: uid("aud"),
+          quando: new Date().toISOString(),
+          usuarioNome: user?.nome ?? "Sistema",
+          rotina,
+          acao,
+          registroTipo: opts?.registroTipo,
+          registroId: opts?.registroId,
+          antes: opts?.antes,
+          depois: opts?.depois,
+        };
+        void recordAudit({
+          organizationId: DEMO_ORG_ID,
+          userId: user?.id,
+          usuarioNome: event.usuarioNome,
+          rotina,
+          acao,
+          registroTipo: opts?.registroTipo,
+          registroId: opts?.registroId,
+          antes: opts?.antes,
+          depois: opts?.depois,
+        });
+        return {
+          ...s,
+          audit: [event, ...s.audit].slice(0, 200),
+        };
+      });
+    },
+    []
+  );
 
   const api = useMemo<Fase1Api>(() => {
     const currentUser = state.users.find((u) => u.id === state.currentUserId);
     const currentProfileName =
       state.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
+    const myPerms: ProfilePermission[] = state.permissions.filter(
+      (p) => p.profileId === currentUser?.profileId
+    );
 
     return {
       state,
       ready,
       currentUser,
       currentProfileName,
+      can: (rotina, acao) => {
+        if (currentUser?.chave) return true;
+        return can(
+          myPerms.map((p) => ({
+            rotina: p.rotina,
+            ver: p.ver,
+            inserirAlterar: p.inserirAlterar,
+            remover: p.remover,
+          })),
+          rotina,
+          acao
+        );
+      },
       reset: () => {
-        const next = seedFase1();
+        if (!isDemoToolsAllowed()) return;
+        const next = unifiedFase1Seed();
         setState(next);
-        localStorage.setItem(FASE1_STORAGE_KEY, JSON.stringify(next));
+        void saveSnapshot("fase1", next, DEMO_ORG_ID);
+        pushAudit("Configurações", "Restaurou dados de desenvolvimento");
       },
       saveOrganization: (org) => {
+        const antes = state.organization;
         setState((s) => ({ ...s, organization: org }));
-        log("Configurações > Empresa", "Salvou dados da empresa");
+        pushAudit("Configurações > Empresa", "alterar", {
+          registroTipo: "organization",
+          registroId: org.id,
+          antes,
+          depois: org,
+        });
       },
       addPerson: (data) => {
         const person: Person = {
@@ -117,39 +174,65 @@ export function Fase1StoreProvider({ children }: { children: ReactNode }) {
           createdAt: new Date().toISOString(),
         };
         setState((s) => ({ ...s, people: [person, ...s.people] }));
-        log("Cadastros > Pessoas", `Cadastrou ${person.nome}`);
+        pushAudit("Cadastros > Pessoas", "criar", {
+          registroTipo: "person",
+          registroId: person.id,
+          depois: person,
+        });
         return person;
       },
       updatePerson: (id, patch) => {
+        const antes = state.people.find((p) => p.id === id);
         setState((s) => ({
           ...s,
           people: s.people.map((p) => (p.id === id ? { ...p, ...patch } : p)),
         }));
-        log("Cadastros > Pessoas", `Atualizou pessoa ${id}`);
+        pushAudit("Cadastros > Pessoas", "alterar", {
+          registroTipo: "person",
+          registroId: id,
+          antes,
+          depois: { ...antes, ...patch },
+        });
       },
       softDeletePerson: (id) => {
+        const antes = state.people.find((p) => p.id === id);
         setState((s) => ({
           ...s,
           people: s.people.map((p) =>
             p.id === id ? { ...p, status: "inativo" } : p
           ),
         }));
-        log("Cadastros > Pessoas", `Inativou pessoa ${id}`);
+        pushAudit("Cadastros > Pessoas", "excluir", {
+          registroTipo: "person",
+          registroId: id,
+          antes,
+          depois: { ...antes, status: "inativo" },
+        });
       },
       peopleByPapel: (papel) =>
         state.people.filter((p) => p.papeis.includes(papel)),
       addUser: (data) => {
         const user: AppUser = { ...data, id: uid("u") };
         setState((s) => ({ ...s, users: [user, ...s.users] }));
-        log("Configurações > Usuários", `Criou ${user.email}`);
+        pushAudit("Configurações > Usuários", "criar", {
+          registroTipo: "user",
+          registroId: user.id,
+          depois: user,
+        });
         return user;
       },
       updateUser: (id, patch) => {
+        const antes = state.users.find((u) => u.id === id);
         setState((s) => ({
           ...s,
           users: s.users.map((u) => (u.id === id ? { ...u, ...patch } : u)),
         }));
-        log("Configurações > Usuários", `Atualizou usuário ${id}`);
+        pushAudit("Configurações > Usuários", "alterar", {
+          registroTipo: "user",
+          registroId: id,
+          antes,
+          depois: { ...antes, ...patch },
+        });
       },
       addFile: (data) => {
         const file: AppFile = {
@@ -158,21 +241,35 @@ export function Fase1StoreProvider({ children }: { children: ReactNode }) {
           createdAt: new Date().toISOString(),
         };
         setState((s) => ({ ...s, files: [file, ...s.files] }));
-        log("Arquivos", `Enviou ${file.nome}`);
+        pushAudit("Arquivos", "criar", {
+          registroTipo: "file",
+          registroId: file.id,
+          depois: file,
+        });
         return file;
       },
       addTask: (data) => {
         const task: AppTask = { ...data, id: uid("t") };
         setState((s) => ({ ...s, tasks: [task, ...s.tasks] }));
-        log("Tarefas", `Criou ${task.titulo}`);
+        pushAudit("Tarefas", "criar", {
+          registroTipo: "task",
+          registroId: task.id,
+          depois: task,
+        });
         return task;
       },
       moveTask: (id, status) => {
+        const antes = state.tasks.find((t) => t.id === id);
         setState((s) => ({
           ...s,
           tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)),
         }));
-        log("Tarefas", `Moveu ${id} → ${status}`);
+        pushAudit("Tarefas", "alterar", {
+          registroTipo: "task",
+          registroId: id,
+          antes,
+          depois: { ...antes, status },
+        });
       },
       markNotificationRead: (id) => {
         setState((s) => ({
@@ -202,19 +299,59 @@ export function Fase1StoreProvider({ children }: { children: ReactNode }) {
                 }
           ),
         }));
-        log("Configurações > Listas", `Alternou item ${codigo}`);
+        pushAudit("Configurações > Listas", "alterar", {
+          registroTipo: "lookup_item",
+          registroId: `${listId}:${codigo}`,
+        });
       },
       toggleApprovalRule: (id) => {
+        const antes = state.approvalRules.find((r) => r.id === id);
         setState((s) => ({
           ...s,
           approvalRules: s.approvalRules.map((r) =>
             r.id === id ? { ...r, ativo: !r.ativo } : r
           ),
         }));
-        log("Configurações > Alçadas", `Alternou regra ${id}`);
+        pushAudit("Configurações > Alçadas", "alterar", {
+          registroTipo: "approval_rule",
+          registroId: id,
+          antes,
+          depois: { ...antes, ativo: !antes?.ativo },
+        });
+      },
+      setProfilePermission: (profileId, rotina, flags) => {
+        const antes = state.permissions.find(
+          (p) => p.profileId === profileId && p.rotina === rotina
+        );
+        setState((s) => {
+          const exists = s.permissions.some(
+            (p) => p.profileId === profileId && p.rotina === rotina
+          );
+          const nextRow: ProfilePermission = {
+            profileId,
+            rotina,
+            ...flags,
+          };
+          return {
+            ...s,
+            permissions: exists
+              ? s.permissions.map((p) =>
+                  p.profileId === profileId && p.rotina === rotina
+                    ? nextRow
+                    : p
+                )
+              : [...s.permissions, nextRow],
+          };
+        });
+        pushAudit("Configurações > Perfis", "alterar", {
+          registroTipo: "profile_permission",
+          registroId: `${profileId}:${rotina}`,
+          antes,
+          depois: { profileId, rotina, ...flags },
+        });
       },
     };
-  }, [state, ready, log]);
+  }, [state, ready, pushAudit]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }
