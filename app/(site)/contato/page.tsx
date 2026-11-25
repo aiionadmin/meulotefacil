@@ -92,41 +92,49 @@ export default function ContatoPage() {
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="mx-auto mt-16 max-w-xl space-y-4 rounded-2xl border border-brand-navy/8 bg-white p-6 shadow-sm sm:p-8"
+          className="mx-auto mt-16 max-w-xl space-y-4 rounded-sm border border-ink/10 bg-card p-6 sm:p-8"
         >
-          <h2 className="font-display text-xl text-brand-navy">Envie uma mensagem</h2>
+          <h2 className="font-display text-xl text-ink">Envie uma mensagem</h2>
           {sent && (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <p className="rounded-sm bg-mata/10 px-3 py-2 text-sm text-mata">
               Mensagem registrada (demo). Prefira o WhatsApp para resposta mais rápida.
             </p>
           )}
           <div>
-            <Label htmlFor="nome">Nome</Label>
+            <Label htmlFor="nome" className="text-ink">
+              Nome
+            </Label>
             <Input id="nome" className="mt-1.5" {...register("nome")} />
             {errors.nome && (
               <p className="mt-1 text-xs text-destructive">{errors.nome.message}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="email" className="text-ink">
+              E-mail
+            </Label>
             <Input id="email" type="email" className="mt-1.5" {...register("email")} />
             {errors.email && (
               <p className="mt-1 text-xs text-destructive">{errors.email.message}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="telefone">Telefone</Label>
+            <Label htmlFor="telefone" className="text-ink">
+              Telefone
+            </Label>
             <Input id="telefone" className="mt-1.5" {...register("telefone")} />
             {errors.telefone && (
               <p className="mt-1 text-xs text-destructive">{errors.telefone.message}</p>
             )}
           </div>
           <div>
-            <Label htmlFor="mensagem">Mensagem</Label>
+            <Label htmlFor="mensagem" className="text-ink">
+              Mensagem
+            </Label>
             <textarea
               id="mensagem"
               rows={4}
-              className="mt-1.5 flex w-full rounded-lg border border-input bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange"
+              className="mt-1.5 flex w-full rounded-lg border border-ink/20 bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-latossolo"
               {...register("mensagem")}
             />
             {errors.mensagem && (
