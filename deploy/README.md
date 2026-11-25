@@ -26,6 +26,9 @@ pm2 restart meulotefacil
 Sirva `/hero-frames/` como estático (ver `deploy/nginx-meulotefacil.conf`).
 Assim o vídeo do header não quebra quando o Node/PM2 reinicia.
 
+No `location /`, mantenha `X-Forwarded-Host` e `X-Forwarded-Proto` para o Next
+não redirecionar login/dashboard para `https://localhost:3000`.
+
 ```bash
 # Dentro do server block HTTPS (sites-available/meulotefacil), antes de location /:
 #   location /hero-frames/ { alias /var/www/meulotefacil/public/hero-frames/; ... }

@@ -72,7 +72,7 @@ export function seedFase1(): Fase1State {
         email: "bruno@email.com",
         cidade: "Campinas",
         uf: "SP",
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
       {
         id: "p2",
@@ -86,7 +86,7 @@ export function seedFase1(): Fase1State {
         cidade: "Campinas",
         uf: "SP",
         qualificacao: 5,
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
       {
         id: "p3",
@@ -99,7 +99,7 @@ export function seedFase1(): Fase1State {
         cidade: "Valinhos",
         uf: "SP",
         creci: "SP-123456",
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
       {
         id: "p4",
@@ -111,7 +111,7 @@ export function seedFase1(): Fase1State {
         celular: "(19) 97777-3300",
         cidade: "Hortolândia",
         uf: "SP",
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
       {
         id: "p5",
@@ -123,7 +123,7 @@ export function seedFase1(): Fase1State {
         celular: "(19) 96666-4400",
         cidade: "Amparo",
         uf: "SP",
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
     ],
     lookups: [
@@ -179,7 +179,7 @@ export function seedFase1(): Fase1State {
         rotina: "Cadastros",
         tag: "Documento",
         tamanho: "240 KB",
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
       {
         id: "f2",
@@ -187,7 +187,7 @@ export function seedFase1(): Fase1State {
         rotina: "Cadastros",
         tag: "CNPJ",
         tamanho: "1,1 MB",
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
     ],
     tasks: [
@@ -215,7 +215,7 @@ export function seedFase1(): Fase1State {
         corpo: "Acesso, pessoas, arquivos e auditoria estão ativos no demo.",
         lida: false,
         link: "/cadastros/pessoas",
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
       {
         id: "n2",
@@ -223,13 +223,13 @@ export function seedFase1(): Fase1State {
         corpo: "Completar cadastro de Maria Souza",
         lida: false,
         link: "/tarefas",
-        createdAt: new Date().toISOString(),
+        createdAt: "2026-11-25T12:00:00.000Z",
       },
     ],
     audit: [
       {
         id: "a1",
-        quando: new Date().toLocaleString("pt-BR"),
+        quando: "25/11/2026, 09:00:00",
         usuarioNome: "Admin Demo",
         rotina: "Sistema",
         acao: "Seed Fase 1 carregado",
