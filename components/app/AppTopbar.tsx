@@ -79,7 +79,7 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
       <Button
         variant="ghost"
         size="icon"
-        className="text-foreground lg:hidden"
+        className="lg:hidden"
         onClick={onMenu}
       >
         <Menu className="h-5 w-5" />

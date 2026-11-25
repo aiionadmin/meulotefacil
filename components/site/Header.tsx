@@ -11,26 +11,40 @@ import { whatsappUrl } from "@/lib/institutional";
 import { cn } from "@/lib/utils";
 
 /**
- * Floating navbar shell (estilo aceternity floating-navbar).
- * Registry 21st exigiu auth, composição própria adaptada a ink/paper/accent.
+ * Navbar flutuante.
+ * Texto claro (paper) só sobre o hero escuro da home.
+ * Em qualquer outra página / após sair do hero: barra sólida com texto ink.
  */
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [overDarkHero, setOverDarkHero] = useState(false);
   const wa = whatsappUrl();
+  const isHome = pathname === "/";
 
   useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      const insideHero =
-        document.documentElement.dataset.heroScroll === "inside";
-      setScrolled(!insideHero && y > 24);
+    const sync = () => {
+      if (!isHome) {
+        setOverDarkHero(false);
+        return;
+      }
+      setOverDarkHero(
+        document.documentElement.dataset.heroScroll === "inside"
+      );
     };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    sync();
+    window.addEventListener("scroll", sync, { passive: true });
+    // ScrollHero atualiza data-hero-scroll sem necessariamente disparar scroll
+    const obs = new MutationObserver(sync);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-hero-scroll"],
+    });
+    return () => {
+      window.removeEventListener("scroll", sync);
+      obs.disconnect();
+    };
+  }, [isHome]);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -43,32 +57,39 @@ export function Header() {
     setOpen(false);
   }, [pathname]);
 
-  const solid = scrolled || open;
+  // Sólida = legível em fundo claro. Transparente só no hero escuro da home.
+  const solid = open || !overDarkHero;
 
   return (
     <>
       <header className="site-header pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4">
         <div
           className={cn(
-            "pointer-events-auto site-container transition-[max-width,padding,background-color,border-color,box-shadow] duration-300",
+            "pointer-events-auto site-container transition-[max-width,padding,background-color,border-color,box-shadow,color] duration-300",
             solid
               ? "rounded-sm border border-linha/80 bg-paper/95 text-ink shadow-[0_8px_28px_-18px_rgba(17,22,20,0.45)] backdrop-blur-md"
               : "rounded-sm border border-transparent bg-transparent text-paper"
           )}
         >
-          <div className="flex h-14 items-center justify-between gap-4 sm:h-16">
-            <Link href="/" className="relative z-10 shrink-0" aria-label="Meu Lote Fácil, Home">
+          <div className="flex h-14 items-center justify-between gap-3 sm:h-16 sm:gap-4">
+            <Link
+              href="/"
+              className="relative z-10 min-w-0 shrink-0"
+              aria-label="Meu Lote Fácil, Home"
+            >
               <Logo
                 variant={solid ? "full" : "mono"}
                 className={cn(
-                  "scale-90 transition-opacity sm:scale-100",
-                  solid ? "opacity-100 text-ink" : "opacity-100 text-paper drop-shadow-[0_1px_10px_rgba(0,0,0,0.45)]"
+                  "max-w-[min(100%,11rem)] scale-90 sm:max-w-none sm:scale-100",
+                  solid
+                    ? "text-ink"
+                    : "text-paper drop-shadow-[0_1px_10px_rgba(0,0,0,0.45)]"
                 )}
               />
             </Link>
 
             <nav
-              className="hidden items-center gap-1 xl:flex"
+              className="hidden items-center gap-0.5 lg:flex"
               aria-label="Principal"
             >
               {SITE_NAV.map((l) => {
@@ -81,18 +102,21 @@ export function Header() {
                     key={l.href}
                     href={l.href}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
+                      "inline-flex items-center gap-1 rounded-sm px-2 py-1.5 text-sm font-medium transition-colors xl:px-2.5",
                       solid
                         ? active
-                          ? "text-ink"
-                          : "text-ink/75 hover:text-ink"
+                          ? "bg-paper-muted/80 text-ink"
+                          : "text-ink/80 hover:bg-paper-muted/60 hover:text-ink"
                         : active
-                          ? "text-paper drop-shadow-[0_1px_8px_rgba(0,0,0,0.4)]"
-                          : "text-paper/90 hover:text-paper drop-shadow-[0_1px_8px_rgba(0,0,0,0.4)]"
+                          ? "bg-paper/15 text-paper drop-shadow-[0_1px_8px_rgba(0,0,0,0.4)]"
+                          : "text-paper/95 hover:bg-paper/10 hover:text-paper drop-shadow-[0_1px_8px_rgba(0,0,0,0.4)]"
                     )}
                   >
                     {l.label}
-                    <ArrowRight className="size-3.5 opacity-70" aria-hidden />
+                    <ArrowRight
+                      className="size-3.5 opacity-70"
+                      aria-hidden
+                    />
                   </Link>
                 );
               })}
@@ -113,7 +137,7 @@ export function Header() {
             <button
               type="button"
               className={cn(
-                "relative z-10 rounded-sm p-2 lg:hidden",
+                "relative z-10 shrink-0 rounded-sm p-2 lg:hidden",
                 solid ? "text-ink" : "text-paper"
               )}
               aria-label={open ? "Fechar menu" : "Abrir menu"}
@@ -136,7 +160,7 @@ export function Header() {
               <Link
                 key={l.href}
                 href={l.href}
-                className="inline-flex items-center gap-3 font-display text-3xl text-paper"
+                className="inline-flex items-center gap-3 font-display text-3xl text-paper sm:text-4xl"
                 onClick={() => setOpen(false)}
               >
                 {l.label}

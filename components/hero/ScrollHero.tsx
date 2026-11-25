@@ -307,7 +307,7 @@ function StepCopy({ step, wa }: { step: HeroStep; wa: string }) {
               Falar no WhatsApp
             </a>
           </Button>
-          <Button asChild size="lg" variant="ghost">
+          <Button asChild size="lg" variant="ghostDark">
             <Link href="/regularizacao">Ver regularizações</Link>
           </Button>
         </div>
@@ -349,7 +349,7 @@ function ReducedHero({ wa }: { wa: string }) {
                     Falar no WhatsApp
                   </a>
                 </Button>
-                <Button asChild size="lg" variant="ghost">
+                <Button asChild size="lg" variant="ghostDark">
                   <Link href="/regularizacao">Ver regularizações</Link>
                 </Button>
               </div>

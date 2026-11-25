@@ -13,8 +13,12 @@ const buttonVariants = cva(
           "bg-brand-navy text-brand-cream hover:bg-brand-navy-deep",
         secondary:
           "bg-transparent text-brand-navy border border-brand-navy/25 hover:border-brand-navy hover:bg-brand-navy/[0.04]",
+        /** Superfícies claras (paper/card) — texto ink legível */
         ghost:
-          "bg-transparent text-brand-cream border border-brand-cream/35 hover:bg-brand-cream/10",
+          "bg-transparent text-ink border border-ink/20 hover:bg-ink/[0.04] hover:border-ink/35",
+        /** Superfícies escuras (navy/ink) — texto paper/cream */
+        ghostDark:
+          "bg-transparent text-brand-cream border border-brand-cream/40 hover:bg-brand-cream/10",
         outline:
           "border border-brand-navy/20 bg-transparent text-brand-ink hover:border-mata hover:text-mata",
         cream:

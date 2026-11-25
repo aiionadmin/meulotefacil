@@ -71,8 +71,8 @@
   --secondary: var(--paper-muted);
   --secondary-foreground: var(--ink);
   --muted: var(--paper-muted);
-  /* Mais escuro que o cinza médio padrão, legível sobre paper */
-  --muted-foreground: #3f4743;
+  /* Contraste WCAG AA sobre paper (#f3f1ec) */
+  --muted-foreground: #2f3733;
   /* shadcn “accent” surface (mata soft) — distinto de --accent latossolo */
   --surface-accent: color-mix(in srgb, var(--mata) 12%, var(--paper));
   --surface-accent-foreground: var(--ink);

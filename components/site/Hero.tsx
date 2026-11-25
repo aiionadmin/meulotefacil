@@ -130,7 +130,7 @@ export function Hero() {
           <span className="text-brand-orange">Realizando sonhos.</span>
         </h1>
 
-        <p className="hero-sub mt-6 max-w-2xl text-base text-brand-cream/75 opacity-0 sm:text-lg">
+        <p className="hero-sub mt-6 max-w-2xl text-base text-brand-cream/90 opacity-0 sm:text-lg">
           Regularização fundiária de ponta a ponta, do diagnóstico ao registro
           em cartório, para que cada família tenha a escritura do próprio lote.
         </p>
@@ -141,7 +141,7 @@ export function Hero() {
               Falar no WhatsApp
             </a>
           </Button>
-          <Button asChild size="lg" variant="ghost">
+          <Button asChild size="lg" variant="ghostDark">
             <Link href="/regularizacoes">Ver regularizações</Link>
           </Button>
         </div>
@@ -149,7 +149,7 @@ export function Hero() {
         <HeroStats />
       </div>
 
-      <div className="hero-scroll absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-brand-cream/50">
+      <div className="hero-scroll absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-brand-cream/80">
         <span className="text-xs uppercase tracking-widest">Scroll</span>
         <ChevronDown className="h-4 w-4" />
       </div>
@@ -166,25 +166,25 @@ function HeroStats() {
   return (
     <dl className="hero-stats mt-14 grid max-w-3xl grid-cols-2 gap-6 opacity-0 sm:grid-cols-4">
       <div>
-        <dt className="text-xs uppercase tracking-wider text-brand-cream/50">Concluídas</dt>
+        <dt className="text-xs uppercase tracking-wider text-brand-cream/80">Concluídas</dt>
         <dd className="mt-1 font-display text-2xl text-brand-orange sm:text-3xl">
           <span ref={concluidas}>0</span>
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wider text-brand-cream/50">Em andamento</dt>
+        <dt className="text-xs uppercase tracking-wider text-brand-cream/80">Em andamento</dt>
         <dd className="mt-1 font-display text-2xl text-brand-orange sm:text-3xl">
           <span ref={andamento}>0</span>
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wider text-brand-cream/50">Valorização</dt>
+        <dt className="text-xs uppercase tracking-wider text-brand-cream/80">Valorização</dt>
         <dd className="mt-1 font-display text-2xl text-brand-orange sm:text-3xl">
           <span ref={valorizacao}>0</span>
         </dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wider text-brand-cream/50">Desde</dt>
+        <dt className="text-xs uppercase tracking-wider text-brand-cream/80">Desde</dt>
         <dd className="mt-1 font-display text-2xl text-brand-orange sm:text-3xl">
           <span ref={desde}>0</span>
         </dd>

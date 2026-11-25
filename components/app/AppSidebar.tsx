@@ -129,7 +129,7 @@ export function AppSidebar({
         {APP_NAV.map((group) => (
           <div key={group.id}>
             {showLabels ? (
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-brand-cream/45">
+              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-brand-cream/70">
                 {group.label}
               </p>
             ) : null}
@@ -149,7 +149,7 @@ export function AppSidebar({
                       "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       active
                         ? "bg-brand-navy text-orange-300"
-                        : "text-brand-cream/80 hover:bg-brand-navy hover:text-brand-cream",
+                        : "text-brand-cream/90 hover:bg-brand-navy hover:text-brand-cream",
                       collapsed && !mobile && "justify-center px-2"
                     )}
                     title={item.description ?? item.label}

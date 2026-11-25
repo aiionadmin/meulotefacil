@@ -39,7 +39,7 @@ export default async function NucleoPage({ params }: Props) {
   );
 
   return (
-    <div className="bg-brand-cream pt-20">
+    <div className="bg-paper pt-24">
       <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="relative aspect-[21/9] overflow-hidden rounded-2xl bg-brand-navy">
           <Image
