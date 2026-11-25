@@ -85,7 +85,7 @@ export default function FeatureSpotlightGrid({
   return (
     <div
       className={cn(
-        "mx-auto grid w-full grid-cols-1 gap-6 md:grid-cols-2",
+        "mx-auto grid w-full grid-cols-1 gap-6 sm:grid-cols-2",
         columns === 3 && "lg:grid-cols-3 lg:gap-8",
         className
       )}
