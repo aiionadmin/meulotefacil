@@ -23,6 +23,11 @@ import {
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
+import {
+  modeloLotesCsv,
+  parseLotesCsv,
+} from "@/lib/import/lotes-csv";
+import { PaginatedTable } from "@/components/app/PaginatedTable";
 
 const STATUS_TONE: Record<LotStatus, "ok" | "warn" | "danger" | "info" | "neutral"> = {
   disponivel: "ok",
@@ -40,6 +45,7 @@ export default function EmpreendimentosPage() {
     massGenerateLots,
     changeLotStatus,
     updateLot,
+    importLots,
   } = useCarteira();
   const [q, setQ] = useState("");
   const [empFilter, setEmpFilter] = useState("todos");
@@ -52,6 +58,7 @@ export default function EmpreendimentosPage() {
     codigo: "",
     nome: "",
     tipo: "loteamento" as Development["tipo"],
+    modalidade: "loteamento" as Development["modalidade"],
     status: "em_andamento" as Development["status"],
     cidade: "Campinas",
     uf: "SP",
@@ -62,6 +69,14 @@ export default function EmpreendimentosPage() {
     taxaMulta: 0.02,
     diaMulta: 0,
   });
+  const [openImport, setOpenImport] = useState(false);
+  const [importDevId, setImportDevId] = useState(
+    state.developments[0]?.id ?? ""
+  );
+  const [importPreview, setImportPreview] = useState<
+    ReturnType<typeof parseLotesCsv>
+  >([]);
+  const [updateExisting, setUpdateExisting] = useState(true);
   const [mass, setMass] = useState({
     developmentId: state.developments[0]?.id ?? "",
     quadra: "E",
@@ -105,6 +120,13 @@ export default function EmpreendimentosPage() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/empreendimentos/planta">Planta</Link>
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setOpenImport(true)}
+            >
+              Importar lotes
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setOpenStatus(true)}>
               Alterar status
             </Button>
@@ -132,7 +154,7 @@ export default function EmpreendimentosPage() {
           columns={[
             { key: "codigo", label: "Código" },
             { key: "nome", label: "Nome" },
-            { key: "tipo", label: "Tipo" },
+            { key: "modalidade", label: "Modalidade" },
             { key: "cidade", label: "Cidade" },
             { key: "status", label: "Status" },
             { key: "lotes", label: "Lotes" },
@@ -140,7 +162,7 @@ export default function EmpreendimentosPage() {
           rows={state.developments.map((d) => ({
             codigo: d.codigo,
             nome: d.nome,
-            tipo: d.tipo,
+            modalidade: d.modalidade,
             cidade: `${d.cidade}/${d.uf}`,
             status: <StatusPill tone="info">{d.status.replace(/_/g, " ")}</StatusPill>,
             lotes: state.lots.filter((l) => l.developmentId === d.id).length,
@@ -167,7 +189,7 @@ export default function EmpreendimentosPage() {
         </select>
       </FilterBar>
 
-      <DataTable
+      <PaginatedTable
         columns={[
           { key: "sel", label: "" },
           { key: "emp", label: "Empreendimento" },
@@ -278,12 +300,148 @@ export default function EmpreendimentosPage() {
             required
           />
         </Field>
+        <Field label="Modalidade *">
+          <select
+            className={fieldControlClass}
+            value={empForm.modalidade}
+            onChange={(e) => {
+              const modalidade = e.target
+                .value as Development["modalidade"];
+              setEmpForm({
+                ...empForm,
+                modalidade,
+                tipo:
+                  modalidade === "regularizacao"
+                    ? "regularizacao"
+                    : "loteamento",
+              });
+            }}
+          >
+            <option value="loteamento">Loteamento</option>
+            <option value="regularizacao">Regularização</option>
+            <option value="ambos">Loteamento e regularização</option>
+          </select>
+        </Field>
         <Field label="Cidade">
           <Input
             value={empForm.cidade}
             onChange={(e) => setEmpForm({ ...empForm, cidade: e.target.value })}
           />
         </Field>
+      </FormDialog>
+
+      <FormDialog
+        open={openImport}
+        onOpenChange={setOpenImport}
+        title="Importar quadras e lotes"
+        onSubmit={() => {
+          const okRows = importPreview.filter((r) => !r.errors.length);
+          if (!okRows.length) {
+            notify("Nenhuma linha válida para gravar");
+            return;
+          }
+          const result = importLots({
+            developmentId: importDevId,
+            updateExisting,
+            rows: okRows,
+          });
+          notify(
+            "Importação concluída",
+            `${result.created} criados · ${result.updated} atualizados · ${result.refused} recusados`
+          );
+          setImportPreview([]);
+          setOpenImport(false);
+        }}
+      >
+        <Field label="Empreendimento">
+          <select
+            className={fieldControlClass}
+            value={importDevId}
+            onChange={(e) => setImportDevId(e.target.value)}
+          >
+            {state.developments
+              .filter((d) => d.modalidade !== "regularizacao")
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.nome}
+                </option>
+              ))}
+          </select>
+        </Field>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const blob = new Blob([modeloLotesCsv()], {
+                type: "text/csv;charset=utf-8",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "modelo-lotes.csv";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Baixar modelo (CSV/Excel)
+          </Button>
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+            <span className="rounded-sm border border-border px-3 py-1.5">
+              Enviar arquivo
+            </span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const text = await file.text();
+                setImportPreview(parseLotesCsv(text));
+              }}
+            />
+          </label>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={updateExisting}
+            onChange={(e) => setUpdateExisting(e.target.checked)}
+          />
+          Atualizar lotes existentes
+        </label>
+        {importPreview.length ? (
+          <div className="max-h-48 overflow-auto rounded-sm border border-border text-xs">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/40 text-left">
+                  <th className="p-2">Linha</th>
+                  <th className="p-2">Q/L</th>
+                  <th className="p-2">Erros</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importPreview.map((r) => (
+                  <tr key={r.line} className="border-b border-border/60">
+                    <td className="p-2">{r.line}</td>
+                    <td className="p-2">
+                      {r.quadra}/{r.lote}
+                    </td>
+                    <td className="p-2 text-destructive">
+                      {r.errors.join("; ") || "ok"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Nada é gravado antes da confirmação. Conferência linha a linha.
+          </p>
+        )}
       </FormDialog>
 
       <FormDialog

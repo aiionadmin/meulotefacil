@@ -20,6 +20,10 @@ const badgeVariant: Record<StatusNucleo, "default" | "warning" | "success"> = {
   em_andamento: "default",
 };
 
+/**
+ * Portfólio — faixa paper-muted clara (contrasta com Método ink acima
+ * e com Três pilares ink-deep abaixo). Cards editoriais no padrão 21st.
+ */
 export function RegularizacoesGrid({
   title = "Portfólio de regularizações",
   subtitle = "Núcleos concluídos, em registro e em andamento em Campinas e região.",
@@ -47,11 +51,11 @@ export function RegularizacoesGrid({
       gsap.utils.toArray<HTMLElement>(".reg-card").forEach((card, i) => {
         gsap.fromTo(
           card,
-          { opacity: 0, y: 40 },
+          { opacity: 0, y: 36 },
           {
             opacity: 1,
             y: 0,
-            duration: 0.8,
+            duration: 0.75,
             delay: i * 0.05,
             ease: "power3.out",
             scrollTrigger: { trigger: card, start: "top 88%" },
@@ -63,63 +67,69 @@ export function RegularizacoesGrid({
   );
 
   return (
-    <section ref={rootRef} className="bg-brand-navy py-20 text-brand-cream lg:py-28">
-      <div className="site-container">
-        <SectionHeading
-          number={sectionNumber}
-          eyebrow="Núcleos"
-          title={title}
-          subtitle={subtitle}
-          dark
-        />
+    <section
+      ref={rootRef}
+      className="relative overflow-hidden border-b border-linha bg-paper-muted text-ink"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_85%_0%,rgba(62,90,75,0.08),transparent_42%),radial-gradient(ellipse_at_10%_40%,rgba(237,134,0,0.06),transparent_40%)]"
+      />
 
-        <div className="mt-12 grid gap-0 border border-brand-cream/15 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="site-container relative py-20 lg:py-28">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <SectionHeading
+            number={sectionNumber}
+            eyebrow="Núcleos"
+            title={title}
+            subtitle={subtitle}
+          />
+          {limit ? (
+            <Link
+              href="/regularizacao#nucleos"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/70 transition-colors hover:text-ink lg:pb-1"
+            >
+              Ver todas as regularizações
+            </Link>
+          ) : null}
+        </div>
+
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
           {list.map((n) => (
             <Link
               key={n.id}
               href={`/regularizacoes/${n.slug}`}
               data-cursor="Ver"
-              className="reg-card group relative overflow-hidden border-b border-r border-brand-cream/15 bg-brand-navy-deep transition-colors hover:bg-brand-navy"
+              className="reg-card group relative flex flex-col overflow-hidden rounded-sm border border-linha bg-card transition-colors duration-300 hover:border-ink/25"
             >
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
                   src={n.imagem}
                   alt={n.nome}
                   fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                   sizes="(max-width: 768px) 100vw, 33vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/55 via-ink/10 to-transparent" />
                 <Badge className="absolute left-4 top-4" variant={badgeVariant[n.status]}>
                   {statusNucleoLabel[n.status]}
                 </Badge>
               </div>
-              <div className="space-y-2 p-5">
-                <h3 className="text-xl font-bold">{n.nome}</h3>
-                <p className="text-sm text-brand-cream/85">
-                  {n.cidade}/{n.estado}, {n.modalidade}, {n.tipo}
+              <div className="flex flex-1 flex-col gap-2 p-5 sm:p-6">
+                <h3 className="font-display text-xl text-ink sm:text-2xl">{n.nome}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {n.cidade}/{n.estado} · {n.modalidade} · {n.tipo}
                 </p>
-                <p className="text-sm font-medium text-orange-300">
-                  <strong>{lotesLabel(n)}</strong>
+                <p className="text-sm font-medium text-latossolo">
+                  {lotesLabel(n)}
                 </p>
-                <p className="pt-1 text-sm font-medium text-brand-cream/90 transition-colors group-hover:text-orange-300">
-                  Ver detalhes →
-                </p>
+                <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-ink/70 transition-colors group-hover:text-ink">
+                  Ver detalhes
+                </span>
               </div>
             </Link>
           ))}
         </div>
-
-        {limit && (
-          <div className="mt-10 text-center">
-            <Link
-              href="/regularizacoes"
-              className="inline-flex font-semibold text-orange-300 hover:text-orange-200 hover:underline"
-            >
-              Ver todas as regularizações →
-            </Link>
-          </div>
-        )}
       </div>
     </section>
   );

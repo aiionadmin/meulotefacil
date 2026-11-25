@@ -19,17 +19,34 @@ export function seedFase1(): Fase1State {
     { id: "pf-reu", codigo: "regularizacao" as const, nome: "Regularização", descricao: "Escrituras, cartórios, documentos" },
   ];
 
+  const org2Id = "org-lote-norte";
+  const orgMain = {
+    id: orgId,
+    razaoSocial: "Meu Lote Fácil Ltda",
+    nomeFantasia: "Meu Lote Fácil",
+    cnpj: "12.345.678/0001-90",
+    telefone: "(19) 99146-1834",
+    email: "contato@meulotefacil.com.br",
+    advogadoNome: "Dr. Silva",
+    advogadoOab: "OAB/SP 123456",
+    status: "ativa" as const,
+  };
+  const orgNorte = {
+    id: org2Id,
+    razaoSocial: "Lote Norte Empreendimentos Spe Ltda",
+    nomeFantasia: "Lote Norte",
+    cnpj: "98.765.432/0001-10",
+    telefone: "(19) 98888-0000",
+    email: "contato@lotenorte.demo",
+    advogadoNome: "Dra. Costa",
+    advogadoOab: "OAB/SP 654321",
+    status: "ativa" as const,
+  };
+
   return {
-    organization: {
-      id: orgId,
-      razaoSocial: "Meu Lote Fácil Ltda",
-      nomeFantasia: "Meu Lote Fácil",
-      cnpj: "12.345.678/0001-90",
-      telefone: "(19) 99146-1834",
-      email: "contato@meulotefacil.com.br",
-      advogadoNome: "Dr. Silva",
-      advogadoOab: "OAB/SP 123456",
-    },
+    organization: orgMain,
+    organizations: [orgMain, orgNorte],
+    selectedEmpresaId: orgId,
     profiles,
     users: [
       {
@@ -39,7 +56,7 @@ export function seedFase1(): Fase1State {
         status: "ativo",
         chave: true,
         profileId: "pf-admin",
-        organizationIds: [orgId],
+        organizationIds: [orgId, org2Id],
       },
       {
         id: "u-fin",
@@ -48,7 +65,7 @@ export function seedFase1(): Fase1State {
         status: "ativo",
         chave: false,
         profileId: "pf-fin",
-        organizationIds: [orgId],
+        organizationIds: [orgId, org2Id],
       },
       {
         id: "u-com",

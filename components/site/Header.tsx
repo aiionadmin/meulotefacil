@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { SITE_NAV, SITE_NAV_CTA } from "@/lib/site-nav";
@@ -11,7 +11,7 @@ import { whatsappUrl } from "@/lib/institutional";
 import { cn } from "@/lib/utils";
 
 /**
- * Navbar flutuante.
+ * Navbar fixa no topo (borda a borda), clicável em toda a barra.
  * Texto claro (paper) só sobre o hero escuro da home.
  * Em qualquer outra página / após sair do hero: barra sólida com texto ink.
  */
@@ -34,7 +34,6 @@ export function Header() {
     };
     sync();
     window.addEventListener("scroll", sync, { passive: true });
-    // ScrollHero atualiza data-hero-scroll sem necessariamente disparar scroll
     const obs = new MutationObserver(sync);
     obs.observe(document.documentElement, {
       attributes: true,
@@ -57,25 +56,25 @@ export function Header() {
     setOpen(false);
   }, [pathname]);
 
-  // Sólida = legível em fundo claro. Transparente só no hero escuro da home.
   const solid = open || !overDarkHero;
 
   return (
     <>
-      <header className="site-header pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4">
-        <div
-          className={cn(
-            "pointer-events-auto site-container transition-[max-width,padding,background-color,border-color,box-shadow,color] duration-300",
-            solid
-              ? "rounded-sm border border-linha/80 bg-paper/95 text-ink shadow-[0_8px_28px_-18px_rgba(17,22,20,0.45)] backdrop-blur-md"
-              : "rounded-sm border border-transparent bg-transparent text-paper"
-          )}
-        >
+      <header
+        className={cn(
+          "site-header fixed inset-x-0 top-0 z-[100] transition-[background-color,border-color,color,backdrop-filter] duration-300",
+          solid
+            ? "border-b border-linha/80 bg-paper/95 text-ink backdrop-blur-md"
+            : "border-b border-transparent bg-transparent text-paper"
+        )}
+      >
+        <div className="site-container">
           <div className="flex h-14 items-center justify-between gap-3 sm:h-16 sm:gap-4">
             <Link
               href="/"
               className="relative z-10 min-w-0 shrink-0"
               aria-label="Meu Lote Fácil, Home"
+              prefetch
             >
               <Logo
                 variant="full"
@@ -97,6 +96,7 @@ export function Header() {
                   <Link
                     key={l.href}
                     href={l.href}
+                    prefetch
                     className={cn(
                       "inline-flex items-center gap-1 rounded-sm px-2 py-1.5 text-sm font-medium transition-colors xl:px-2.5",
                       solid
@@ -109,10 +109,6 @@ export function Header() {
                     )}
                   >
                     {l.label}
-                    <ArrowRight
-                      className="hidden size-3.5 opacity-70 xl:inline"
-                      aria-hidden
-                    />
                   </Link>
                 );
               })}
@@ -147,7 +143,7 @@ export function Header() {
       </header>
 
       {open && (
-        <div className="fixed inset-0 z-40 bg-ink text-paper lg:hidden">
+        <div className="fixed inset-0 z-[110] bg-ink text-paper lg:hidden">
           <nav
             className="site-container flex h-full flex-col justify-center gap-5 pt-16"
             aria-label="Mobile"
@@ -156,11 +152,11 @@ export function Header() {
               <Link
                 key={l.href}
                 href={l.href}
+                prefetch
                 className="inline-flex items-center gap-3 font-display text-3xl text-paper sm:text-4xl"
                 onClick={() => setOpen(false)}
               >
                 {l.label}
-                <ArrowRight className="size-6 opacity-80" aria-hidden />
               </Link>
             ))}
             <Button asChild size="lg" variant="cream" className="mt-6 w-fit">

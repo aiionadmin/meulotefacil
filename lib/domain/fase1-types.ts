@@ -33,6 +33,9 @@ export type Organization = {
   email: string;
   advogadoNome: string;
   advogadoOab: string;
+  status?: "ativa" | "inativa";
+  logoUrl?: string;
+  endereco?: string;
 };
 
 export type Profile = {
@@ -50,6 +53,8 @@ export type AppUser = {
   chave: boolean;
   profileId: string;
   organizationIds: string[];
+  /** Visibilidade de obras (ids); vazio = nenhuma restrição especial na demo */
+  obraIds?: string[];
 };
 
 export type Person = {
@@ -123,7 +128,12 @@ export type ApprovalRule = {
 };
 
 export type Fase1State = {
+  /** Empresa “atual” legada — espelha a selecionada quando não é "todas" */
   organization: Organization;
+  /** Multiempresas (Parte 1 §2.1) */
+  organizations: Organization[];
+  /** id da empresa ou "todas" */
+  selectedEmpresaId: string;
   profiles: Profile[];
   users: AppUser[];
   people: Person[];

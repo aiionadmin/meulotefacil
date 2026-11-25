@@ -36,6 +36,7 @@ import { createClient } from "@/lib/supabase/client";
 import { clearDemoSession } from "@/lib/auth-demo";
 import { APP_FLAT_NAV, NOVO_ATALHOS } from "@/lib/app-nav";
 import { useFase1 } from "@/lib/store/fase1-store";
+import { EmpresaSelector } from "@/components/app/EmpresaSelector";
 
 const crumbs: Record<string, string> = Object.fromEntries(
   APP_FLAT_NAV.map((i) => [i.href.replace(/^\//, ""), i.label])
@@ -106,8 +107,11 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
       </nav>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
-        <span className="hidden text-xs text-muted-foreground xl:inline">
-          {state.organization.nomeFantasia}
+        <EmpresaSelector />
+        <span className="hidden text-xs text-muted-foreground 2xl:inline">
+          {state.selectedEmpresaId === "todas"
+            ? "Todas as empresas"
+            : state.organization.nomeFantasia}
         </span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

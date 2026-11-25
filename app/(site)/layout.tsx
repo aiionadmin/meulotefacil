@@ -1,4 +1,5 @@
 import { Header } from "@/components/site/Header";
+import { SiteBackLink } from "@/components/site/SiteBackLink";
 import { Footer } from "@/components/site/Footer";
 import { Preloader } from "@/components/site/Preloader";
 import { LenisProvider } from "@/components/motion/LenisProvider";
@@ -16,6 +17,7 @@ export default function SiteLayout({
       <CustomCursor />
       <PageTransition />
       <Header />
+      <SiteBackLink />
       <main>{children}</main>
       <Footer />
     </LenisProvider>

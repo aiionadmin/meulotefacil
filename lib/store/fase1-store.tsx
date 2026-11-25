@@ -36,6 +36,7 @@ type Fase1Api = {
   currentProfileName: string;
   reset: () => void;
   saveOrganization: (org: Organization) => void;
+  setSelectedEmpresa: (id: string) => void;
   addPerson: (data: Omit<Person, "id" | "createdAt">) => Person;
   updatePerson: (id: string, patch: Partial<Person>) => void;
   softDeletePerson: (id: string) => void;
@@ -60,7 +61,19 @@ export function Fase1StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FASE1_STORAGE_KEY);
-      if (raw) setState({ ...seedFase1(), ...JSON.parse(raw) });
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Fase1State>;
+        const seed = seedFase1();
+        setState({
+          ...seed,
+          ...parsed,
+          organizations: parsed.organizations?.length
+            ? parsed.organizations
+            : seed.organizations,
+          selectedEmpresaId:
+            parsed.selectedEmpresaId ?? seed.selectedEmpresaId,
+        });
+      }
     } catch {
       /* ignore */
     }
@@ -107,8 +120,32 @@ export function Fase1StoreProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(FASE1_STORAGE_KEY, JSON.stringify(next));
       },
       saveOrganization: (org) => {
-        setState((s) => ({ ...s, organization: org }));
+        setState((s) => ({
+          ...s,
+          organization: org,
+          organizations: s.organizations.map((o) =>
+            o.id === org.id ? org : o
+          ),
+        }));
         log("Configurações > Empresa", "Salvou dados da empresa");
+      },
+      setSelectedEmpresa: (id) => {
+        setState((s) => {
+          if (id === "todas") {
+            return { ...s, selectedEmpresaId: "todas" };
+          }
+          const org = s.organizations.find((o) => o.id === id);
+          if (!org) return s;
+          return {
+            ...s,
+            selectedEmpresaId: id,
+            organization: org,
+          };
+        });
+        log(
+          "Empresa",
+          id === "todas" ? "Selecionou todas as empresas" : `Selecionou ${id}`
+        );
       },
       addPerson: (data) => {
         const person: Person = {

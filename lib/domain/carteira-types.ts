@@ -20,6 +20,12 @@ export type DevelopmentTipo =
   | "avcb"
   | "construcao";
 
+/** Modalidade comercial: liga/desliga abas e etapas (Parte 1 §2.2). */
+export type DevelopmentModalidade =
+  | "loteamento"
+  | "regularizacao"
+  | "ambos";
+
 export type ContractStatus =
   | "ativo"
   | "quitado"
@@ -38,11 +44,25 @@ export type BankSlipStatus =
   | "baixado"
   | "cancelado";
 
+export type DevelopmentPlantPdf = {
+  id: string;
+  developmentId: string;
+  versao: number;
+  folha: number;
+  nomeArquivo: string;
+  /** data URL ou path demo — original PDF */
+  dataUrl?: string;
+  autor?: string;
+  criadoEm: string;
+};
+
 export type Development = {
   id: string;
   codigo: string;
   nome: string;
   tipo: DevelopmentTipo;
+  /** Loteamento | Regularização | ambos */
+  modalidade: DevelopmentModalidade;
   status: DevelopmentStatus;
   cidade: string;
   uf: string;
@@ -54,6 +74,7 @@ export type Development = {
   taxaMulta: number;
   diaMulta: number;
   observacoes?: string;
+  plantPdfs?: DevelopmentPlantPdf[];
 };
 
 export type Lot = {
@@ -203,6 +224,8 @@ export type JourneyCard = {
     | "escritura"
     | "quitado"
     | "retomado";
+  /** Selos (ex.: Em atraso) — não movem a coluna */
+  badges?: string[];
 };
 
 export type CarteiraState = {

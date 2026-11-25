@@ -34,6 +34,8 @@ export type KanbanCard = {
   title: string;
   subtitle?: string;
   badge?: string;
+  /** Selos adicionais (atraso, pendência…) — não mudam coluna */
+  badges?: string[];
   meta?: string;
 };
 
@@ -68,6 +70,11 @@ function SortableCard({
       ) : null}
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         {card.badge ? <StatusPill tone="warn">{card.badge}</StatusPill> : null}
+        {(card.badges ?? []).map((b) => (
+          <StatusPill key={b} tone="danger">
+            {b}
+          </StatusPill>
+        ))}
         {card.meta ? (
           <span className="text-[10px] text-muted-foreground">{card.meta}</span>
         ) : null}
