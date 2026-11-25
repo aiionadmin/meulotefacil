@@ -203,6 +203,8 @@ create policy profile_permissions_write on public.profile_permissions
 
 -- ---------------------------------------------------------------------------
 -- A04 — matriz inicial de permissões para os 12 perfis
+-- Nota: em instalação limpa rode supabase/seed/fase1.sql depois desta migration
+-- (os perfis nascem no seed). O insert abaixo é no-op se ainda não houver perfis.
 -- ---------------------------------------------------------------------------
 insert into public.profile_permissions (profile_id, rotina, ver, inserir_alterar, remover)
 select p.id, r.rotina, r.ver, r.inserir_alterar, r.remover

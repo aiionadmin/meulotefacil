@@ -121,4 +121,50 @@ begin
     (org_id, 'obras', 'Obras'),
     (org_id, 'tarefas', 'Tarefas')
   on conflict do nothing;
+
+  -- A04 — permissões depois dos perfis (idempotente)
+  insert into public.profile_permissions (profile_id, rotina, ver, inserir_alterar, remover)
+  select p.id, r.rotina, r.ver, r.inserir_alterar, r.remover
+  from public.profiles p
+  cross join lateral (
+    values
+      ('administrador', 'dashboard', true, true, true),
+      ('administrador', 'cadastros.pessoas', true, true, true),
+      ('administrador', 'cadastros.listas', true, true, true),
+      ('administrador', 'empreendimentos', true, true, true),
+      ('administrador', 'carteira', true, true, true),
+      ('administrador', 'boletos', true, true, true),
+      ('administrador', 'vendas', true, true, true),
+      ('administrador', 'leads', true, true, true),
+      ('administrador', 'cobranca', true, true, true),
+      ('administrador', 'juridico', true, true, true),
+      ('administrador', 'financeiro', true, true, true),
+      ('administrador', 'compras', true, true, true),
+      ('administrador', 'obras', true, true, true),
+      ('administrador', 'fiscal', true, true, true),
+      ('administrador', 'relatorios', true, true, true),
+      ('administrador', 'tarefas', true, true, true),
+      ('administrador', 'arquivos', true, true, true),
+      ('administrador', 'configuracoes', true, true, true),
+      ('administrador', 'auditoria', true, true, true),
+      ('administrador', 'usuarios', true, true, true),
+      ('direcao', 'dashboard', true, true, false),
+      ('direcao', 'relatorios', true, true, false),
+      ('direcao', 'auditoria', true, false, false),
+      ('financeiro', 'dashboard', true, true, false),
+      ('financeiro', 'financeiro', true, true, false),
+      ('financeiro', 'boletos', true, true, false),
+      ('financeiro', 'carteira', true, true, false),
+      ('comercial', 'dashboard', true, true, false),
+      ('comercial', 'leads', true, true, false),
+      ('comercial', 'vendas', true, true, false),
+      ('corretor', 'dashboard', true, true, false),
+      ('corretor', 'leads', true, true, false),
+      ('corretor', 'vendas', true, true, false)
+  ) as r(perfil, rotina, ver, inserir_alterar, remover)
+  where p.codigo = r.perfil
+  on conflict (profile_id, rotina) do update
+    set ver = excluded.ver,
+        inserir_alterar = excluded.inserir_alterar,
+        remover = excluded.remover;
 end $$;
