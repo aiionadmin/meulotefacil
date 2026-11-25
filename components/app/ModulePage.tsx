@@ -81,13 +81,13 @@ export function DataTable({
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm text-foreground">
-          <thead className="border-b border-border bg-muted/70">
+          <thead className="border-b border-border bg-muted">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={cn(
-                    "px-4 py-3 font-medium text-foreground/80",
+                    "px-4 py-3 font-semibold text-foreground",
                     col.className
                   )}
                 >
