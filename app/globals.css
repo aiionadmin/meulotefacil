@@ -285,7 +285,7 @@
 html[data-hero-scroll="inside"] .site-header {
   background-color: transparent;
   backdrop-filter: none;
-  border-color: transparent;
+  border-bottom-color: transparent;
 }
 
 .after-scroll-hero {
