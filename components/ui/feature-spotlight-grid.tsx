@@ -76,6 +76,7 @@ type FeatureSpotlightGridProps = {
 
 /**
  * Feature Grid Spotlight Cards (21st/hirael) — tokens ink/paper/latossolo.
+ * Flex + justify-center: última linha incompleta (ex.: 2 de 5) fica centralizada.
  */
 export default function FeatureSpotlightGrid({
   features,
@@ -85,15 +86,21 @@ export default function FeatureSpotlightGrid({
   return (
     <div
       className={cn(
-        "mx-auto grid w-full grid-cols-1 gap-6 sm:grid-cols-2",
-        columns === 3 && "lg:grid-cols-3 lg:gap-8",
+        "mx-auto flex w-full flex-wrap justify-center gap-6",
+        columns === 3 && "lg:gap-8",
         className
       )}
     >
       {features.map((feature) => {
         const Icon = feature.icon;
         return (
-          <FeatureCard key={feature.title}>
+          <FeatureCard
+            key={feature.title}
+            className={cn(
+              "w-full sm:w-[calc((100%-1.5rem)/2)]",
+              columns === 3 && "lg:w-[calc((100%-4rem)/3)]"
+            )}
+          >
             <CrossDecor position="top-start" />
             <CrossDecor position="bottom-end" />
             <div className="relative z-10 flex items-center gap-3">
