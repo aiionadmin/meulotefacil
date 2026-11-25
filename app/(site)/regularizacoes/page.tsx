@@ -7,6 +7,9 @@ export const metadata: Metadata = {
     "Portfólio de núcleos regularizados e em andamento, Campinas, Hortolândia, Valinhos e Amparo.",
 };
 
+/**
+ * Mantida por compatibilidade; next.config redireciona /regularizacoes → /regularizacao.
+ */
 export default function RegularizacoesPage() {
   return (
     <div className="pt-24">
