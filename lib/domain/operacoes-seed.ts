@@ -435,14 +435,14 @@ export function seedOperacoes(): OperacoesState {
       },
       {
         id: "cf-rec",
-        label: "A receber",
+        label: "A receber total (painel origem)",
         expected: LOTEWIN_PANEL_2026_11_24.aReceber,
         actual: 2500,
         unit: "money",
       },
       {
         id: "cf-atr",
-        label: "Em atraso",
+        label: "Em atraso (painel origem)",
         expected: LOTEWIN_PANEL_2026_11_24.emAtraso,
         actual: 238.75,
         unit: "money",

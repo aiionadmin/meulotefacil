@@ -62,7 +62,7 @@ export default function ContratosPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Contratos"
-        description="Fase 3 — venda, plano de parcelas e operações sobre o contrato."
+        description="venda, plano de parcelas e operações sobre o contrato."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -79,7 +79,7 @@ export default function ContratosPage() {
         items={[
           { label: "Contratos", value: state.contracts.length },
           { label: "Ativos", value: ativos },
-          { label: "A receber", value: formatBRL(aReceber) },
+          { label: "A receber de contratos", value: formatBRL(aReceber) },
         ]}
       />
 

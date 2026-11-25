@@ -18,7 +18,7 @@ export default function JuridicoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Processos judiciais"
-        description="Fase 9 — ações, prazos e advogado responsável."
+        description="ações, prazos e advogado responsável."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/cobranca">Voltar à cobrança</Link>

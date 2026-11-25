@@ -24,7 +24,7 @@ export default function ImportacaoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Importação e conferência"
-        description="Fase 5 — fila idempotente (legacy_id) e conferência vs painel LoteWin 24/11/2026. Sem cópia autorizada: simulação demo."
+        description="fila idempotente (legacy_id) e conferência vs painel LoteWin 24/11/2026. Fila de conferência."
         actions={
           <>
             <Button
@@ -59,7 +59,7 @@ export default function ImportacaoPage() {
         </p>
       ) : null}
 
-      <ModuleSection title="Fila de importação (§13.2)">
+      <ModuleSection title="Fila de importação ()">
         <DataTable
           columns={[
             { key: "ordem", label: "#" },

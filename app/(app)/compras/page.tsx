@@ -22,6 +22,7 @@ import {
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useOperacoes } from "@/lib/store/operacoes-store";
 import type { PurchaseRequest } from "@/lib/domain/operacoes-types";
+import { statusLabel } from "@/lib/status/labels";
 
 export default function ComprasPage() {
   const {
@@ -62,7 +63,7 @@ export default function ComprasPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Compras"
-        description="Fase 7 — solicitação → aprovação → ordem → lançamento a pagar."
+        description="solicitação → aprovação → ordem → lançamento a pagar."
         actions={
           <Button size="sm" onClick={() => setOpen(true)}>
             Nova solicitação
@@ -105,10 +106,10 @@ export default function ComprasPage() {
               </button>
             ),
             desc: (
-              <span>
-                {p.descricao}
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <span>{p.descricao}</span>
                 {p.urgente ? (
-                  <StatusPill tone="danger"> urgente</StatusPill>
+                  <StatusPill tone="danger">Urgente</StatusPill>
                 ) : null}
               </span>
             ),
@@ -116,7 +117,9 @@ export default function ComprasPage() {
             nec: formatDateBR(p.necessidade),
             valor: formatBRL(p.valorEstimado),
             status: (
-              <StatusPill tone="info">{p.status.replace(/_/g, " ")}</StatusPill>
+              <StatusPill tone="info">
+                {statusLabel(p.status)}
+              </StatusPill>
             ),
           }))}
         />

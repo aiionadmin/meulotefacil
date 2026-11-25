@@ -75,7 +75,7 @@ export default function ArquivosPage() {
       <FormDialog
         open={open}
         onOpenChange={setOpen}
-        title="Registrar arquivo (demo)"
+        title="Registrar arquivo"
         submitLabel="Salvar"
         onSubmit={() => {
           if (!form.nome.trim()) return;

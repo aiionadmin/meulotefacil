@@ -1,4 +1,4 @@
-/** Navegação — 15 menus (docs/especificacao.md §2). */
+/** Navegação — 15 menus (docs/especificacao.md §2). B07/B13 limpos. */
 
 import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
 
@@ -6,9 +6,7 @@ export type AppNavItem = {
   href: string;
   label: string;
   description?: string;
-  /** Fase ainda não entregue — mostra stub */
   stub?: boolean;
-  /** Só visível com ferramentas de demo (A03) */
   demoOnly?: boolean;
 };
 
@@ -32,9 +30,9 @@ export const APP_NAV: AppNavGroup[] = [
     id: "quadros",
     label: "2. Quadros",
     items: [
-      { href: "/quadros/jornada", label: "Jornada do cliente", description: "Kanban com regra de arraste (Fase 8)" },
-      { href: "/quadros/cobranca", label: "Cobrança", description: "Faixas de atraso (Fase 9)" },
-      { href: "/quadros/regularizacao", label: "Regularização e escritura", description: "Processo por lote (Fase 9)" },
+      { href: "/quadros/jornada", label: "Jornada do cliente", description: "Kanban com regra de arraste" },
+      { href: "/quadros/cobranca", label: "Cobrança", description: "Faixas de atraso" },
+      { href: "/quadros/regularizacao", label: "Regularização e escritura", description: "Processo por lote" },
       { href: "/quadros/compras", label: "Compras", description: "SC por status" },
       { href: "/quadros/obras", label: "Obras", description: "Status da obra" },
       { href: "/quadros/tarefas", label: "Tarefas", description: "Quadro de tarefas" },
@@ -44,9 +42,9 @@ export const APP_NAV: AppNavGroup[] = [
     id: "comercial",
     label: "3. Comercial",
     items: [
-      { href: "/leads", label: "Leads", description: "Origem e funil (Fase 8)" },
+      { href: "/leads", label: "Leads", description: "Origem e funil" },
       { href: "/vendas", label: "Propostas e reservas", description: "Converter em contrato" },
-      { href: "/contratos", label: "Efetuar venda / contratos", description: "Venda gera parcelas" },
+      { href: "/contratos", label: "Contratos", description: "Venda, saldo e operações" },
     ],
   },
   {
@@ -59,10 +57,9 @@ export const APP_NAV: AppNavGroup[] = [
   },
   {
     id: "contratos",
-    label: "5. Contratos",
+    label: "5. Contratos e ficha",
     items: [
-      { href: "/contratos", label: "Contratos", description: "Lista, saldo e operações" },
-      { href: "/carteira", label: "Ficha financeira", description: "Parcelas e encargos" },
+      { href: "/carteira", label: "Ficha financeira", description: "Parcelas, encargos e caixa" },
       { href: "/reajustes", label: "Reajuste e operações", description: "Índice anual e operações" },
     ],
   },
@@ -70,26 +67,23 @@ export const APP_NAV: AppNavGroup[] = [
     id: "recebimentos",
     label: "6. Recebimentos",
     items: [
-      { href: "/carteira", label: "Caixa (receber)", description: "Baixa e estorno de parcelas" },
-      { href: "/boletos", label: "Boletos, remessa e retorno", description: "Emissão CNAB demo" },
+      { href: "/boletos", label: "Boletos, remessa e retorno", description: "Emissão CNAB" },
     ],
   },
   {
     id: "cobranca",
     label: "7. Cobrança e jurídico",
     items: [
-      { href: "/cobranca", label: "Inadimplentes e acordos", description: "Régua e contatos (Fase 9)" },
+      { href: "/cobranca", label: "Inadimplentes e acordos", description: "Régua e contatos" },
       { href: "/juridico", label: "Processos judiciais", description: "Ações e prazos" },
-      { href: "/quadros/cobranca", label: "Quadro cobrança", description: "Kanban por faixa" },
     ],
   },
   {
     id: "regularizacao",
     label: "8. Regularização",
     items: [
-      { href: "/quadros/regularizacao", label: "Quadro regularização", description: "Etapas por lote (Fase 9)" },
-      { href: "/processos", label: "Processos REURB", description: "Portfólio legado" },
-      { href: "/nucleos", label: "Núcleos", description: "Portfólio" },
+      { href: "/processos", label: "Processos REURB", description: "Acompanhamento" },
+      { href: "/nucleos", label: "Núcleos", description: "Portfólio operacional" },
       { href: "/documentos", label: "Documentos", description: "Checklist do morador" },
       { href: "/protocolo", label: "Protocolo", description: "Consulta por número" },
     ],
@@ -98,29 +92,29 @@ export const APP_NAV: AppNavGroup[] = [
     id: "obras",
     label: "9. Obras",
     items: [
-      { href: "/obras", label: "Obras e orçamento", description: "Gestão de custos e árvore (Fase 7)" },
+      { href: "/obras", label: "Obras e orçamento", description: "Gestão de custos e árvore" },
     ],
   },
   {
     id: "compras",
     label: "10. Compras",
     items: [
-      { href: "/compras", label: "Solicitações e OC", description: "Fluxo SC → OC → a pagar (Fase 7)" },
+      { href: "/compras", label: "Solicitações e OC", description: "Fluxo SC → cotação → OC" },
     ],
   },
   {
     id: "financeiro",
     label: "11. Financeiro",
     items: [
-      { href: "/financeiro", label: "Pagar, receber e contas", description: "Fase 6" },
-      { href: "/importacao", label: "Importação / conferência", description: "Fase 5 — LoteWin / Mais Controle" },
+      { href: "/financeiro", label: "Pagar, receber e contas", description: "Lançamentos e contas" },
+      { href: "/importacao", label: "Importação / conferência", description: "LoteWin / Mais Controle" },
     ],
   },
   {
     id: "fiscal",
     label: "12. Fiscal",
     items: [
-      { href: "/fiscal", label: "NFe / NFSe / exportações", description: "Fase 10" },
+      { href: "/fiscal", label: "NFe / NFSe / exportações", description: "Notas e obrigações" },
     ],
   },
   {
@@ -138,7 +132,7 @@ export const APP_NAV: AppNavGroup[] = [
     id: "relatorios",
     label: "14. Relatórios e arquivos",
     items: [
-      { href: "/relatorios", label: "Central de relatórios", description: "Favoritos e execução (Fase 10)" },
+      { href: "/relatorios", label: "Central de relatórios", description: "Favoritos e execução" },
       { href: "/arquivos", label: "Arquivos", description: "Repositório com tags" },
     ],
   },

@@ -99,7 +99,7 @@ export default function EmpreendimentosPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Empreendimentos e lotes"
-        description="Fase 2 — estoque Emp+Quadra+Lote, status com travas, geração em massa e planta."
+        description="estoque Emp+Quadra+Lote, status com travas, geração em massa e planta."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>

@@ -40,7 +40,7 @@ export default function RelatoriosPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Central de relatórios"
-        description="Fase 10 — favoritos, execução em tela e histórico recente."
+        description="favoritos, execução em tela e histórico recente."
       />
 
       <KpiGrid

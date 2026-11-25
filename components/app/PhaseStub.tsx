@@ -4,11 +4,10 @@ import { ModuleHeader } from "@/components/app/ModulePage";
 
 export function PhaseStub({
   title,
-  phase,
   description,
 }: {
   title: string;
-  phase: string;
+  phase?: string;
   description?: string;
 }) {
   return (
@@ -17,14 +16,13 @@ export function PhaseStub({
         title={title}
         description={
           description ??
-          `Esta tela entra na ${phase} da especificação unificada. A estrutura de menu já está pronta.`
+          "Esta tela está prevista na especificação. A estrutura de menu já está pronta."
         }
       />
       <div className="rounded-sm border border-dashed border-linha bg-white p-8 text-sm text-ink/80">
         <p>
-          Consulte <code className="text-xs">docs/especificacao.md</code> e a
-          ordem em §13.1. Enquanto isso, use Cadastros, Arquivos e
-          Configurações da Fase 1.
+          Enquanto a tela completa não estiver disponível, use Cadastros,
+          Arquivos e Configurações.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button asChild size="sm">

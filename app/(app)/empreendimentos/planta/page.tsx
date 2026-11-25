@@ -53,7 +53,7 @@ export default function PlantaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Planta do loteamento"
-        description="Lotes clicáveis por status — Fase 2."
+        description="Lotes clicáveis por status."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/empreendimentos">Voltar à grade</Link>

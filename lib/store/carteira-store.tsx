@@ -19,7 +19,7 @@ import type {
   Lot,
   LotStatus,
 } from "@/lib/domain/carteira-types";
-import { calcAtraso } from "@/lib/money/atraso";
+import { resolveInstallmentStatus } from "@/lib/money/installment-status";
 import { aplicarFatorReajuste } from "@/lib/money/reajuste";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
@@ -223,20 +223,20 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           installments: s.installments.map((p) => {
             if (p.status === "paga" || p.status === "cancelada") return p;
             const ct = s.contracts.find((c) => c.id === p.contractId);
-            if (!ct) return p;
-            const r = calcAtraso({
+            const r = resolveInstallmentStatus({
+              status: p.status,
               valor: p.valor,
               vencimento: p.vencimento,
               consulta,
-              taxaMoraMes: ct.taxaMoraMes,
-              taxaMulta: ct.multaPct,
-              diasTolerancia: ct.diasTolerancia,
+              taxaMoraMes: ct?.taxaMoraMes ?? 0.01,
+              taxaMulta: ct?.multaPct ?? 0.02,
+              diasTolerancia: ct?.diasTolerancia ?? 0,
             });
             return {
               ...p,
               juros: r.juros,
               multa: r.multa,
-              status: r.emAtraso ? "vencida" : p.status === "vencida" ? "em_aberto" : p.status,
+              status: r.status,
             };
           }),
           cards: s.cards.map((card) => {

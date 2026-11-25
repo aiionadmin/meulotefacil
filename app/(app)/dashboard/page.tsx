@@ -11,24 +11,27 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { brl } from "@/lib/data/sistema";
-import { formatBRL } from "@/lib/masks/br";
+import { formatBRL, formatDateTimeBR } from "@/lib/masks/br";
 import { useDemoStore } from "@/lib/store/demo-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useOperacoes } from "@/lib/store/operacoes-store";
-
+import {
+  aReceberContratos,
+  aReceberFinanceiro,
+  aReceberTotal,
+  countUsuariosAtivos,
+  emAtrasoContratos,
+} from "@/lib/indicators/receivables";
 export default function DashboardPage() {
   const { state } = useDemoStore();
   const { state: f1, currentUser } = useFase1();
   const { state: cart, saldoDevedor } = useCarteira();
   const { state: ops } = useOperacoes();
-  const abertoCarteira = cart.installments
-    .filter((p) => p.status !== "paga" && p.status !== "cancelada")
-    .reduce(
-      (a, p) =>
-        a + p.valor + p.juros + p.multa + p.correcao + p.despesaBancaria - p.desconto,
-      0
-    );
+  const aReceberCtr = aReceberContratos(cart.installments);
+  const aReceberFin = aReceberFinanceiro(ops.receivables);
+  const aReceberAll = aReceberTotal(cart.installments, ops.receivables);
+  const emAtraso = emAtrasoContratos(cart.installments);
   const nfeSem = state.fiscal.filter((n) => n.status === "Sem lançamento").length;
   const pessoasAtivas = f1.people.filter((p) => p.status !== "excluido").length;
   const notifUnread = f1.notifications.filter((n) => !n.lida).length;
@@ -39,7 +42,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <ModuleHeader
         title="Painel unificado"
-        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. Fases 1–10 ativas (acesso → carteira → operações → jornada/cobrança → fiscal).`}
+        description={`Olá, ${currentUser?.nome?.split(" ")[0] ?? "equipe"}. `}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
@@ -52,7 +55,7 @@ export default function DashboardPage() {
         }
       />
 
-      <ModuleSection title="Operações (Fases 5–7)">
+      <ModuleSection title="Operações">
         <KpiGrid
           items={[
             {
@@ -83,7 +86,7 @@ export default function DashboardPage() {
         />
       </ModuleSection>
 
-      <ModuleSection title="Carteira e estoque (Fases 2–4)">
+      <ModuleSection title="Carteira e estoque">
         <KpiGrid
           items={[
             {
@@ -100,15 +103,38 @@ export default function DashboardPage() {
               value: cart.contracts.filter((c) => c.status === "ativo").length,
             },
             {
-              label: "A receber",
-              value: formatBRL(abertoCarteira),
+              label: "A receber de contratos",
+              value: formatBRL(aReceberCtr),
               hint: `caixa ${formatBRL(cart.caixaSaldo)}`,
             },
           ]}
         />
+        <div className="mt-3">
+          <KpiGrid
+            items={[
+              {
+                label: "A receber financeiro",
+                value: formatBRL(aReceberFin),
+              },
+              {
+                label: "A receber total",
+                value: formatBRL(aReceberAll),
+              },
+              {
+                label: "Em atraso (contratos)",
+                value: formatBRL(emAtraso),
+              },
+              {
+                label: "Usuários ativos",
+                value: countUsuariosAtivos(f1.users),
+                hint: "fonte: cadastro de usuários",
+              },
+            ]}
+          />
+        </div>
       </ModuleSection>
 
-      <ModuleSection title="Fase 1 — Acesso e cadastros">
+      <ModuleSection title="Acesso e cadastros">
         <KpiGrid
           items={[
             {
@@ -117,8 +143,8 @@ export default function DashboardPage() {
               hint: `${f1.organization.nomeFantasia}`,
             },
             {
-              label: "Usuários",
-              value: f1.users.filter((u) => u.status === "ativo").length,
+              label: "Usuários ativos",
+              value: countUsuariosAtivos(f1.users),
             },
             {
               label: "Notificações",
@@ -143,7 +169,7 @@ export default function DashboardPage() {
                   {n.titulo}
                 </span>
               ),
-              quando: n.createdAt,
+              quando: formatDateTimeBR(n.createdAt),
             }))}
           />
           <DataTable
