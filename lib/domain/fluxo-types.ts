@@ -27,6 +27,8 @@ export type Lead = {
   id: string;
   nome: string;
   telefone: string;
+  /** Opcional na captação; usado no bloqueio de duplicidade quando informado. */
+  cpf?: string;
   email?: string;
   empInteresse?: string;
   origem: LeadOrigem;
@@ -134,6 +136,7 @@ export type RegularizationCase = {
   loteLabel: string;
   empNome: string;
   cliente: string;
+  clienteCpf?: string;
   etapa:
     | "documentos"
     | "prefeitura"
@@ -143,6 +146,12 @@ export type RegularizationCase = {
     | "entregue";
   responsavel: string;
   prazo?: string;
+  /** Documentos ainda faltando (portal cliente). */
+  docsPendentes?: string[];
+  /** Exigências do cartório/prefeitura. */
+  exigencias?: string[];
+  /** Previsão de entrega da escritura. */
+  previsaoEscritura?: string;
 };
 
 export type FiscalDoc = {

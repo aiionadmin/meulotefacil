@@ -14,6 +14,7 @@ import {
   REGULARIZACAO_FORWARD_ORDER,
   canMoveForward,
 } from "@/lib/domain/kanban-forward";
+import { findDuplicateLead } from "@/lib/domain/lead-duplicate";
 import { scoreLead } from "@/lib/domain/lead-score";
 import type {
   Agreement,
@@ -52,7 +53,11 @@ type FluxoApi = {
   state: FluxoState;
   ready: boolean;
   reset: () => void;
-  addLead: (data: LeadInput) => Lead;
+  addLead: (
+    data: LeadInput
+  ) =>
+    | { ok: true; lead: Lead }
+    | { ok: false; motivo: string; existenteId: string };
   updateLead: (id: string, patch: Partial<Lead>) => void;
   moveLead: (
     id: string,
@@ -111,6 +116,17 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(FLUXO_STORAGE_KEY, JSON.stringify(next));
       },
       addLead: (data) => {
+        const dup = findDuplicateLead(state.leads, {
+          telefone: data.telefone,
+          cpf: data.cpf,
+        });
+        if (dup) {
+          return {
+            ok: false as const,
+            motivo: dup.motivo,
+            existenteId: dup.lead.id,
+          };
+        }
         const scored = scoreLead(data);
         const lead: Lead = {
           ...data,
@@ -122,7 +138,7 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
           temperatura: scored.temperatura,
         };
         setState((s) => ({ ...s, leads: [lead, ...s.leads] }));
-        return lead;
+        return { ok: true as const, lead };
       },
       updateLead: (id, patch) => {
         setState((s) => ({

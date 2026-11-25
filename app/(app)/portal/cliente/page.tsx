@@ -19,9 +19,11 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { PortalLoginGate } from "@/components/app/PortalLoginGate";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { regularizacoesDoCliente } from "@/lib/domain/regularizacao-timeline";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { useFluxo } from "@/lib/store/fluxo-store";
 
 function digits(s: string) {
   return s.replace(/\D/g, "");
@@ -32,6 +34,7 @@ export default function PortalClientePage() {
     useParte5();
   const { state: cart, saldoDevedor } = useCarteira();
   const { state: fin } = useFinanceiro();
+  const { state: fluxo } = useFluxo();
   const sess = p5.portalCliente;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -57,6 +60,15 @@ export default function PortalClientePage() {
     (r) =>
       r.origem === "contrato" &&
       r.cliente.toLowerCase().includes(sess.nome.split(" ")[0].toLowerCase())
+  );
+  const minhasReg = useMemo(
+    () =>
+      regularizacoesDoCliente(
+        fluxo.regularization,
+        sess.nome,
+        sess.cpf
+      ),
+    [fluxo.regularization, sess.nome, sess.cpf]
   );
 
   return (
@@ -101,6 +113,7 @@ export default function PortalClientePage() {
           },
           { label: "Parcelas em aberto", value: meusRecs.length },
           { label: "Minhas demandas", value: minhasDemandas.length },
+          { label: "Regularizações", value: minhasReg.length },
         ]}
       />
 
@@ -154,6 +167,84 @@ export default function PortalClientePage() {
         >
           Gerar 2ª via boleto / Pix
         </Button>
+      </ModuleSection>
+
+      <ModuleSection title="Minha regularização">
+        {minhasReg.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhum processo de regularização vinculado a este CPF.
+          </p>
+        ) : (
+          <div className="space-y-6">
+            {minhasReg.map((view) => (
+              <div key={view.caso.id} className="space-y-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-sm font-medium">
+                    {view.caso.empNome} · lote {view.caso.loteLabel}
+                  </p>
+                  {view.previsaoEscritura ? (
+                    <p className="text-xs text-muted-foreground">
+                      Previsão escritura:{" "}
+                      {formatDateBR(view.previsaoEscritura)}
+                    </p>
+                  ) : null}
+                </div>
+                <ol className="flex flex-wrap gap-2">
+                  {view.etapas.map((step) => (
+                    <li key={step.etapa}>
+                      <StatusPill
+                        tone={
+                          step.status === "concluida"
+                            ? "ok"
+                            : step.status === "atual"
+                              ? "info"
+                              : "neutral"
+                        }
+                      >
+                        {step.label}
+                        {step.status === "atual" ? " · atual" : ""}
+                      </StatusPill>
+                    </li>
+                  ))}
+                </ol>
+                {view.docsPendentes.length > 0 ? (
+                  <div>
+                    <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Documentos pendentes
+                    </p>
+                    <ul className="list-inside list-disc text-sm">
+                      {view.docsPendentes.map((d) => (
+                        <li key={d}>{d}</li>
+                      ))}
+                    </ul>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      onClick={() =>
+                        notify("Envio de documento registrado (demo)")
+                      }
+                    >
+                      Enviar documento
+                    </Button>
+                  </div>
+                ) : null}
+                {view.exigencias.length > 0 ? (
+                  <div>
+                    <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Exigências
+                    </p>
+                    <ul className="list-inside list-disc text-sm">
+                      {view.exigencias.map((e) => (
+                        <li key={e}>{e}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
       </ModuleSection>
 
       <ModuleSection title="Minhas demandas">
