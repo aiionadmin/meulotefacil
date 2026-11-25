@@ -21,6 +21,17 @@ NODE_OPTIONS=--max-old-space-size=1536 npm run build
 pm2 restart meulotefacil
 ```
 
+## Nginx — frames do hero
+
+Sirva `/hero-frames/` como estático (ver `deploy/nginx-meulotefacil.conf`).
+Assim o vídeo do header não quebra quando o Node/PM2 reinicia.
+
+```bash
+# Dentro do server block HTTPS (sites-available/meulotefacil), antes de location /:
+#   location /hero-frames/ { alias /var/www/meulotefacil/public/hero-frames/; ... }
+nginx -t && systemctl reload nginx
+```
+
 ## Variáveis
 
 Copie `.env.example` → `.env.local`. Supabase vazio = modo demo.

@@ -45,6 +45,22 @@ export function ScrollHero() {
     onReady: () => setFramesReady(true),
   });
 
+  // Se o browser restaura o scroll no meio do hero, alinha o progresso já no mount
+  useEffect(() => {
+    if (reduced) return;
+    const section = sectionRef.current;
+    if (!section) return;
+    const rect = section.getBoundingClientRect();
+    const total = section.offsetHeight - window.innerHeight;
+    if (total <= 0) return;
+    const scrolled = Math.min(total, Math.max(0, -rect.top));
+    const p = scrolled / total;
+    progressObj.current.p = p;
+    setProgress(p);
+    document.documentElement.dataset.heroScroll =
+      p < 0.98 ? "inside" : "done";
+  }, [reduced, setProgress]);
+
   useGSAP(
     () => {
       const section = sectionRef.current;
