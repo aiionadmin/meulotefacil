@@ -303,12 +303,12 @@ export function rdfElevation(crest: number, rows: number, layer: number, layers:
 
 const RDF_CSS = `
 .rdf-root {
-  position: relative; display: grid; width: 100%; overflow: hidden; isolation: isolate;
+  position: relative; display: flex; flex-direction: column; width: 100%; overflow: hidden; isolation: isolate;
   background: var(--rdf-paper); color: var(--rdf-ink); font-family: var(--rdf-sans);
   -webkit-font-smoothing: antialiased; --rdf-pad: clamp(20px, 3.2vw, 30px);
 }
 .rdf-frame {
-  position: relative; display: grid; grid-template-rows: auto auto minmax(var(--rdf-scene-min), 1fr);
+  position: relative; display: grid; grid-template-rows: auto auto;
   width: 100%; max-width: var(--rdf-max); margin: 0 auto;
 }
 
@@ -379,9 +379,13 @@ const RDF_CSS = `
 .rdf-credit:hover .rdf-heart { animation: rdf-beat 1s ease-in-out infinite; }
 @keyframes rdf-beat { 0%, 60%, 100% { transform: scale(1); } 15% { transform: scale(1.3); } 32% { transform: scale(.95); } 45% { transform: scale(1.15); } }
 
-.rdf-scene { position: relative; z-index: 1; margin-top: -64px; overflow: hidden; }
+/* Scene is a sibling of .rdf-frame so mountains are full-bleed (not capped by --rdf-max). */
+.rdf-scene {
+  position: relative; z-index: 1; width: 100%; min-height: var(--rdf-scene-min);
+  margin-top: -64px; overflow: hidden; flex: 1 1 auto;
+}
 .rdf-scene canvas {
-  position: absolute; left: 0; bottom: 0; display: block; max-width: none;
+  position: absolute; inset: 0; display: block; width: 100% !important; height: 100% !important; max-width: none;
   image-rendering: pixelated; image-rendering: crisp-edges;
 }
 .rdf-alt {
@@ -892,13 +896,13 @@ export default function RidgelineDitherFooter({
             </a>
           ) : null}
         </div>
-        <div ref={sceneRef} className="rdf-scene">
-          <canvas ref={canvasRef} aria-hidden="true" />
-          <div ref={altRef} className="rdf-alt" aria-hidden="true">
-            <b />
-            <i />
-            <span ref={altTextRef} />
-          </div>
+      </div>
+      <div ref={sceneRef} className="rdf-scene">
+        <canvas ref={canvasRef} aria-hidden="true" />
+        <div ref={altRef} className="rdf-alt" aria-hidden="true">
+          <b />
+          <i />
+          <span ref={altTextRef} />
         </div>
       </div>
     </footer>
