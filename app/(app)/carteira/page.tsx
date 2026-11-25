@@ -18,6 +18,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useClientCard } from "@/lib/client/client-card-context";
 import type { Installment } from "@/lib/domain/carteira-types";
 import { resolveInstallmentStatus } from "@/lib/money/installment-status";
 import { aReceberContratos } from "@/lib/indicators/receivables";
@@ -50,6 +51,7 @@ function CarteiraInner() {
     estornarParcela,
     saldoDevedor,
   } = useCarteira();
+  const { openClient } = useClientCard();
   const search = useSearchParams();
   const contratoQ = search.get("contrato") ?? "";
   const [q, setQ] = useState("");
@@ -178,6 +180,22 @@ function CarteiraInner() {
           <>
             <Button size="sm" variant="outline" asChild>
               <Link href="/contratos">Contratos</Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!contratoFiltro}
+              onClick={() => {
+                if (!contratoFiltro) return;
+                openClient({
+                  nome: contratoFiltro.compradorNome,
+                  personId: contratoFiltro.compradorId,
+                  contractId: contratoFiltro.id,
+                  tab: "parcelas",
+                });
+              }}
+            >
+              Card do cliente
             </Button>
             <Button
               size="sm"

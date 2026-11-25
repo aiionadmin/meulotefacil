@@ -11,6 +11,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { useFluxo } from "@/lib/store/fluxo-store";
+import { useClientCard } from "@/lib/client/client-card-context";
 import { formatDateBR } from "@/lib/masks/br";
 import { statusLabel } from "@/lib/status/labels";
 
@@ -27,6 +28,7 @@ const ORDER = COLS.map((c) => c.id);
 
 export default function QuadroRegularizacaoPage() {
   const { state, avancarRegularizacao } = useFluxo();
+  const { openClient } = useClientCard();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = state.regularization.find((r) => r.id === selectedId) ?? null;
 
@@ -68,7 +70,17 @@ export default function QuadroRegularizacaoPage() {
           else notify("Não foi possível avançar");
           return ok;
         }}
-        onOpen={setSelectedId}
+        onOpen={(id) => {
+          setSelectedId(id);
+          const r = state.regularization.find((x) => x.id === id);
+          if (r) {
+            openClient({
+              nome: r.cliente,
+              regularizationId: r.id,
+              tab: "regularizacao",
+            });
+          }
+        }}
       />
       <DetailSheet
         open={!!selected}

@@ -37,6 +37,7 @@ import { clearDemoSession } from "@/lib/auth-demo";
 import { APP_FLAT_NAV, NOVO_ATALHOS } from "@/lib/app-nav";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useEmpresa } from "@/lib/empresa/context";
+import { useClientCard } from "@/lib/client/client-card-context";
 import { fieldControlClass } from "@/components/app/ModuleToolkit";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
   const { theme, setTheme } = useTheme();
   const { currentUser, currentProfileName, state } = useFase1();
   const { empresas, selectedId, setSelectedId } = useEmpresa();
+  const { openClient } = useClientCard();
   const [open, setOpen] = useState(false);
   const parts = pathname.split("/").filter(Boolean);
   const unread = state.notifications.filter((n) => !n.lida).length;
@@ -254,7 +256,12 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
                 key={p.id}
                 onSelect={() => {
                   setOpen(false);
-                  router.push("/cadastros/pessoas");
+                  openClient({
+                    nome: p.nome,
+                    documento: p.documento,
+                    personId: p.id,
+                    tab: "resumo",
+                  });
                 }}
               >
                 {p.nome} · {p.documento}
