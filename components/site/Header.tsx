@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { SITE_NAV, SITE_NAV_CTA } from "@/lib/site-nav";
@@ -109,10 +109,6 @@ export function Header() {
                     )}
                   >
                     {l.label}
-                    <ArrowRight
-                      className="hidden size-3.5 opacity-70 xl:inline"
-                      aria-hidden
-                    />
                   </Link>
                 );
               })}
@@ -160,7 +156,6 @@ export function Header() {
                 onClick={() => setOpen(false)}
               >
                 {l.label}
-                <ArrowRight className="size-6 opacity-80" aria-hidden />
               </Link>
             ))}
             <Button asChild size="lg" variant="cream" className="mt-6 w-fit">

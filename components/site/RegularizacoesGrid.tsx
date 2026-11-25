@@ -103,7 +103,7 @@ export function RegularizacoesGrid({
                   <strong>{lotesLabel(n)}</strong>
                 </p>
                 <p className="pt-1 text-sm font-medium text-brand-cream/90 transition-colors group-hover:text-orange-300">
-                  Ver detalhes →
+                  Ver detalhes
                 </p>
               </div>
             </Link>
@@ -116,7 +116,7 @@ export function RegularizacoesGrid({
               href="/regularizacoes"
               className="inline-flex font-semibold text-orange-300 hover:text-orange-200 hover:underline"
             >
-              Ver todas as regularizações →
+              Ver todas as regularizações
             </Link>
           </div>
         )}
