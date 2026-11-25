@@ -398,6 +398,17 @@ export function seedFinanceiro(): FinanceiroState {
     ],
     transferencias: [],
     ofxImports: [],
+    meusCnpjs: [
+      {
+        id: "cnpj-1",
+        cnpj: "00.000.000/0001-00",
+        razaoSocial: "Meu Lote Fácil Ltda",
+        certificadoValidade: "2027-06-30",
+        emissaoNfse: false,
+        capturaSefaz: false,
+        ativo: true,
+      },
+    ],
     notas: [
       {
         id: "nf-1",

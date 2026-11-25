@@ -18,6 +18,10 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
+import {
+  buildMapaCotacaoHtml,
+  openPrintHtml,
+} from "@/lib/domain/report-pdf";
 import type { Cotacao } from "@/lib/domain/compras-types";
 
 export default function CotacoesPage() {
@@ -271,23 +275,49 @@ export default function CotacoesPage() {
                     ))}
                   </tbody>
                 </table>
-                <Button
-                  size="sm"
-                  disabled={live.status === "finalizado"}
-                  onClick={() => {
-                    const ocs = gerarOrdensDaCotacao(live.id);
-                    if (!ocs.length) {
-                      notify("Escolha vencedores no mapa");
-                      return;
-                    }
-                    notify(
-                      `${ocs.length} OC gerada(s): ${ocs.map((o) => o.numero).join(", ")}`
-                    );
-                    setSelected(null);
-                  }}
-                >
-                  Gerar ordens de compra
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const html = buildMapaCotacaoHtml({
+                        numero: live.numero,
+                        descricao: live.descricao,
+                        centro: live.centro.label,
+                        fornecedores: live.fornecedores.map((f) => ({
+                          id: f.id,
+                          nome: f.fornecedor,
+                        })),
+                        itens: live.itens,
+                        precos: live.precos,
+                      });
+                      if (!openPrintHtml(html, `Mapa ${live.numero}`)) {
+                        notify("Permita pop-ups para imprimir");
+                        return;
+                      }
+                      notify("Mapa aberto para impressão/PDF");
+                    }}
+                  >
+                    PDF mapa
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={live.status === "finalizado"}
+                    onClick={() => {
+                      const ocs = gerarOrdensDaCotacao(live.id);
+                      if (!ocs.length) {
+                        notify("Escolha vencedores no mapa");
+                        return;
+                      }
+                      notify(
+                        `${ocs.length} OC gerada(s): ${ocs.map((o) => o.numero).join(", ")}`
+                      );
+                      setSelected(null);
+                    }}
+                  >
+                    Gerar ordens de compra
+                  </Button>
+                </div>
               </div>
             ) : null}
           </div>

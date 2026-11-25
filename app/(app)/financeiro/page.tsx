@@ -26,6 +26,10 @@ import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { podeConciliar } from "@/lib/domain/alcadas";
+import {
+  buildPagamentosHtml,
+  openPrintHtml,
+} from "@/lib/domain/report-pdf";
 import type {
   CondicaoPagamento,
   FormaPagamento,
@@ -134,6 +138,30 @@ function PagamentosInner() {
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/financeiro/contas">Contas</Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const html = buildPagamentosHtml(
+                  filtered.map((p) => ({
+                    vencimento: p.vencimento,
+                    favorecido: p.favorecido,
+                    descricao: p.descricao,
+                    valor: p.valor,
+                    status: p.status,
+                    centro: p.centroLabel,
+                  })),
+                  `Filtro: ${sit}`
+                );
+                if (!openPrintHtml(html, "Pagamentos")) {
+                  notify("Permita pop-ups para imprimir");
+                  return;
+                }
+                notify("Relatório de pagamentos aberto");
+              }}
+            >
+              PDF lista
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               Novo lançamento
@@ -303,7 +331,10 @@ function PagamentosInner() {
                     size="sm"
                     onClick={() => {
                       const resto = live.valor - live.valorPago;
-                      baixarPagamento(live.id, resto);
+                      if (!baixarPagamento(live.id, resto)) {
+                        notify("Baixa bloqueada (conta ou valor)");
+                        return;
+                      }
                       notify("Pago integral");
                     }}
                   >
@@ -314,7 +345,10 @@ function PagamentosInner() {
                     variant="outline"
                     onClick={() => {
                       const parcial = Math.round(live.valor * 0.5 * 100) / 100;
-                      baixarPagamento(live.id, parcial);
+                      if (!baixarPagamento(live.id, parcial)) {
+                        notify("Baixa bloqueada (conta ou valor)");
+                        return;
+                      }
                       notify(`Baixa parcial ${formatBRL(parcial)}`);
                     }}
                   >

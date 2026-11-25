@@ -195,6 +195,16 @@ export type FinanceiroConfig = {
   numeroDocObrigatorioPagamento: boolean;
 };
 
+export type MeuCnpj = {
+  id: string;
+  cnpj: string;
+  razaoSocial: string;
+  certificadoValidade?: string;
+  emissaoNfse: boolean;
+  capturaSefaz: boolean;
+  ativo: boolean;
+};
+
 export type OfxImport = {
   id: string;
   contaId: string;
@@ -229,4 +239,5 @@ export type FinanceiroState = {
   transferencias: Transferencia[];
   notas: NotaFiscal[];
   ofxImports: OfxImport[];
+  meusCnpjs: MeuCnpj[];
 };

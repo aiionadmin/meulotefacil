@@ -23,6 +23,10 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import {
+  buildRecebimentosHtml,
+  openPrintHtml,
+} from "@/lib/domain/report-pdf";
 import type { FormaPagamento, Recebimento } from "@/lib/domain/financeiro-types";
 
 function RecebimentosInner() {
@@ -83,6 +87,30 @@ function RecebimentosInner() {
           <>
             <Button size="sm" variant="outline" asChild>
               <Link href="/financeiro">Pagamentos</Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const html = buildRecebimentosHtml(
+                  filtered.map((r) => ({
+                    vencimento: r.vencimento,
+                    cliente: r.cliente,
+                    descricao: r.descricao,
+                    valor: r.valor,
+                    status: r.status,
+                    origem: r.origem,
+                  })),
+                  "Lista atual"
+                );
+                if (!openPrintHtml(html, "Recebimentos")) {
+                  notify("Permita pop-ups para imprimir");
+                  return;
+                }
+                notify("Relatório de recebimentos aberto");
+              }}
+            >
+              PDF lista
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               Novo faturamento
