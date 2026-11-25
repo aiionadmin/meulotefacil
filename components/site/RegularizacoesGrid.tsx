@@ -63,7 +63,10 @@ export function RegularizacoesGrid({
   );
 
   return (
-    <section ref={rootRef} className="bg-brand-navy py-20 text-brand-cream lg:py-28">
+    <section
+      ref={rootRef}
+      className="border-b border-ink/20 bg-ink-deep py-20 text-brand-cream lg:py-28"
+    >
       <div className="site-container">
         <SectionHeading
           number={sectionNumber}
@@ -113,8 +116,8 @@ export function RegularizacoesGrid({
         {limit && (
           <div className="mt-10 text-center">
             <Link
-              href="/regularizacoes"
-              className="inline-flex font-semibold text-orange-300 hover:text-orange-200 hover:underline"
+              href="/regularizacao#nucleos"
+              className="inline-flex font-semibold text-latossolo hover:text-orange-200 hover:underline"
             >
               Ver todas as regularizações
             </Link>
