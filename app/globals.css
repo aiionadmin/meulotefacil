@@ -202,12 +202,33 @@
 
   html {
     scroll-behavior: auto;
+    /* Evita inputs/labels nativos pretos quando o SO está em dark mode. */
+    color-scheme: light;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
+    color-scheme: light;
+  }
+
+  /* Controles de formulário: sempre claros e legíveis no site institucional. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    color-scheme: light;
+    background-color: var(--paper);
+    color: var(--ink);
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--ink);
+    box-shadow: 0 0 0 1000px var(--paper) inset;
+    transition: background-color 99999s ease-out;
   }
 
   :focus-visible {
