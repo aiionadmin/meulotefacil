@@ -23,7 +23,7 @@ export default function NoticiasPage() {
             number="01"
             eyebrow="Editorial"
             title="Notícias"
-            subtitle={`Atualizações do ramo, de Campinas e região, e temas gerais — ${noticias.length} publicações com acompanhamento contínuo da agenda fundiária.`}
+            subtitle={`${noticias.length} matérias reais sobre regularização fundiária, Campinas e região — com imagens e link para a fonte original.`}
           />
           <div className="mt-12">
             <NoticiasList />

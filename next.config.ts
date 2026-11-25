@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "www.hortolandia.sp.gov.br",
+        pathname: "/wp-content/uploads/**",
+      },
     ],
   },
   async redirects() {
