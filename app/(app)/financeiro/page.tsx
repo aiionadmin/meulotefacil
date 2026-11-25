@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,7 +32,13 @@ import type {
 
 type Situacao = "todos" | "em_aberto" | "vencidos" | "pagos";
 
-export default function PagamentosPage() {
+function parseSit(raw: string | null): Situacao {
+  if (raw === "em_aberto" || raw === "vencidos" || raw === "pagos") return raw;
+  return "todos";
+}
+
+function PagamentosInner() {
+  const search = useSearchParams();
   const {
     state,
     categoriaNome,
@@ -40,7 +48,7 @@ export default function PagamentosPage() {
     conciliarPagamento,
   } = useFinanceiro();
   const [q, setQ] = useState("");
-  const [sit, setSit] = useState<Situacao>("todos");
+  const [sit, setSit] = useState<Situacao>(() => parseSit(search.get("sit")));
   const [selected, setSelected] = useState<Pagamento | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -550,5 +558,15 @@ export default function PagamentosPage() {
         ) : null}
       </FormDialog>
     </div>
+  );
+}
+
+export default function PagamentosPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-muted-foreground">Carregando…</p>}
+    >
+      <PagamentosInner />
+    </Suspense>
   );
 }

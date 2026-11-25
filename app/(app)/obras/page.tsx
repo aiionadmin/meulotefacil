@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,11 +30,14 @@ const STATUS_LABEL: Record<ObraStatus, string> = {
   finalizada: "Finalizada",
 };
 
-export default function ObrasPage() {
+function ObrasInner() {
+  const search = useSearchParams();
   const { state, addObra, duplicateObra, softRemoveObra } = useObras();
   const { state: carteira } = useCarteira();
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState(
+    () => search.get("status") || "todos"
+  );
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     codigo: "",
@@ -263,5 +267,15 @@ export default function ObrasPage() {
         </Field>
       </FormDialog>
     </div>
+  );
+}
+
+export default function ObrasPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-muted-foreground">Carregando…</p>}
+    >
+      <ObrasInner />
+    </Suspense>
   );
 }

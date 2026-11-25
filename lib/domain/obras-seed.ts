@@ -234,6 +234,24 @@ export function seedObras(): ObrasCatalogState {
       fim: "2026-12-10",
       predecessorId: "cr-1",
     },
+    {
+      id: "cr-3",
+      obraId: "obr-1",
+      label: "Pavimentação",
+      duracaoDias: 40,
+      inicio: "2026-12-05",
+      fim: "2027-01-15",
+      predecessorId: "cr-2",
+    },
+    {
+      id: "cr-4",
+      obraId: "obr-1",
+      label: "Rede de água",
+      duracaoDias: 25,
+      inicio: "2026-12-15",
+      fim: "2027-01-10",
+      predecessorId: "cr-2",
+    },
   ];
 
   const curvaS = {

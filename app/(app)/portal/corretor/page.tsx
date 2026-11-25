@@ -17,13 +17,15 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { PortalLoginGate } from "@/components/app/PortalLoginGate";
 import { formatBRL } from "@/lib/masks/br";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 
 export default function PortalCorretorPage() {
-  const { state: p5, addDemanda, demandasDoCorretor } = useParte5();
+  const { state: p5, addDemanda, demandasDoCorretor, setPortalCorretor } =
+    useParte5();
   const { state: fluxo } = useFluxo();
   const { state: cart } = useCarteira();
   const sess = p5.portalCorretor;
@@ -55,6 +57,26 @@ export default function PortalCorretorPage() {
   );
 
   return (
+    <PortalLoginGate
+      kind="corretor"
+      title="Portal do corretor"
+      hint="Entre com e-mail cadastrado e o código de acesso."
+      demoHint="Demo: ana@corretor.demo · código demo"
+      onLogin={({ documento, codigo }) => {
+        const id = documento.toLowerCase();
+        const ok =
+          (id.includes("ana") || id.includes("corretor")) &&
+          codigo.toLowerCase() === "demo";
+        if (!ok) {
+          return {
+            ok: false,
+            message: "E-mail ou código inválidos (use o demo)",
+          };
+        }
+        setPortalCorretor("corr-1", "Ana Corretora");
+        return { ok: true };
+      }}
+    >
     <div className="space-y-6">
       <ModuleHeader
         title={`Portal do corretor · ${sess.nome}`}
@@ -212,5 +234,6 @@ export default function PortalCorretorPage() {
         </div>
       </FormDialog>
     </div>
+    </PortalLoginGate>
   );
 }

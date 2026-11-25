@@ -74,7 +74,7 @@ export default function DashboardOperacionalPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Dashboard · Números gerais"
-        description="Operacional — cada número abre a lista de origem."
+        description="Operacional — cada número abre a lista de origem com o filtro correspondente."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -92,16 +92,25 @@ export default function DashboardOperacionalPage() {
           {
             label: "Empreendimentos",
             value: cart.developments.length,
-            hint: "Abrir lista",
+            href: "/empreendimentos",
           },
           {
             label: "Clientes ativos",
             value: f1.people.filter(
               (p) => p.papeis.includes("cliente") && p.status !== "excluido"
             ).length,
+            href: "/cadastros/clientes",
           },
-          { label: "Contratos ativos", value: contratosAtivos },
-          { label: "Demandas abertas", value: demandasAbertas },
+          {
+            label: "Contratos ativos",
+            value: contratosAtivos,
+            href: "/contratos",
+          },
+          {
+            label: "Demandas abertas",
+            value: demandasAbertas,
+            href: "/demandas?status=aberta",
+          },
         ]}
       />
 
@@ -110,7 +119,7 @@ export default function DashboardOperacionalPage() {
           {Object.entries(lotesPorStatus).map(([st, n]) => (
             <Link
               key={st}
-              href="/empreendimentos"
+              href={`/empreendimentos?status=${st}`}
               className="rounded-md bg-muted px-3 py-2 hover:text-brand-orange"
             >
               {st.replace(/_/g, " ")}: <strong>{n}</strong>
@@ -124,17 +133,24 @@ export default function DashboardOperacionalPage() {
           {
             label: "Leads (funil)",
             value: fluxo.leads.length,
+            href: "/leads",
           },
           {
             label: "Propostas abertas",
             value: fluxo.proposals.filter(
               (p) => p.status === "aberta" || p.status === "reservada"
             ).length,
+            href: "/vendas",
           },
-          { label: "A receber", value: formatBRL(aReceber) },
+          {
+            label: "A receber",
+            value: formatBRL(aReceber),
+            href: "/financeiro/recebimentos?status=aberto",
+          },
           {
             label: "Venc. 7 / 30 dias",
             value: `${venc7} / ${venc30}`,
+            href: "/financeiro/recebimentos?status=aberto",
           },
         ]}
       />
@@ -145,47 +161,28 @@ export default function DashboardOperacionalPage() {
             label: "Inadimplência",
             value: formatBRL(inad.reduce((a, r) => a + r.valor, 0)),
             hint: `${inad.length} títulos`,
+            href: "/financeiro/recebimentos?status=vencido",
           },
           {
             label: "Obras em andamento",
             value: obras.obras.filter((o) => o.status === "em_andamento")
               .length,
+            href: "/obras?status=em_andamento",
           },
           {
             label: "SC em aprovação",
             value: compras.solicitacoes.filter(
               (s) => s.status === "em_aprovacao"
             ).length,
+            href: "/compras?status=em_aprovacao",
           },
           {
             label: "Pagar venc. / aberto",
             value: `${pagarFaixas.vencidos} / ${pagarFaixas.aberto}`,
+            href: "/financeiro?sit=vencidos",
           },
         ]}
       />
-
-      <p className="text-xs text-muted-foreground">
-        Atalhos:{" "}
-        <Link className="underline" href="/demandas">
-          Demandas
-        </Link>
-        {" · "}
-        <Link className="underline" href="/financeiro">
-          Pagamentos
-        </Link>
-        {" · "}
-        <Link className="underline" href="/financeiro/recebimentos">
-          Recebimentos
-        </Link>
-        {" · "}
-        <Link className="underline" href="/obras">
-          Obras
-        </Link>
-        {" · "}
-        <Link className="underline" href="/compras">
-          Compras
-        </Link>
-      </p>
     </div>
   );
 }

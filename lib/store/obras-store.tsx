@@ -67,6 +67,11 @@ type ObrasApi = {
     status: RdoStatus,
     motivo?: string
   ) => boolean;
+  addRdoFoto: (
+    id: string,
+    foto: { legenda: string; dataUrl: string }
+  ) => boolean;
+  removeRdoFoto: (id: string, fotoId: string) => boolean;
   gerarCurvaS: (obraId: string) => void;
   nodesDaObra: (obraId: string) => OrcamentoNode[];
   totaisDaObra: (obraId: string) => {
@@ -312,9 +317,47 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
           materiais: [],
           ocorrencias: [],
           efetivoTotal: 0,
+          fotos: [],
         };
         setState((s) => ({ ...s, rdos: [rdo, ...s.rdos] }));
         return rdo;
+      },
+      addRdoFoto: (id, foto) => {
+        const rdo = state.rdos.find((r) => r.id === id);
+        if (!rdo || !foto.dataUrl) return false;
+        setState((s) => ({
+          ...s,
+          rdos: s.rdos.map((r) =>
+            r.id === id
+              ? {
+                  ...r,
+                  fotos: [
+                    ...(r.fotos ?? []),
+                    {
+                      id: uid("foto"),
+                      legenda: foto.legenda.trim() || "Foto do canteiro",
+                      dataUrl: foto.dataUrl,
+                    },
+                  ],
+                }
+              : r
+          ),
+        }));
+        return true;
+      },
+      removeRdoFoto: (id, fotoId) => {
+        setState((s) => ({
+          ...s,
+          rdos: s.rdos.map((r) =>
+            r.id === id
+              ? {
+                  ...r,
+                  fotos: (r.fotos ?? []).filter((f) => f.id !== fotoId),
+                }
+              : r
+          ),
+        }));
+        return true;
       },
       updateRdoStatus: (id, status, motivo) => {
         const rdo = state.rdos.find((r) => r.id === id);

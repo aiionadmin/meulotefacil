@@ -22,5 +22,5 @@ Prompt: `docs/prompt-cursor-meu-lote-facil.md` §6.
 
 ## Pendente
 
-- Auth real dos portais (CPF + código), PDF comissões/materiais, planta PDF no hub, sync Supabase com RLS em produção.
-- Fine-tuning de permissões por perfil na UI.
+- Auth real (SMS/e-mail), PDF comissões/materiais, planta PDF no hub, sync Supabase com RLS em produção.
+- *(Parcial no polish pós-#32: gate CPF/código demo, KPIs→listas filtradas, matriz de permissões na UI.)*

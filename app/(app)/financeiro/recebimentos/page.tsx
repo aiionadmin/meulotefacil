@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,7 +25,9 @@ import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { FormaPagamento, Recebimento } from "@/lib/domain/financeiro-types";
 
-export default function RecebimentosPage() {
+function RecebimentosInner() {
+  const search = useSearchParams();
+  const statusQ = search.get("status");
   const {
     state,
     addFaturamento,
@@ -48,16 +51,24 @@ export default function RecebimentosPage() {
   });
 
   const filtered = useMemo(() => {
+    let list = state.recebimentos;
+    if (statusQ === "vencido") {
+      list = list.filter((r) => r.status === "vencido");
+    } else if (statusQ === "aberto") {
+      list = list.filter((r) => r.status !== "recebido");
+    } else if (statusQ === "recebido") {
+      list = list.filter((r) => r.status === "recebido");
+    }
     const term = q.trim().toLowerCase();
-    if (!term) return state.recebimentos;
-    return state.recebimentos.filter((r) =>
+    if (!term) return list;
+    return list.filter((r) =>
       [r.cliente, r.descricao, r.origem, r.contratoRef, r.status]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
         .includes(term)
     );
-  }, [state.recebimentos, q]);
+  }, [state.recebimentos, q, statusQ]);
 
   const live = selected
     ? state.recebimentos.find((r) => r.id === selected.id) ?? selected
@@ -337,5 +348,15 @@ export default function RecebimentosPage() {
         </div>
       </FormDialog>
     </div>
+  );
+}
+
+export default function RecebimentosPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-muted-foreground">Carregando…</p>}
+    >
+      <RecebimentosInner />
+    </Suspense>
   );
 }

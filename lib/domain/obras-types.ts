@@ -166,6 +166,8 @@ export type Rdo = {
   }[];
   observacoes?: string;
   efetivoTotal: number;
+  /** Fotos locais (demo: data URL); produção usará storage. */
+  fotos?: { id: string; legenda: string; dataUrl: string }[];
 };
 
 export type ObrasCatalogState = {

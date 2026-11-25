@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   StatusPill,
+  ModuleSection,
 } from "@/components/app/ModulePage";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
+  DetailSheet,
   Field,
   FilterBar,
   FormDialog,
@@ -20,19 +22,34 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatDateBR } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
+import { openRdoPrintWindow } from "@/lib/domain/rdo-pdf";
+import type { Rdo } from "@/lib/domain/obras-types";
+
 function weekday(iso: string) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", {
     weekday: "short",
   });
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 function RdoInner() {
   const search = useSearchParams();
   const obraQ = search.get("obra") ?? "";
-  const { state, addRdo, updateRdoStatus, nodesDaObra } = useObras();
+  const { state, addRdo, updateRdoStatus, addRdoFoto, removeRdoFoto, nodesDaObra } =
+    useObras();
   const [q, setQ] = useState("");
   const [obraFilter, setObraFilter] = useState(obraQ || "todos");
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<Rdo | null>(null);
+  const [legenda, setLegenda] = useState("");
   const [form, setForm] = useState({
     obraId: obraQ || state.obras[0]?.id || "",
     data: new Date().toISOString().slice(0, 10),
@@ -60,13 +77,20 @@ function RdoInner() {
     return list;
   }, [state.rdos, state.obras, q, obraFilter]);
 
+  const live = selected
+    ? state.rdos.find((r) => r.id === selected.id) ?? selected
+    : null;
+  const liveObra = live
+    ? state.obras.find((o) => o.id === live.obraId)
+    : undefined;
+
   const itensObra = nodesDaObra(form.obraId).filter((n) => n.kind === "item");
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="RDO — Relatório diário de obras"
-        description="Um RDO por obra e por dia. Aprovar atualiza a evolução física dos itens."
+        description="Um RDO por obra e por dia. Aprovar atualiza a evolução física dos itens. PDF stub e fotos da câmera/arquivo."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -102,6 +126,7 @@ function RdoInner() {
           { key: "obra", label: "Obra" },
           { key: "resp", label: "Responsável" },
           { key: "ef", label: "Efetivo" },
+          { key: "fotos", label: "Fotos" },
           { key: "status", label: "Status" },
           { key: "acoes", label: "" },
         ]}
@@ -114,6 +139,7 @@ function RdoInner() {
             obra: obra?.nome ?? "—",
             resp: r.responsavel,
             ef: r.efetivoTotal,
+            fotos: (r.fotos ?? []).length,
             status: (
               <StatusPill
                 tone={
@@ -129,6 +155,16 @@ function RdoInner() {
             ),
             acoes: (
               <div className="flex flex-wrap gap-1">
+                <Button size="sm" variant="ghost" onClick={() => setSelected(r)}>
+                  Abrir
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openRdoPrintWindow(r, obra)}
+                >
+                  PDF
+                </Button>
                 {r.status === "rascunho" ? (
                   <Button
                     size="sm"
@@ -175,6 +211,102 @@ function RdoInner() {
         })}
       />
 
+      <DetailSheet
+        open={Boolean(live)}
+        onOpenChange={(v) => {
+          if (!v) setSelected(null);
+        }}
+        title={live ? `RDO nº ${live.numero}` : "RDO"}
+      >
+        {live ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {liveObra?.nome ?? "—"} · {formatDateBR(live.data)} ·{" "}
+              {live.responsavel} · {live.status}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openRdoPrintWindow(live, liveObra)}
+              >
+                Gerar PDF / imprimir
+              </Button>
+            </div>
+
+            <ModuleSection title="Fotos do canteiro">
+              <div className="mb-3 flex flex-wrap items-end gap-2">
+                <Field label="Legenda">
+                  <Input
+                    value={legenda}
+                    onChange={(e) => setLegenda(e.target.value)}
+                    placeholder="Ex.: frente do trecho A"
+                  />
+                </Field>
+                <Field label="Arquivo / câmera">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      try {
+                        const dataUrl = await readFileAsDataUrl(file);
+                        const ok = addRdoFoto(live.id, {
+                          legenda,
+                          dataUrl,
+                        });
+                        if (!ok) {
+                          notify("Não foi possível anexar a foto");
+                          return;
+                        }
+                        setLegenda("");
+                        notify("Foto anexada");
+                      } catch {
+                        notify("Falha ao ler a imagem");
+                      }
+                    }}
+                  />
+                </Field>
+              </div>
+              {(live.fotos ?? []).length ? (
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {(live.fotos ?? []).map((f) => (
+                    <li key={f.id} className="rounded-md border p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={f.dataUrl}
+                        alt={f.legenda}
+                        className="h-32 w-full rounded object-cover"
+                      />
+                      <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+                        <span className="truncate">{f.legenda}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            removeRdoFoto(live.id, f.id);
+                            notify("Foto removida");
+                          }}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma foto ainda. Use a câmera do celular ou um arquivo.
+                </p>
+              )}
+            </ModuleSection>
+          </div>
+        ) : null}
+      </DetailSheet>
+
       <FormDialog
         open={open}
         onOpenChange={setOpen}
@@ -206,6 +338,7 @@ function RdoInner() {
           }
           notify(`RDO nº ${created.numero} criado`);
           setOpen(false);
+          setSelected(created);
         }}
       >
         <Field label="Obra *">

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,7 +39,9 @@ const TABS: { id: "todas" | ScStatus; label: string }[] = [
 
 type ItemDraft = { descricao: string; unidade: string; quantidade: number };
 
-export default function ComprasSolicitacoesPage() {
+function ComprasSolicitacoesInner() {
+  const search = useSearchParams();
+  const statusQ = search.get("status");
   const {
     state,
     contadores,
@@ -50,7 +54,10 @@ export default function ComprasSolicitacoesPage() {
   } = useCompras();
   const { state: obras } = useObras();
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("todas");
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>(() => {
+    const match = TABS.find((t) => t.id === statusQ);
+    return match?.id ?? "todas";
+  });
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Solicitacao | null>(null);
   const [motivo, setMotivo] = useState("");
@@ -504,5 +511,15 @@ export default function ComprasSolicitacoesPage() {
         </label>
       </FormDialog>
     </div>
+  );
+}
+
+export default function ComprasSolicitacoesPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-muted-foreground">Carregando…</p>}
+    >
+      <ComprasSolicitacoesInner />
+    </Suspense>
   );
 }

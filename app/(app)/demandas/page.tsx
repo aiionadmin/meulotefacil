@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,11 +37,15 @@ const COLS: { id: DemandaStatus; label: string }[] = [
   { id: "cancelada", label: "Cancelada" },
 ];
 
-export default function DemandasPage() {
+function DemandasInner() {
+  const search = useSearchParams();
+  const statusQ = search.get("status") as DemandaStatus | null;
   const { state, addDemanda, moverDemanda } = useParte5();
   const { state: cart } = useCarteira();
   const [q, setQ] = useState("");
-  const [view, setView] = useState<"lista" | "quadro">("quadro");
+  const [view, setView] = useState<"lista" | "quadro">(
+    statusQ ? "lista" : "quadro"
+  );
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     tipoId: "",
@@ -61,9 +66,17 @@ export default function DemandasPage() {
   ).length;
 
   const filtered = useMemo(() => {
+    let list = state.demandas;
+    if (statusQ === "aberta") {
+      list = list.filter(
+        (d) => d.status !== "concluida" && d.status !== "cancelada"
+      );
+    } else if (statusQ && COLS.some((c) => c.id === statusQ)) {
+      list = list.filter((d) => d.status === statusQ);
+    }
     const term = q.trim().toLowerCase();
-    if (!term) return state.demandas;
-    return state.demandas.filter((d) =>
+    if (!term) return list;
+    return list.filter((d) =>
       [
         d.numero,
         d.descricao,
@@ -76,7 +89,7 @@ export default function DemandasPage() {
         .toLowerCase()
         .includes(term)
     );
-  }, [state.demandas, q]);
+  }, [state.demandas, q, statusQ]);
 
   const tipoNome = (id: string) =>
     state.demandaTipos.find((t) => t.id === id)?.nome ?? "—";
@@ -283,5 +296,15 @@ export default function DemandasPage() {
         </Field>
       </FormDialog>
     </div>
+  );
+}
+
+export default function DemandasPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-muted-foreground">Carregando…</p>}
+    >
+      <DemandasInner />
+    </Suspense>
   );
 }

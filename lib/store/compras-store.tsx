@@ -65,6 +65,16 @@ type ComprasApi = {
   negarOrdem: (id: string) => boolean;
   marcarOcComprada: (id: string) => boolean;
   marcarOcEntregue: (id: string, parcial?: boolean) => boolean;
+  /** Fornecedor responde pelo link público `/cotacao/[token]`. */
+  responderCotacaoPublica: (
+    token: string,
+    linhas: {
+      itemId: string;
+      precoUnitario: number;
+      quantidadeCotada: number;
+      prazoDias?: number;
+    }[]
+  ) => boolean;
 };
 
 const Ctx = createContext<ComprasApi | null>(null);
@@ -485,6 +495,47 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      responderCotacaoPublica: (token, linhas) => {
+        const t = token.trim();
+        if (!t || !linhas.length) return false;
+        let found = false;
+        setState((s) => {
+          const cotacoes = s.cotacoes.map((c) => {
+            const forn = c.fornecedores.find((f) => f.publicToken === t);
+            if (!forn) return c;
+            found = true;
+            let precos = c.precos.filter((p) => p.supplierId !== forn.id);
+            for (const linha of linhas) {
+              if (!(linha.precoUnitario > 0)) continue;
+              precos = [
+                ...precos,
+                {
+                  id: uid("pr"),
+                  itemId: linha.itemId,
+                  supplierId: forn.id,
+                  precoUnitario: linha.precoUnitario,
+                  quantidadeCotada: linha.quantidadeCotada,
+                  prazoDias: linha.prazoDias,
+                  vencedor: false,
+                },
+              ];
+            }
+            return {
+              ...c,
+              fornecedores: c.fornecedores.map((f) =>
+                f.id === forn.id ? { ...f, respondido: true } : f
+              ),
+              precos,
+              status:
+                c.status === "finalizado"
+                  ? c.status
+                  : ("respondido_parcial" as CotacaoStatus),
+            };
+          });
+          return { ...s, cotacoes };
+        });
+        return found;
       },
     }),
     [state, ready]
