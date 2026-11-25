@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
   StatusPill,
 } from "@/components/app/ModulePage";
+import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
   Field,
   FilterBar,
@@ -19,16 +19,27 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFluxo } from "@/lib/store/fluxo-store";
+import { useCarteira } from "@/lib/store/carteira-store";
+import { leadProntoParaProposta } from "@/lib/domain/lead-score";
 
 export default function VendasPage() {
   const { state, addProposal, converterProposal } = useFluxo();
+  const { state: carteira } = useCarteira();
   const [q, setQ] = useState("");
+  const [empFilter, setEmpFilter] = useState("todos");
   const [open, setOpen] = useState(false);
+
+  const vendaEmps = carteira.developments.filter(
+    (d) => d.modalidade !== "regularizacao"
+  );
   const [form, setForm] = useState({
     leadId: state.leads[0]?.id ?? "",
     cliente: "",
-    empNome: "Residencial Horizonte",
-    loteLabel: "A/02",
+    developmentId: vendaEmps[0]?.id ?? "",
+    empNome: vendaEmps[0]?.nome ?? "",
+    lotId: "",
+    loteLabel: "",
+    servicoRegularizacao: false,
     valor: 185000,
     parcelas: 120,
     entrada: 20000,
@@ -36,22 +47,37 @@ export default function VendasPage() {
     responsavel: "Comercial",
   });
 
+  const lotsDisponiveis = useMemo(
+    () =>
+      carteira.lots.filter(
+        (l) =>
+          l.developmentId === form.developmentId && l.status === "disponivel"
+      ),
+    [carteira.lots, form.developmentId]
+  );
+
   const filtered = useMemo(() => {
+    let list = state.proposals;
+    if (empFilter !== "todos") {
+      list = list.filter((p) => p.empNome === empFilter);
+    }
     const term = q.trim().toLowerCase();
-    if (!term) return state.proposals;
-    return state.proposals.filter((p) =>
-      [p.cliente, p.empNome, p.loteLabel, p.status]
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
-    );
-  }, [state.proposals, q]);
+    if (term) {
+      list = list.filter((p) =>
+        [p.cliente, p.empNome, p.loteLabel, p.status]
+          .join(" ")
+          .toLowerCase()
+          .includes(term)
+      );
+    }
+    return list;
+  }, [state.proposals, q, empFilter]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Propostas e reservas"
-        description="Fase 8 — simular plano, reservar lote e converter em venda/contrato."
+        description="Empreendimento obrigatório. Fluxo: Proposta → Contrato."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -73,21 +99,47 @@ export default function VendasPage() {
           },
           {
             label: "Reservadas",
-            value: state.proposals.filter((p) => p.status === "reservada").length,
+            value: state.proposals.filter((p) => p.status === "reservada")
+              .length,
           },
           {
             label: "Convertidas",
-            value: state.proposals.filter((p) => p.status === "convertida").length,
+            value: state.proposals.filter((p) => p.status === "convertida")
+              .length,
           },
         ]}
       />
 
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar cliente, lote…" />
+      <FilterBar value={q} onChange={setQ} placeholder="Buscar cliente, lote…">
+        <select
+          className={fieldControlClass + " max-w-[220px]"}
+          value={empFilter}
+          onChange={(e) => setEmpFilter(e.target.value)}
+        >
+          <option value="todos">Todos empreendimentos</option>
+          {carteira.developments.map((d) => (
+            <option key={d.id} value={d.nome}>
+              {d.nome}
+            </option>
+          ))}
+        </select>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setQ("");
+            setEmpFilter("todos");
+          }}
+        >
+          Limpar filtros
+        </Button>
+      </FilterBar>
 
-      <DataTable
+      <PaginatedTable
         columns={[
           { key: "cliente", label: "Cliente" },
-          { key: "lote", label: "Lote" },
+          { key: "emp", label: "Empreendimento" },
+          { key: "lote", label: "Lote / serviço" },
           { key: "valor", label: "Valor" },
           { key: "validade", label: "Validade" },
           { key: "status", label: "Status" },
@@ -95,7 +147,10 @@ export default function VendasPage() {
         ]}
         rows={filtered.map((p) => ({
           cliente: p.cliente,
-          lote: `${p.empNome} · ${p.loteLabel}`,
+          emp: p.empNome,
+          lote: p.servicoRegularizacao
+            ? "Regularização"
+            : p.loteLabel,
           valor: formatBRL(p.valor),
           validade: formatDateBR(p.validade),
           status: <StatusPill tone="info">{p.status}</StatusPill>,
@@ -122,11 +177,30 @@ export default function VendasPage() {
         title="Nova proposta"
         onSubmit={() => {
           const lead = state.leads.find((l) => l.id === form.leadId);
-          addProposal({
+          if (lead && !leadProntoParaProposta(lead)) {
+            notify(
+              "Lead incompleto",
+              "Preencha empreendimento, tipo de interesse e telefone antes da proposta."
+            );
+            return;
+          }
+          if (!form.empNome) {
+            notify("Empreendimento obrigatório");
+            return;
+          }
+          if (!form.servicoRegularizacao && !form.loteLabel) {
+            notify("Selecione quadra/lote ou marque regularização");
+            return;
+          }
+          const created = addProposal({
             ...form,
             cliente: form.cliente || lead?.nome || "Cliente",
             leadId: form.leadId || undefined,
           });
+          if (!created) {
+            notify("Proposta recusada", "Empreendimento e lote/serviço exigidos");
+            return;
+          }
           notify("Proposta criada");
           setOpen(false);
         }}
@@ -137,27 +211,90 @@ export default function VendasPage() {
             value={form.leadId}
             onChange={(e) => {
               const lead = state.leads.find((l) => l.id === e.target.value);
+              const emp = carteira.developments.find(
+                (d) => d.nome === lead?.empInteresse
+              );
               setForm({
                 ...form,
                 leadId: e.target.value,
                 cliente: lead?.nome ?? form.cliente,
-                empNome: lead?.empInteresse ?? form.empNome,
+                empNome: emp?.nome ?? form.empNome,
+                developmentId: emp?.id ?? form.developmentId,
               });
             }}
           >
             {state.leads.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.nome}
+                {l.temperatura ? ` · ${l.temperatura}` : ""}
               </option>
             ))}
           </select>
         </Field>
-        <Field label="Lote">
-          <Input
-            value={form.loteLabel}
-            onChange={(e) => setForm({ ...form, loteLabel: e.target.value })}
-          />
+        <Field label="Empreendimento *">
+          <select
+            className={fieldControlClass}
+            value={form.developmentId}
+            onChange={(e) => {
+              const emp = carteira.developments.find(
+                (d) => d.id === e.target.value
+              );
+              setForm({
+                ...form,
+                developmentId: e.target.value,
+                empNome: emp?.nome ?? "",
+                lotId: "",
+                loteLabel: "",
+                servicoRegularizacao: emp?.modalidade === "regularizacao",
+              });
+            }}
+          >
+            {carteira.developments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nome} · {d.modalidade}
+              </option>
+            ))}
+          </select>
         </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.servicoRegularizacao}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                servicoRegularizacao: e.target.checked,
+                loteLabel: e.target.checked ? "Regularização" : "",
+                lotId: "",
+              })
+            }
+          />
+          Serviço de regularização (sem lote)
+        </label>
+        {!form.servicoRegularizacao ? (
+          <Field label="Quadra / Lote *">
+            <select
+              className={fieldControlClass}
+              value={form.lotId}
+              onChange={(e) => {
+                const lot = lotsDisponiveis.find((l) => l.id === e.target.value);
+                setForm({
+                  ...form,
+                  lotId: e.target.value,
+                  loteLabel: lot ? `${lot.quadra}/${lot.lote}` : "",
+                  valor: lot?.valor ?? form.valor,
+                });
+              }}
+            >
+              <option value="">Selecione lote disponível</option>
+              {lotsDisponiveis.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.quadra}/{l.lote} · {formatBRL(l.valor)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
         <Field label="Valor">
           <Input
             type="number"

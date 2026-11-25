@@ -8,14 +8,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { FLUXO_STORAGE_KEY, JORNADA_COLS, seedFluxo } from "@/lib/domain/fluxo-seed";
+import { FLUXO_STORAGE_KEY, seedFluxo } from "@/lib/domain/fluxo-seed";
+import {
+  JORNADA_FORWARD_ORDER,
+  REGULARIZACAO_FORWARD_ORDER,
+  canMoveForward,
+} from "@/lib/domain/kanban-forward";
+import { scoreLead } from "@/lib/domain/lead-score";
 import type {
   Agreement,
   FluxoState,
   JornadaColuna,
   Lead,
-  LeadOrigem,
   Proposal,
+  RegularizationCase,
 } from "@/lib/domain/fluxo-types";
 
 function uid(prefix: string) {
@@ -30,24 +36,31 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+type LeadInput = Omit<
+  Lead,
+  | "id"
+  | "etapa"
+  | "criadoEm"
+  | "score"
+  | "temperatura"
+  | "badges"
+  | "responsavel"
+> &
+  Partial<Pick<Lead, "score" | "temperatura" | "badges" | "responsavel">>;
+
 type FluxoApi = {
   state: FluxoState;
   ready: boolean;
   reset: () => void;
-  addLead: (data: {
-    nome: string;
-    telefone: string;
-    email?: string;
-    empInteresse?: string;
-    origem: LeadOrigem;
-  }) => Lead;
+  addLead: (data: LeadInput) => Lead;
+  updateLead: (id: string, patch: Partial<Lead>) => void;
   moveLead: (
     id: string,
     para: JornadaColuna,
     opts?: { force?: boolean; motivo?: string }
   ) => boolean;
   marcarPerdido: (id: string, motivo: string) => void;
-  addProposal: (data: Omit<Proposal, "id" | "status">) => Proposal;
+  addProposal: (data: Omit<Proposal, "id" | "status">) => Proposal | null;
   converterProposal: (id: string) => void;
   registrarContato: (
     caseId: string,
@@ -56,15 +69,16 @@ type FluxoApi = {
   ) => void;
   proporAcordo: (caseId: string, desconto: number, qtdParcelas: number) => Agreement | null;
   avancarRegularizacao: (id: string) => void;
+  moverRegularizacao: (
+    id: string,
+    para: RegularizationCase["etapa"],
+    opts?: { force?: boolean; motivo?: string }
+  ) => boolean;
   vincularNfe: (id: string) => void;
   toggleReportFavorite: (id: string) => void;
   runReport: (id: string) => void;
   pausarRegua: (caseId: string) => void;
 };
-
-const MANUAL_COLS: ReadonlySet<JornadaColuna> = new Set(
-  JORNADA_COLS.filter((c) => c.manual).map((c) => c.id)
-);
 
 const Ctx = createContext<FluxoApi | null>(null);
 
@@ -97,29 +111,50 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(FLUXO_STORAGE_KEY, JSON.stringify(next));
       },
       addLead: (data) => {
+        const scored = scoreLead(data);
         const lead: Lead = {
           ...data,
           id: uid("ld"),
-          responsavel: "Atendimento",
+          responsavel: data.responsavel || "Atendimento",
           etapa: "novo_contato",
           criadoEm: todayIso(),
+          score: scored.score,
+          temperatura: scored.temperatura,
         };
         setState((s) => ({ ...s, leads: [lead, ...s.leads] }));
         return lead;
+      },
+      updateLead: (id, patch) => {
+        setState((s) => ({
+          ...s,
+          leads: s.leads.map((l) => {
+            if (l.id !== id) return l;
+            const next = { ...l, ...patch };
+            const scored = scoreLead(next);
+            return { ...next, score: scored.score, temperatura: scored.temperatura };
+          }),
+        }));
       },
       moveLead: (id, para, opts) => {
         const lead = state.leads.find((l) => l.id === id);
         if (!lead) return false;
         const de = lead.etapa;
-        const allowed =
-          opts?.force ||
-          para === "perdido" ||
-          (MANUAL_COLS.has(de) && MANUAL_COLS.has(para));
+        const allowed = canMoveForward(JORNADA_FORWARD_ORDER, de, para, {
+          force: opts?.force,
+          allowExit: true,
+        });
         if (!allowed) return false;
         setState((s) => ({
           ...s,
           leads: s.leads.map((l) =>
-            l.id === id ? { ...l, etapa: para, ultimoContato: todayIso() } : l
+            l.id === id
+              ? {
+                  ...l,
+                  etapa: para,
+                  ultimoContato: todayIso(),
+                  motivoPerda: para === "perdido" ? opts?.motivo : l.motivoPerda,
+                }
+              : l
           ),
           cardMoves: [
             {
@@ -137,10 +172,13 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
         return true;
       },
       marcarPerdido: (id, motivo) => {
+        if (!motivo?.trim()) return;
         setState((s) => ({
           ...s,
           leads: s.leads.map((l) =>
-            l.id === id ? { ...l, etapa: "perdido" as const } : l
+            l.id === id
+              ? { ...l, etapa: "perdido" as const, motivoPerda: motivo }
+              : l
           ),
           cardMoves: [
             {
@@ -157,6 +195,8 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
         }));
       },
       addProposal: (data) => {
+        if (!data.empNome?.trim()) return null;
+        if (!data.servicoRegularizacao && !data.loteLabel?.trim()) return null;
         const p: Proposal = { ...data, id: uid("pr"), status: "aberta" };
         setState((s) => {
           const leads = data.leadId
@@ -234,23 +274,55 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
         return ag;
       },
       avancarRegularizacao: (id) => {
-        const order = [
-          "documentos",
-          "prefeitura",
-          "cartorio",
-          "registro",
-          "matricula",
-          "entregue",
-        ] as const;
         setState((s) => ({
           ...s,
           regularization: s.regularization.map((r) => {
             if (r.id !== id) return r;
-            const i = order.indexOf(r.etapa);
-            if (i < 0 || i >= order.length - 1) return r;
-            return { ...r, etapa: order[i + 1] };
+            const i = REGULARIZACAO_FORWARD_ORDER.indexOf(r.etapa);
+            if (i < 0 || i >= REGULARIZACAO_FORWARD_ORDER.length - 1) return r;
+            return { ...r, etapa: REGULARIZACAO_FORWARD_ORDER[i + 1] };
           }),
+          cardMoves: [
+            {
+              id: uid("mv"),
+              cardId: id,
+              de: s.regularization.find((x) => x.id === id)?.etapa ?? "?",
+              para: "avanco",
+              quando: nowLabel(),
+              usuario: "Admin Demo",
+            },
+            ...s.cardMoves,
+          ].slice(0, 80),
         }));
+      },
+      moverRegularizacao: (id, para, opts) => {
+        const item = state.regularization.find((r) => r.id === id);
+        if (!item) return false;
+        const de = item.etapa;
+        const allowed = canMoveForward(REGULARIZACAO_FORWARD_ORDER, de, para, {
+          force: opts?.force,
+          allowExit: false,
+        });
+        if (!allowed) return false;
+        setState((s) => ({
+          ...s,
+          regularization: s.regularization.map((r) =>
+            r.id === id ? { ...r, etapa: para } : r
+          ),
+          cardMoves: [
+            {
+              id: uid("mv"),
+              cardId: id,
+              de,
+              para,
+              quando: nowLabel(),
+              usuario: "Admin Demo",
+              motivo: opts?.motivo,
+            },
+            ...s.cardMoves,
+          ].slice(0, 80),
+        }));
+        return true;
       },
       vincularNfe: (id) => {
         setState((s) => ({

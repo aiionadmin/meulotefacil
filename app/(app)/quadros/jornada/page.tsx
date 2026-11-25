@@ -21,7 +21,7 @@ export default function JornadaPage() {
   const columns = JORNADA_COLS.map((c) => ({
     id: c.id,
     label: c.label,
-    droppable: c.manual,
+    droppable: true,
   }));
 
   const cards = useMemo(
@@ -33,7 +33,10 @@ export default function JornadaPage() {
           columnId: l.etapa,
           title: l.nome,
           subtitle: l.empInteresse,
-          badge: l.origem,
+          badge: l.temperatura
+            ? `${l.temperatura}${l.score != null ? ` · ${l.score}` : ""}`
+            : l.origem,
+          badges: l.badges,
           meta: l.responsavel,
         })),
     [state.leads]
@@ -43,7 +46,7 @@ export default function JornadaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Jornada do cliente"
-        description="Fase 8 — arrastar só nas colunas 1–2 (e Perdido). Demais etapas mudam por evento do sistema."
+        description="Cards só avançam. Atraso vira selo no card — cobrança fica no quadro próprio. Saídas: Perdido (com motivo)."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -65,10 +68,10 @@ export default function JornadaPage() {
           if (!ok) {
             notify(
               "Movimento bloqueado",
-              "Só colunas Novo contato e Em atendimento aceitam arraste manual"
+              "O card só pode avançar. Voltar exige perfil Administrador com motivo."
             );
           } else {
-            notify("Card movido");
+            notify("Card avançou");
           }
           return ok;
         }}
@@ -87,28 +90,54 @@ export default function JornadaPage() {
           <div className="space-y-2">
             <DetailRow label="Telefone" value={selected.telefone} />
             <DetailRow label="Origem" value={selected.origem} />
-            <DetailRow label="Empreendimento" value={selected.empInteresse ?? "—"} />
+            <DetailRow
+              label="Empreendimento"
+              value={selected.empInteresse ?? "—"}
+            />
+            <DetailRow
+              label="Score"
+              value={
+                selected.score != null
+                  ? `${selected.score} · ${selected.temperatura ?? "—"}`
+                  : "—"
+              }
+            />
             <DetailRow label="Etapa" value={selected.etapa} />
             <DetailRow label="Responsável" value={selected.responsavel} />
+            {selected.badges?.length ? (
+              <DetailRow label="Selos" value={selected.badges.join(", ")} />
+            ) : null}
             <div className="flex flex-wrap gap-2 pt-3">
-              {selected.etapa === "novo_contato" ||
-              selected.etapa === "em_atendimento" ? (
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    moveLead(selected.id, "em_atendimento");
-                    notify("Em atendimento");
-                    setSelected(null);
-                  }}
-                >
-                  Responder
-                </Button>
-              ) : null}
+              <Button
+                size="sm"
+                onClick={() => {
+                  const idx = JORNADA_COLS.findIndex(
+                    (c) => c.id === selected.etapa
+                  );
+                  const next = JORNADA_COLS[idx + 1];
+                  if (!next) {
+                    notify("Já está na última etapa");
+                    return;
+                  }
+                  const ok = moveLead(selected.id, next.id);
+                  if (ok) {
+                    notify("Avançou", next.label);
+                    setSelected({ ...selected, etapa: next.id });
+                  } else notify("Movimento bloqueado");
+                }}
+              >
+                Avançar etapa
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  marcarPerdido(selected.id, "Sem interesse");
+                  const motivo = window.prompt("Motivo da perda *");
+                  if (!motivo?.trim()) {
+                    notify("Motivo obrigatório");
+                    return;
+                  }
+                  marcarPerdido(selected.id, motivo.trim());
                   notify("Marcado como perdido");
                   setSelected(null);
                 }}

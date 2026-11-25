@@ -25,7 +25,7 @@ const COLORS: Record<LotStatus, string> = {
 };
 
 export default function PlantaPage() {
-  const { state, changeLotStatus } = useCarteira();
+  const { state, changeLotStatus, addPlantPdf } = useCarteira();
   const [devId, setDevId] = useState(state.developments[0]?.id ?? "");
   const [selected, setSelected] = useState<Lot | null>(null);
 
@@ -53,7 +53,7 @@ export default function PlantaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Planta do loteamento"
-        description="Lotes clicáveis por status — Fase 2."
+        description="PDF do projeto + lotes coloridos por situação. Marcação de polígonos na próxima iteração."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/empreendimentos">Voltar à grade</Link>
@@ -67,12 +67,39 @@ export default function PlantaPage() {
           value={devId}
           onChange={(e) => setDevId(e.target.value)}
         >
-          {state.developments.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.nome}
-            </option>
-          ))}
+          {state.developments
+            .filter((d) => d.modalidade !== "regularizacao")
+            .map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nome}
+              </option>
+            ))}
         </select>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+          <span className="rounded-sm border border-border px-3 py-1.5">
+            Upload PDF
+          </span>
+          <input
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file || !devId) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                addPlantPdf({
+                  developmentId: devId,
+                  nomeArquivo: file.name,
+                  dataUrl: String(reader.result ?? ""),
+                  autor: "Admin Demo",
+                });
+                notify("PDF da planta anexado", file.name);
+              };
+              reader.readAsDataURL(file);
+            }}
+          />
+        </label>
         <div className="flex flex-wrap gap-2 text-xs">
           {(Object.keys(COLORS) as LotStatus[]).map((s) => (
             <span key={s} className="inline-flex items-center gap-1.5">
@@ -82,6 +109,32 @@ export default function PlantaPage() {
           ))}
         </div>
       </div>
+
+      {emp?.plantPdfs?.length ? (
+        <div className="space-y-2 rounded-sm border border-border bg-card p-3 text-sm">
+          <p className="font-medium">PDFs do projeto</p>
+          <ul className="space-y-1 text-muted-foreground">
+            {emp.plantPdfs.map((p) => (
+              <li key={p.id}>
+                v{p.versao} · {p.nomeArquivo}
+                {p.dataUrl ? (
+                  <>
+                    {" · "}
+                    <a
+                      className="text-brand-orange underline"
+                      href={p.dataUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      abrir
+                    </a>
+                  </>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="relative overflow-hidden rounded-sm border border-border bg-[linear-gradient(135deg,#e8f0e4_0%,#d4e4d8_40%,#c5d5c8_100%)] p-6">
         <p className="mb-4 font-display text-lg text-ink">{emp?.nome}</p>

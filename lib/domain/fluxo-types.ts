@@ -19,6 +19,10 @@ export type LeadOrigem =
   | "site"
   | "manual";
 
+export type LeadTipoInteresse = "comprar_lote" | "regularizar" | "ambos";
+export type LeadFinalidade = "morar" | "investir" | "construir_vender";
+export type LeadTemperatura = "frio" | "morno" | "quente";
+
 export type Lead = {
   id: string;
   nome: string;
@@ -26,19 +30,45 @@ export type Lead = {
   email?: string;
   empInteresse?: string;
   origem: LeadOrigem;
+  campanha?: string;
   responsavel: string;
+  corretorNome?: string;
+  tipoInteresse?: LeadTipoInteresse;
+  finalidade?: LeadFinalidade;
+  faixaValorMin?: number;
+  faixaValorMax?: number;
+  entradaDisponivel?: number;
+  parcelaCabivel?: number;
+  formaPagamento?: string;
+  prazoDecidir?: string;
+  cidade?: string;
+  bairro?: string;
+  visitou?: boolean;
+  dataVisita?: string;
+  melhorHorario?: string;
+  canalPreferido?: string;
+  objecoes?: string;
+  score?: number;
+  temperatura?: LeadTemperatura;
+  motivoPerda?: string;
   etapa: JornadaColuna;
   criadoEm: string;
   ultimoContato?: string;
   observacoes?: string;
+  /** Selos sem mudar coluna (atraso, pendência…) */
+  badges?: string[];
 };
 
 export type Proposal = {
   id: string;
   leadId?: string;
   cliente: string;
+  /** Obrigatório — empreendimento da proposta */
   empNome: string;
+  developmentId?: string;
   loteLabel: string;
+  lotId?: string;
+  servicoRegularizacao?: boolean;
   valor: number;
   parcelas: number;
   entrada: number;

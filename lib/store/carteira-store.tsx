@@ -50,6 +50,28 @@ type CarteiraApi = {
     area: number;
     valor: number;
   }) => number;
+  importLots: (input: {
+    developmentId: string;
+    rows: {
+      quadra: string;
+      lote: string;
+      area: number;
+      frente?: string;
+      fundo?: string;
+      direita?: string;
+      esquerda?: string;
+      matricula?: string;
+      precoAvista: number;
+      situacao: string;
+    }[];
+    updateExisting: boolean;
+  }) => { created: number; updated: number; refused: number };
+  addPlantPdf: (input: {
+    developmentId: string;
+    nomeArquivo: string;
+    dataUrl?: string;
+    autor?: string;
+  }) => void;
   updateLot: (id: string, patch: Partial<Lot>) => void;
   changeLotStatus: (
     ids: string[],
@@ -90,7 +112,26 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CARTEIRA_STORAGE_KEY);
-      if (raw) setState({ ...seedCarteira(), ...JSON.parse(raw) });
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<CarteiraState>;
+        const seed = seedCarteira();
+        const developments = (parsed.developments ?? seed.developments).map(
+          (d) => ({
+            ...d,
+            modalidade:
+              d.modalidade ??
+              (d.tipo === "regularizacao"
+                ? ("regularizacao" as const)
+                : ("loteamento" as const)),
+            plantPdfs: d.plantPdfs ?? [],
+          })
+        );
+        setState({
+          ...seed,
+          ...parsed,
+          developments,
+        });
+      }
     } catch {
       /* ignore */
     }
@@ -132,7 +173,9 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         const dev: Development = {
           ...data,
           id: uid("dev"),
+          modalidade: data.modalidade ?? "loteamento",
           qtdLotes: data.qtdLotes ?? 0,
+          plantPdfs: data.plantPdfs ?? [],
         };
         setState((s) => ({
           ...s,
@@ -184,6 +227,121 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         }));
         return created.length;
       },
+      importLots: ({ developmentId, rows, updateExisting }) => {
+        const emp = state.developments.find((d) => d.id === developmentId);
+        if (!emp || emp.modalidade === "regularizacao") {
+          return { created: 0, updated: 0, refused: rows.length };
+        }
+        let created = 0;
+        let updated = 0;
+        let refused = 0;
+        setState((s) => {
+          let lots = [...s.lots];
+          for (const row of rows) {
+            const status = (row.situacao || "disponivel") as LotStatus;
+            const existing = lots.find(
+              (l) =>
+                l.developmentId === developmentId &&
+                l.quadra === row.quadra &&
+                l.lote === row.lote
+            );
+            if (existing) {
+              if (!updateExisting) {
+                refused += 1;
+                continue;
+              }
+              lots = lots.map((l) =>
+                l.id === existing.id
+                  ? {
+                      ...l,
+                      area: row.area,
+                      valor: row.precoAvista || l.valor,
+                      valorM2:
+                        row.area > 0
+                          ? Math.round(
+                              ((row.precoAvista || l.valor) / row.area) * 100
+                            ) / 100
+                          : l.valorM2,
+                      frente: row.frente ?? l.frente,
+                      fundo: row.fundo ?? l.fundo,
+                      direita: row.direita ?? l.direita,
+                      esquerda: row.esquerda ?? l.esquerda,
+                      matricula: row.matricula ?? l.matricula,
+                      status,
+                    }
+                  : l
+              );
+              updated += 1;
+            } else {
+              lots.unshift({
+                id: uid("lot"),
+                developmentId,
+                empNome: emp.nome,
+                quadra: row.quadra,
+                lote: row.lote,
+                area: row.area,
+                custo: 0,
+                valor: row.precoAvista,
+                valorM2:
+                  row.area > 0
+                    ? Math.round((row.precoAvista / row.area) * 100) / 100
+                    : 0,
+                status,
+                bloqueiaVenda:
+                  status === "bloqueado" ||
+                  status === "vendido" ||
+                  status === "reservado",
+                bloqueiaFinanceiro: status === "bloqueado",
+                frente: row.frente,
+                fundo: row.fundo,
+                direita: row.direita,
+                esquerda: row.esquerda,
+                matricula: row.matricula,
+              });
+              created += 1;
+            }
+          }
+          return {
+            ...s,
+            lots,
+            developments: s.developments.map((d) =>
+              d.id === developmentId
+                ? {
+                    ...d,
+                    qtdLotes: lots.filter((l) => l.developmentId === d.id)
+                      .length,
+                  }
+                : d
+            ),
+          };
+        });
+        return { created, updated, refused };
+      },
+      addPlantPdf: ({ developmentId, nomeArquivo, dataUrl, autor }) => {
+        setState((s) => ({
+          ...s,
+          developments: s.developments.map((d) => {
+            if (d.id !== developmentId) return d;
+            const versao = (d.plantPdfs?.length ?? 0) + 1;
+            return {
+              ...d,
+              plantPdfs: [
+                ...(d.plantPdfs ?? []),
+                {
+                  id: uid("pdf"),
+                  developmentId,
+                  versao,
+                  folha: 1,
+                  nomeArquivo,
+                  dataUrl,
+                  autor,
+                  criadoEm: todayIso(),
+                },
+              ],
+            };
+          }),
+        }));
+      },
       updateLot: (id, patch) => {
         setState((s) => ({
           ...s,
@@ -220,9 +378,11 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
       },
       saldoDevedor,
       refreshEncargos: (consulta = todayIso()) => {
-        setState((s) => ({
-          ...s,
-          installments: s.installments.map((p) => {
+        // Encargos em lote só sob demanda (botão). A ficha financeira
+        // pagina e calcula só a página visível via lib/money/ficha-parcelas.
+        // Atraso NÃO move card de coluna — vira selo (Parte 1 §2.3 / §2.7).
+        setState((s) => {
+          const installments = s.installments.map((p) => {
             if (p.status === "paga" || p.status === "cancelada") return p;
             const ct = s.contracts.find((c) => c.id === p.contractId);
             if (!ct) return p;
@@ -234,26 +394,39 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
               taxaMulta: ct.multaPct,
               diasTolerancia: ct.diasTolerancia,
             });
+            const nextStatus: Installment["status"] = r.emAtraso
+              ? "vencida"
+              : p.status === "vencida"
+                ? "em_aberto"
+                : p.status;
             return {
               ...p,
               juros: r.juros,
               multa: r.multa,
-              status: r.emAtraso ? "vencida" : p.status === "vencida" ? "em_aberto" : p.status,
+              status: nextStatus,
             };
-          }),
-          cards: s.cards.map((card) => {
-            if (!card.contractId) return card;
-            const atrasada = s.installments.some(
-              (p) =>
-                p.contractId === card.contractId &&
-                p.status === "vencida"
-            );
-            if (atrasada && card.coluna === "carteira_em_dia") {
-              return { ...card, coluna: "cobranca" as const };
-            }
-            return card;
-          }),
-        }));
+          });
+          const atrasados = new Set(
+            installments
+              .filter((p) => p.status === "vencida")
+              .map((p) => p.contractId)
+          );
+          return {
+            ...s,
+            installments,
+            cards: s.cards.map((card) => {
+              if (!card.contractId || !atrasados.has(card.contractId)) {
+                return {
+                  ...card,
+                  badges: (card.badges ?? []).filter((b) => b !== "Em atraso"),
+                };
+              }
+              const badges = new Set(card.badges ?? []);
+              badges.add("Em atraso");
+              return { ...card, badges: [...badges] };
+            }),
+          };
+        });
       },
       baixarParcela: (installmentId) => {
         setState((s) => {
