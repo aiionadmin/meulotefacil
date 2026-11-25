@@ -161,6 +161,8 @@ export function useFrameSequence(
       canvas.height = Math.floor(h * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.fillStyle = "#111614";
     ctx.fillRect(0, 0, w, h);
 

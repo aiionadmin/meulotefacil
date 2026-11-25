@@ -177,6 +177,7 @@ export function ScrollHero() {
               alt=""
               fill
               priority
+              unoptimized
               sizes="100vw"
               className={cn(
                 "pointer-events-none object-cover transition-opacity duration-500",
@@ -329,6 +330,7 @@ function ReducedHero({ wa }: { wa: string }) {
           alt=""
           fill
           priority
+          unoptimized
           className="object-cover opacity-40"
           sizes="100vw"
         />
