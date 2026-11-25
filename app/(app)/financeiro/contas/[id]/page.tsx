@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
@@ -26,6 +27,7 @@ export default function ContaExtratoPage() {
     extratoConta,
     importOfx,
     desconciliarPagamento,
+    setBloqueioConta,
   } = useFinanceiro();
   const { state: f1, currentUser } = useFase1();
   const perfil =
@@ -39,6 +41,7 @@ export default function ContaExtratoPage() {
   );
 
   const [ofxText, setOfxText] = useState("");
+  const [bloqueioAte, setBloqueioAte] = useState("");
 
   if (!conta) {
     return (
@@ -135,6 +138,48 @@ export default function ContaExtratoPage() {
               ),
           }))}
         />
+      </ModuleSection>
+
+      <ModuleSection title="Bloqueio financeiro">
+        <p className="mb-2 text-sm text-muted-foreground">
+          Impede baixas na conta até a data (inclusive). Atual:{" "}
+          {conta.bloqueioAte
+            ? formatDateBR(conta.bloqueioAte)
+            : "sem bloqueio"}
+        </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <Input
+            type="date"
+            className="w-auto"
+            value={bloqueioAte || conta.bloqueioAte || ""}
+            onChange={(e) => setBloqueioAte(e.target.value)}
+          />
+          <Button
+            size="sm"
+            onClick={() => {
+              const d = bloqueioAte || conta.bloqueioAte;
+              if (!d) {
+                notify("Informe a data");
+                return;
+              }
+              setBloqueioConta(conta.id, d);
+              notify(`Bloqueio até ${formatDateBR(d)}`);
+            }}
+          >
+            Bloquear
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setBloqueioConta(conta.id, undefined);
+              setBloqueioAte("");
+              notify("Bloqueio removido");
+            }}
+          >
+            Desbloquear
+          </Button>
+        </div>
       </ModuleSection>
 
       <ModuleSection title="Importar OFX">

@@ -31,6 +31,7 @@ import type {
   Recebimento,
   Transferencia,
 } from "@/lib/domain/financeiro-types";
+// MeuCnpj used via state.meusCnpjs
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -76,6 +77,11 @@ type FinanceiroApi = {
     arquivoNome?: string
   ) => { ok: boolean; import?: OfxImport; matched: number; total: number };
   extratoConta: (contaId: string) => ExtratoLinha[];
+  setBloqueioConta: (contaId: string, bloqueioAte: string | undefined) => boolean;
+  setCnpjToggles: (
+    id: string,
+    patch: { emissaoNfse?: boolean; capturaSefaz?: boolean }
+  ) => boolean;
   addFaturamento: (input: {
     descricao: string;
     cliente: string;
@@ -164,6 +170,9 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           transferencias: parsed.transferencias ?? seed.transferencias,
           notas: parsed.notas ?? seed.notas,
           ofxImports: parsed.ofxImports ?? seed.ofxImports ?? [],
+          meusCnpjs: parsed.meusCnpjs?.length
+            ? parsed.meusCnpjs
+            : seed.meusCnpjs,
         });
       }
     } catch {
@@ -294,6 +303,13 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
         if (valor <= 0) return false;
         const pag = state.pagamentos.find((p) => p.id === id);
         if (!pag || pag.status === "pago") return false;
+        const conta = state.contas.find((c) => c.id === pag.contaId);
+        if (
+          conta?.bloqueioAte &&
+          todayIso() <= conta.bloqueioAte
+        ) {
+          return false;
+        }
         const resto = Math.round((pag.valor - pag.valorPago) * 100) / 100;
         const baixa = Math.min(valor, resto);
         setState((s) => ({
@@ -795,6 +811,26 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           despesas,
           saldo: Math.round((receitas - despesas) * 100) / 100,
         };
+      },
+      setBloqueioConta: (contaId, bloqueioAte) => {
+        if (!state.contas.some((c) => c.id === contaId)) return false;
+        setState((s) => ({
+          ...s,
+          contas: s.contas.map((c) =>
+            c.id === contaId ? { ...c, bloqueioAte } : c
+          ),
+        }));
+        return true;
+      },
+      setCnpjToggles: (id, patch) => {
+        if (!state.meusCnpjs.some((c) => c.id === id)) return false;
+        setState((s) => ({
+          ...s,
+          meusCnpjs: s.meusCnpjs.map((c) =>
+            c.id === id ? { ...c, ...patch } : c
+          ),
+        }));
+        return true;
       },
     }),
     [state, ready]
