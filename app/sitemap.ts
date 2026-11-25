@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { nucleos } from "@/lib/data/nucleos";
+import { noticias } from "@/lib/data/noticias";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://meulotefacil.com.br";
@@ -26,5 +27,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...nucleoRoutes];
+  const noticiaRoutes = noticias.map((n) => ({
+    url: `${base}/noticias/${n.slug}`,
+    lastModified: new Date(n.date),
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...nucleoRoutes, ...noticiaRoutes];
 }

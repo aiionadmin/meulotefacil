@@ -86,7 +86,7 @@ Layout (`app/(site)/layout.tsx`): Lenis, Preloader, PageTransition, `Header` fix
 | `/servicos` | Serviços | `ServicosCards` |
 | `/servicos/consultoria` | Consultoria municipal | Artigo + WhatsApp |
 | `/servicos/planos-e-projetos` | Planos e projetos | Artigo + WhatsApp |
-| `/noticias` | Notícias | Stub “em breve” |
+| `/noticias` | Notícias | Listagem + detalhe (`/noticias/[slug]`), ≥15 conteúdos (ramo / Campinas / geral) |
 | `/contato` | Contato | Unidades + formulário RHF/Zod (envio mock) + WhatsApp |
 
 Navegação pública (`lib/site-nav.ts`): Home, Quem somos, Regularização, Serviços, Notícias, Contato. CTA: **Falar com a equipe** (WhatsApp). Links `/auth` **não** aparecem no menu público.
