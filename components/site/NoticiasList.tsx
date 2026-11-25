@@ -47,8 +47,9 @@ function NoticiaCard({
       >
         <Image
           src={n.imagem}
-          alt=""
+          alt={n.title}
           fill
+          unoptimized={n.imagem.startsWith("http")}
           className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           sizes={
             featured
@@ -67,12 +68,20 @@ function NoticiaCard({
           featured && "md:justify-center md:p-8 lg:p-10"
         )}
       >
-        <time
-          dateTime={n.date}
-          className="font-mono-label text-[11px] tabular-nums text-muted-foreground"
-        >
-          {formatNoticiaDate(n.date)}
-        </time>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <time
+            dateTime={n.date}
+            className="font-mono-label text-[11px] tabular-nums text-muted-foreground"
+          >
+            {formatNoticiaDate(n.date)}
+          </time>
+          <span className="text-ink/20" aria-hidden>
+            ·
+          </span>
+          <span className="font-mono-label text-[11px] text-latossolo">
+            {n.sourceName}
+          </span>
+        </div>
         <h2
           className={cn(
             "font-display mt-2 text-ink transition-colors group-hover:text-latossolo",

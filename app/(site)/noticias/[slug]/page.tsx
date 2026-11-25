@@ -74,13 +74,19 @@ export default async function NoticiaPage({ params }: Props) {
         <div className="relative mt-10 aspect-[16/9] overflow-hidden rounded-sm border border-ink/10 bg-paper-muted">
           <Image
             src={n.imagem}
-            alt=""
+            alt={n.title}
             fill
             priority
+            unoptimized={n.imagem.startsWith("http")}
             className="object-cover"
             sizes="(max-width: 768px) 100vw, 768px"
           />
         </div>
+        {n.imageCredit ? (
+          <p className="mt-2 font-mono-label text-[11px] text-muted-foreground">
+            Foto: {n.imageCredit}
+          </p>
+        ) : null}
 
         <div className="mt-10 space-y-5 text-base leading-relaxed text-ink/85 sm:text-[1.05rem]">
           {n.body.map((p) => (
@@ -88,12 +94,36 @@ export default async function NoticiaPage({ params }: Props) {
           ))}
         </div>
 
+        <aside className="mt-10 rounded-sm border border-ink/10 bg-paper-muted/60 p-5 text-sm leading-relaxed text-muted-foreground">
+          <p>
+            Fonte:{" "}
+            <a
+              href={n.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-latossolo underline-offset-4 hover:underline"
+            >
+              {n.sourceName}
+            </a>
+            . Resumo editorial com base na matéria original — leia o texto
+            completo no link.
+          </p>
+        </aside>
+
         <div className="mt-12 flex flex-wrap gap-3 border-t border-ink/10 pt-8">
+          <a
+            href={n.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-sm bg-ink px-5 py-3 text-sm font-medium text-paper transition-colors hover:bg-latossolo hover:text-ink"
+          >
+            Ler na fonte original
+          </a>
           <a
             href={wa}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-sm bg-ink px-5 py-3 text-sm font-medium text-paper transition-colors hover:bg-latossolo hover:text-ink"
+            className="inline-flex items-center justify-center rounded-sm border border-ink/20 px-5 py-3 text-sm font-medium text-ink transition-colors hover:border-ink/40"
           >
             Falar com a equipe
           </a>
