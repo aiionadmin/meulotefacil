@@ -139,6 +139,12 @@ type CarteiraApi = {
   /** H12 — liberar / pagar comissão. */
   liberarComissao: (id: string) => boolean;
   pagarComissao: (id: string) => boolean;
+  /** H10/H12 — registrar comissão prevista na venda. */
+  addComissao: (input: {
+    corretorNome: string;
+    vendaRef: string;
+    valorPrevisto: number;
+  }) => boolean;
   /** H25 — cartórios e escrituras. */
   addCartorio: (input: {
     nome: string;
@@ -964,6 +970,25 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return ok;
+      },
+      addComissao: ({ corretorNome, vendaRef, valorPrevisto }) => {
+        if (!corretorNome.trim() || valorPrevisto <= 0) return false;
+        setState((s) => ({
+          ...s,
+          comissoes: [
+            {
+              id: uid("com"),
+              corretorNome: corretorNome.trim(),
+              vendaRef,
+              valorPrevisto: Math.round(valorPrevisto * 100) / 100,
+              valorLiberado: 0,
+              valorPago: 0,
+              status: "prevista" as const,
+            },
+            ...s.comissoes,
+          ],
+        }));
+        return true;
       },
       liberarComissao: (id) => {
         let ok = false;

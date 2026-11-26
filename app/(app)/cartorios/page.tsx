@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
-  DataTable,
   StatusPill,
   KpiGrid,
 } from "@/components/app/ModulePage";
@@ -15,6 +14,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { downloadExcel } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
@@ -98,64 +98,131 @@ export default function CartoriosPage() {
           },
         ]}
       />
-      <DataTable
-        columns={[
-          { key: "nome", label: "Cartório" },
-          { key: "cidade", label: "Cidade" },
-          { key: "contato", label: "Contato" },
-        ]}
-        rows={state.cartorios.map((c) => ({
-          nome: c.nome,
-          cidade: `${c.cidade}/${c.uf}`,
-          contato: c.contato ?? "—",
-        }))}
+      <ProcessList
+        storageKey="cartorios"
+        exportName="cartorios"
+        rows={state.cartorios}
         empty="Sem cartórios."
-      />
-      <DataTable
         columns={[
-          { key: "protocolo", label: "Protocolo" },
-          { key: "contrato", label: "Contrato" },
-          { key: "cartorio", label: "Cartório" },
-          { key: "status", label: "Status" },
-          { key: "acao", label: "" },
+          {
+            key: "nome",
+            label: "Cartório",
+            filter: { type: "text" },
+            getValue: (c) => c.nome,
+          },
+          {
+            key: "cidade",
+            label: "Cidade",
+            filter: { type: "text" },
+            getValue: (c) => `${c.cidade}/${c.uf}`,
+          },
+          {
+            key: "contato",
+            label: "Contato",
+            filter: { type: "text" },
+            getValue: (c) => c.contato ?? "",
+            render: (c) => c.contato ?? "—",
+          },
         ]}
-        rows={state.escrituras.map((e) => ({
-          protocolo: e.protocolo,
-          contrato: contratoLabel(e.contractId),
-          cartorio: cartorioNome(e.cartorioId),
-          status: (
-            <StatusPill tone="info">{statusLabel(e.status)}</StatusPill>
-          ),
-          acao:
-            e.status !== "registrada" ? (
-              <div className="flex flex-wrap gap-1">
-                {e.status === "pendente" ? (
+      />
+      <ProcessList
+        storageKey="escrituras"
+        exportName="escrituras"
+        rows={state.escrituras}
+        empty="Sem escrituras em andamento."
+        bulkActions={[
+          {
+            label: "Registrar seleção",
+            onClick: (ids) => {
+              let n = 0;
+              for (const id of ids) {
+                if (setEscrituraStatus(id, "registrada")) n += 1;
+              }
+              notify(n ? `${n} registrada(s)` : "Nenhuma pendente");
+            },
+          },
+          {
+            label: "Em andamento",
+            onClick: (ids) => {
+              let n = 0;
+              for (const id of ids) {
+                if (setEscrituraStatus(id, "em_andamento")) n += 1;
+              }
+              notify(n ? `${n} em andamento` : "Nenhuma alterada");
+            },
+          },
+        ]}
+        columns={[
+          {
+            key: "protocolo",
+            label: "Protocolo",
+            filter: { type: "text" },
+            getValue: (e) => e.protocolo,
+          },
+          {
+            key: "contrato",
+            label: "Contrato",
+            filter: { type: "text" },
+            getValue: (e) => contratoLabel(e.contractId),
+          },
+          {
+            key: "cartorio",
+            label: "Cartório",
+            filter: { type: "text" },
+            getValue: (e) => cartorioNome(e.cartorioId),
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: [
+                { value: "pendente", label: "Pendente" },
+                { value: "em_andamento", label: "Em andamento" },
+                { value: "registrada", label: "Registrada" },
+              ],
+            },
+            getValue: (e) => e.status,
+            render: (e) => (
+              <StatusPill tone="info">{statusLabel(e.status)}</StatusPill>
+            ),
+          },
+          {
+            key: "acao",
+            label: "",
+            getValue: () => "",
+            render: (e) =>
+              e.status !== "registrada" ? (
+                <div className="flex flex-wrap gap-1">
+                  {e.status === "pendente" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setEscrituraStatus(e.id, "em_andamento");
+                        notify("Em andamento");
+                      }}
+                    >
+                      Andamento
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setEscrituraStatus(e.id, "em_andamento");
-                      notify("Em andamento");
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      setEscrituraStatus(e.id, "registrada");
+                      notify("Escritura registrada");
                     }}
                   >
-                    Andamento
+                    Registrar
                   </Button>
-                ) : null}
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setEscrituraStatus(e.id, "registrada");
-                    notify("Escritura registrada");
-                  }}
-                >
-                  Registrar
-                </Button>
-              </div>
-            ) : (
-              "—"
-            ),
-        }))}
-        empty="Sem escrituras em andamento."
+                </div>
+              ) : (
+                "—"
+              ),
+          },
+        ]}
       />
 
       <FormDialog

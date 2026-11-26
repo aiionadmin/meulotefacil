@@ -5,15 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
-  DataTable,
   StatusPill,
   KpiGrid,
 } from "@/components/app/ModulePage";
-import {
-  Field,
-  FormDialog,
-  notify,
-} from "@/components/app/ModuleToolkit";
+import { Field, FormDialog, notify } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
 import { downloadCsv } from "@/lib/export/list-export";
 
 type Veiculo = {
@@ -40,7 +36,7 @@ export default function VeiculosComunicacaoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Veículos de comunicação"
-        description="Origem da venda (H13) com relatório de quantidade."
+        description="H13 — origem da venda; lista filtrável (C14/C15)."
         actions={
           <>
             <Button
@@ -59,7 +55,7 @@ export default function VeiculosComunicacaoPage() {
                 notify("Relatório exportado");
               }}
             >
-              Exportar
+              Excel
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               Novo veículo
@@ -69,7 +65,6 @@ export default function VeiculosComunicacaoPage() {
       />
       <KpiGrid
         items={[
-          { label: "Veículos", value: itens.length },
           { label: "Ativos", value: itens.filter((v) => v.ativo).length },
           {
             label: "Vendas atribuídas",
@@ -77,37 +72,66 @@ export default function VeiculosComunicacaoPage() {
           },
         ]}
       />
-      <DataTable
-        columns={[
-          { key: "nome", label: "Nome" },
-          { key: "vendas", label: "Vendas" },
-          { key: "status", label: "Status" },
-          { key: "acao", label: "" },
-        ]}
-        rows={itens.map((v) => ({
-          nome: v.nome,
-          vendas: String(v.vendas),
-          status: (
-            <StatusPill tone={v.ativo ? "ok" : "neutral"}>
-              {v.ativo ? "Ativo" : "Inativo"}
-            </StatusPill>
-          ),
-          acao: (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                setItens((list) =>
-                  list.map((x) =>
-                    x.id === v.id ? { ...x, ativo: !x.ativo } : x
-                  )
+      <ProcessList
+        storageKey="veiculos-comms"
+        exportName="veiculos-comunicacao"
+        rows={itens}
+        empty="Nenhum veículo."
+        bulkActions={[
+          {
+            label: "Ativar seleção",
+            onClick: (ids) => {
+              setItens((list) =>
+                list.map((v) =>
+                  ids.includes(v.id) ? { ...v, ativo: true } : v
                 )
-              }
-            >
-              Alternar
-            </Button>
-          ),
-        }))}
+              );
+              notify(`${ids.length} ativado(s)`);
+            },
+          },
+          {
+            label: "Desativar seleção",
+            onClick: (ids) => {
+              setItens((list) =>
+                list.map((v) =>
+                  ids.includes(v.id) ? { ...v, ativo: false } : v
+                )
+              );
+              notify(`${ids.length} desativado(s)`);
+            },
+          },
+        ]}
+        columns={[
+          {
+            key: "nome",
+            label: "Nome",
+            filter: { type: "text" },
+            getValue: (v) => v.nome,
+          },
+          {
+            key: "vendas",
+            label: "Vendas",
+            filter: { type: "range" },
+            getValue: (v) => v.vendas,
+          },
+          {
+            key: "ativo",
+            label: "Ativo",
+            filter: {
+              type: "status",
+              options: [
+                { value: "sim", label: "Sim" },
+                { value: "nao", label: "Não" },
+              ],
+            },
+            getValue: (v) => (v.ativo ? "sim" : "nao"),
+            render: (v) => (
+              <StatusPill tone={v.ativo ? "ok" : "neutral"}>
+                {v.ativo ? "Sim" : "Não"}
+              </StatusPill>
+            ),
+          },
+        ]}
       />
       <FormDialog
         open={open}
@@ -119,15 +143,15 @@ export default function VeiculosComunicacaoPage() {
             return;
           }
           setItens((list) => [
+            ...list,
             {
               id: `vc-${Date.now()}`,
               nome: nome.trim(),
               ativo: true,
               vendas: 0,
             },
-            ...list,
           ]);
-          notify("Veículo criado", nome);
+          notify("Veículo criado", nome.trim());
           setNome("");
           setOpen(false);
         }}

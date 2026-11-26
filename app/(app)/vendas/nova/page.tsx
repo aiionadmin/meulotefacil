@@ -10,11 +10,8 @@ import {
   ModuleSection,
   StatusPill,
 } from "@/components/app/ModulePage";
-import {
-  Field,
-  fieldControlClass,
-  notify,
-} from "@/components/app/ModuleToolkit";
+import { Field, notify } from "@/components/app/ModuleToolkit";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
@@ -23,6 +20,7 @@ const STEPS = [
   "Lotes",
   "Comprador",
   "Promitentes",
+  "Dados do lote",
   "Plano",
   "Comissão",
   "Finalizar",
@@ -30,7 +28,7 @@ const STEPS = [
 
 export default function NovaVendaPage() {
   const router = useRouter();
-  const { state, addContract, changeLotStatus } = useCarteira();
+  const { state, addContract, changeLotStatus, addComissao } = useCarteira();
   const { state: f1 } = useFase1();
   const [step, setStep] = useState(0);
   const [developmentId, setDevelopmentId] = useState(
@@ -42,10 +40,12 @@ export default function NovaVendaPage() {
   const [promitentes, setPromitentes] = useState<string[]>([]);
   const [promitenteDraft, setPromitenteDraft] = useState("");
   const [planId, setPlanId] = useState(state.paymentPlans[0]?.id ?? "");
+  const [copyFromContractId, setCopyFromContractId] = useState("");
   const [entradaPct, setEntradaPct] = useState(20);
   const [comissaoPct, setComissaoPct] = useState(3);
   const [corretor, setCorretor] = useState("Carla Corretora");
   const [recado, setRecado] = useState("");
+  const [obsLote, setObsLote] = useState("");
 
   const disponiveis = useMemo(
     () =>
@@ -67,6 +67,7 @@ export default function NovaVendaPage() {
       p.papeis.includes("cliente") ||
       p.papeis.includes("pre_cadastro")
   );
+  const corretores = f1.people.filter((p) => p.papeis.includes("corretor"));
 
   const toggleLot = (id: string) => {
     setLotIds((prev) =>
@@ -92,6 +93,7 @@ export default function NovaVendaPage() {
     const resto = total - entrada;
     const valorParcela =
       Math.round((resto / Math.max(1, prestacoes)) * 100) / 100;
+    const numeros: string[] = [];
     let ok = 0;
     for (const lot of selectedLots) {
       const ct = addContract({
@@ -108,6 +110,7 @@ export default function NovaVendaPage() {
       });
       if (ct) {
         changeLotStatus([lot.id], "vendido", `Venda ${ct.numero}`);
+        numeros.push(ct.numero);
         ok += 1;
       }
     }
@@ -115,9 +118,17 @@ export default function NovaVendaPage() {
       notify("Nenhum contrato gerado", "Verifique disponibilidade dos lotes");
       return;
     }
+    const comissaoValor = Math.round(((total * comissaoPct) / 100) * 100) / 100;
+    addComissao({
+      corretorNome: corretor,
+      vendaRef: numeros.join(", "),
+      valorPrevisto: comissaoValor,
+    });
     notify(
       `${ok} contrato(s)`,
-      `Comissão ${comissaoPct}% · ${corretor}${recado ? ` · ${recado}` : ""}`
+      `Comissão ${comissaoPct}% · ${corretor}${recado ? ` · ${recado}` : ""}${
+        obsLote ? ` · ${obsLote}` : ""
+      }`
     );
     router.push("/contratos");
   };
@@ -126,7 +137,7 @@ export default function NovaVendaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Nova venda"
-        description="Etapas LoteWin: lotes → comprador → promitentes → plano → comissão → finalizar."
+        description="H10 — multi-lote: lotes → comprador → promitentes → dados → plano → comissão → finalizar."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/vendas">Voltar</Link>
@@ -136,7 +147,10 @@ export default function NovaVendaPage() {
 
       <div className="flex flex-wrap gap-2">
         {STEPS.map((label, i) => (
-          <StatusPill key={label} tone={i === step ? "info" : i < step ? "ok" : "neutral"}>
+          <StatusPill
+            key={label}
+            tone={i === step ? "info" : i < step ? "ok" : "neutral"}
+          >
             {i + 1}. {label}
           </StatusPill>
         ))}
@@ -145,21 +159,22 @@ export default function NovaVendaPage() {
       {step === 0 ? (
         <ModuleSection title="Selecionar lote(s)">
           <Field label="Empreendimento">
-            <select
-              className={fieldControlClass}
+            <SearchSelect
               value={developmentId}
-              onChange={(e) => {
-                setDevelopmentId(e.target.value);
+              onChange={(id) => {
+                setDevelopmentId(id);
                 setLotIds([]);
               }}
-            >
-              {state.developments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.nome}
-                </option>
-              ))}
-            </select>
+              placeholder="Buscar empreendimento…"
+              options={state.developments.map((d) => ({
+                value: d.id,
+                label: d.nome,
+              }))}
+            />
           </Field>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {lotIds.length} selecionado(s) · {formatBRL(total)}
+          </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {disponiveis.map((l) => {
               const on = lotIds.includes(l.id);
@@ -195,23 +210,19 @@ export default function NovaVendaPage() {
       {step === 1 ? (
         <ModuleSection title="Comprador">
           <Field label="Pessoa cadastrada">
-            <select
-              className={fieldControlClass}
+            <SearchSelect
               value={compradorId}
-              onChange={(e) => {
-                const id = e.target.value;
+              onChange={(id) => {
                 setCompradorId(id);
                 const p = compradores.find((x) => x.id === id);
                 if (p) setCompradorNome(p.nome);
               }}
-            >
-              <option value="">— digitar nome —</option>
-              {compradores.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome} · {p.documento}
-                </option>
-              ))}
-            </select>
+              placeholder="Buscar comprador…"
+              options={compradores.map((p) => ({
+                value: p.id,
+                label: `${p.nome} · ${p.documento}`,
+              }))}
+            />
           </Field>
           <Field label="Nome do comprador *">
             <Input
@@ -270,19 +281,74 @@ export default function NovaVendaPage() {
       ) : null}
 
       {step === 3 ? (
+        <ModuleSection title="Dados do(s) lote(s)">
+          <ul className="space-y-2 text-sm">
+            {selectedLots.map((l) => (
+              <li
+                key={l.id}
+                className="rounded-md border border-border px-3 py-2"
+              >
+                <div className="font-medium">
+                  {l.empNome} · {l.quadra}/{l.lote}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Área {l.area} m² · {formatBRL(l.valor)} · m²{" "}
+                  {formatBRL(l.valorM2)}
+                  {l.matricula ? ` · matrícula ${l.matricula}` : ""}
+                </div>
+                {(l.frente || l.fundo || l.direita || l.esquerda) && (
+                  <div className="text-xs text-muted-foreground">
+                    Confrontações: F {l.frente ?? "—"} · Fd {l.fundo ?? "—"} · D{" "}
+                    {l.direita ?? "—"} · E {l.esquerda ?? "—"}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Field label="Observações / recados do lote">
+            <Input
+              value={obsLote}
+              onChange={(e) => setObsLote(e.target.value)}
+              placeholder="Ex.: entrega de escritura em 90 dias"
+            />
+          </Field>
+        </ModuleSection>
+      ) : null}
+
+      {step === 4 ? (
         <ModuleSection title="Plano de pagamento">
+          <Field label="Copiar plano de contrato existente">
+            <SearchSelect
+              value={copyFromContractId}
+              onChange={(id) => {
+                setCopyFromContractId(id);
+                const c = state.contracts.find((x) => x.id === id);
+                if (!c) return;
+                const match = state.paymentPlans.find(
+                  (p) =>
+                    p.developmentId === c.developmentId ||
+                    p.nome.toLowerCase().includes(c.tipoReajuste.toLowerCase())
+                );
+                if (match) setPlanId(match.id);
+                notify("Plano copiado", c.numero);
+              }}
+              placeholder="Buscar contrato modelo…"
+              options={state.contracts.map((c) => ({
+                value: c.id,
+                label: `${c.numero} · ${c.compradorNome}`,
+              }))}
+            />
+          </Field>
           <Field label="Plano">
-            <select
-              className={fieldControlClass}
+            <SearchSelect
               value={planId}
-              onChange={(e) => setPlanId(e.target.value)}
-            >
-              {state.paymentPlans.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome} · {p.prestacoes}x · {p.moedaRef}
-                </option>
-              ))}
-            </select>
+              onChange={setPlanId}
+              placeholder="Buscar plano…"
+              options={state.paymentPlans.map((p) => ({
+                value: p.id,
+                label: `${p.nome} · ${p.prestacoes}x · ${p.moedaRef}`,
+              }))}
+            />
           </Field>
           <Field label="% entrada">
             <Input
@@ -300,9 +366,25 @@ export default function NovaVendaPage() {
         </ModuleSection>
       ) : null}
 
-      {step === 4 ? (
+      {step === 5 ? (
         <ModuleSection title="Comissão">
           <Field label="Corretor">
+            <SearchSelect
+              value={
+                corretores.find((c) => c.nome === corretor)?.id ?? ""
+              }
+              onChange={(id) => {
+                const p = corretores.find((x) => x.id === id);
+                if (p) setCorretor(p.nome);
+              }}
+              placeholder="Buscar corretor…"
+              options={corretores.map((p) => ({
+                value: p.id,
+                label: p.nome,
+              }))}
+            />
+          </Field>
+          <Field label="Nome do corretor">
             <Input
               value={corretor}
               onChange={(e) => setCorretor(e.target.value)}
@@ -321,7 +403,7 @@ export default function NovaVendaPage() {
         </ModuleSection>
       ) : null}
 
-      {step === 5 ? (
+      {step === 6 ? (
         <ModuleSection title="Resumo">
           <p className="text-sm">
             {selectedLots.length} lote(s) · {formatBRL(total)}
@@ -336,6 +418,9 @@ export default function NovaVendaPage() {
             Plano: {plan?.nome ?? "—"} · entrada {entradaPct}% · comissão{" "}
             {comissaoPct}% ({corretor})
           </p>
+          {obsLote ? (
+            <p className="text-sm text-muted-foreground">Obs.: {obsLote}</p>
+          ) : null}
           <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
             {selectedLots.map((l) => (
               <li key={l.id}>
