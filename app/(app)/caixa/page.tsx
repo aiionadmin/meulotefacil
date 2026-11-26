@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
-  DataTable,
   KpiGrid,
   ModuleSection,
 } from "@/components/app/ModulePage";
@@ -15,6 +14,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { downloadExcel, printList } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
@@ -140,72 +140,163 @@ export default function CaixaPage() {
           },
         ]}
       />
-      <DataTable
-        columns={[
-          { key: "data", label: "Data" },
-          { key: "cliente", label: "Cliente" },
-          { key: "valor", label: "Valor" },
-          { key: "forma", label: "Forma" },
-          { key: "auth", label: "Autenticação" },
-          { key: "fech", label: "Fechamento" },
-          { key: "acao", label: "" },
-        ]}
-        rows={state.caixa.map((m) => ({
-          data: m.data,
-          cliente: m.cliente,
-          valor: formatBRL(m.valor),
-          forma: m.forma,
-          auth: m.estornado ? (
-            <span className="text-destructive">ESTORNADO</span>
-          ) : (
-            m.autenticacao
-          ),
-          fech: m.fechamentoId ? "fechado" : "aberto",
-          acao:
-            !m.estornado &&
-            !m.fechamentoId &&
-            (!params.estornoSoAdmin || isAdmin) ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (!window.confirm("Estornar este recebimento?")) return;
-                  if (!estornarCaixa(m.id)) {
-                    notify("Não foi possível estornar");
-                    return;
-                  }
-                  notify("Estorno registrado", m.autenticacao);
-                }}
-              >
-                Estornar
-              </Button>
-            ) : (
-              "—"
-            ),
-        }))}
+      <ProcessList
+        storageKey="caixa-mov"
+        exportName="caixa"
+        rows={state.caixa}
         empty="Nenhum recebimento no caixa nesta sessão."
+        bulkActions={
+          params.estornoSoAdmin && !isAdmin
+            ? undefined
+            : [
+                {
+                  label: "Estornar abertos",
+                  tone: "danger",
+                  onClick: (ids) => {
+                    let n = 0;
+                    for (const id of ids) {
+                      const m = state.caixa.find((x) => x.id === id);
+                      if (!m || m.estornado || m.fechamentoId) continue;
+                      if (estornarCaixa(id)) n += 1;
+                    }
+                    notify(n ? `${n} estorno(s)` : "Nenhum aberto");
+                  },
+                },
+              ]
+        }
+        columns={[
+          {
+            key: "data",
+            label: "Data",
+            filter: { type: "period" },
+            getValue: (m) => m.data,
+          },
+          {
+            key: "cliente",
+            label: "Cliente",
+            filter: { type: "text" },
+            getValue: (m) => m.cliente,
+          },
+          {
+            key: "valor",
+            label: "Valor",
+            filter: { type: "range" },
+            getValue: (m) => m.valor,
+            render: (m) => formatBRL(m.valor),
+          },
+          {
+            key: "forma",
+            label: "Forma",
+            filter: { type: "text" },
+            getValue: (m) => m.forma,
+          },
+          {
+            key: "auth",
+            label: "Autenticação",
+            filter: { type: "text" },
+            getValue: (m) => m.autenticacao,
+            render: (m) =>
+              m.estornado ? (
+                <span className="text-destructive">ESTORNADO</span>
+              ) : (
+                m.autenticacao
+              ),
+          },
+          {
+            key: "fech",
+            label: "Fechamento",
+            filter: {
+              type: "status",
+              options: [
+                { value: "aberto", label: "Aberto" },
+                { value: "fechado", label: "Fechado" },
+              ],
+            },
+            getValue: (m) => (m.fechamentoId ? "fechado" : "aberto"),
+          },
+          {
+            key: "acao",
+            label: "",
+            getValue: () => "",
+            render: (m) =>
+              !m.estornado &&
+              !m.fechamentoId &&
+              (!params.estornoSoAdmin || isAdmin) ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!window.confirm("Estornar este recebimento?")) return;
+                    if (!estornarCaixa(m.id)) {
+                      notify("Não foi possível estornar");
+                      return;
+                    }
+                    notify("Estorno registrado", m.autenticacao);
+                  }}
+                >
+                  Estornar
+                </Button>
+              ) : (
+                "—"
+              ),
+          },
+        ]}
       />
       {(state.caixaFechamentos ?? []).length ? (
         <ModuleSection title="Histórico de fechamentos (H20)">
-          <DataTable
+          <ProcessList
+            storageKey="caixa-fech"
+            exportName="fechamentos-caixa"
+            rows={state.caixaFechamentos ?? []}
             columns={[
-              { key: "data", label: "Data" },
-              { key: "antes", label: "Saldo antes" },
-              { key: "ent", label: "Entradas" },
-              { key: "est", label: "Estornos" },
-              { key: "depois", label: "Saldo depois" },
-              { key: "qtd", label: "Mov." },
-              { key: "quem", label: "Quem" },
+              {
+                key: "data",
+                label: "Data",
+                filter: { type: "period" },
+                getValue: (f) => f.data,
+              },
+              {
+                key: "antes",
+                label: "Saldo antes",
+                filter: { type: "range" },
+                getValue: (f) => f.saldoAntes,
+                render: (f) => formatBRL(f.saldoAntes),
+              },
+              {
+                key: "ent",
+                label: "Entradas",
+                filter: { type: "range" },
+                getValue: (f) => f.entradas,
+                render: (f) => formatBRL(f.entradas),
+              },
+              {
+                key: "est",
+                label: "Estornos",
+                filter: { type: "range" },
+                getValue: (f) => f.estornos,
+                render: (f) => formatBRL(f.estornos),
+              },
+              {
+                key: "depois",
+                label: "Saldo depois",
+                filter: { type: "range" },
+                getValue: (f) => f.saldoDepois,
+                render: (f) => formatBRL(f.saldoDepois),
+              },
+              {
+                key: "qtd",
+                label: "Mov.",
+                filter: { type: "range" },
+                getValue: (f) => f.qtdMovimentos,
+              },
+              {
+                key: "quem",
+                label: "Quem",
+                filter: { type: "text" },
+                getValue: (f) => f.quem,
+              },
             ]}
-            rows={(state.caixaFechamentos ?? []).map((f) => ({
-              data: f.data,
-              antes: formatBRL(f.saldoAntes),
-              ent: formatBRL(f.entradas),
-              est: formatBRL(f.estornos),
-              depois: formatBRL(f.saldoDepois),
-              qtd: String(f.qtdMovimentos),
-              quem: f.quem,
-            }))}
           />
         </ModuleSection>
       ) : null}

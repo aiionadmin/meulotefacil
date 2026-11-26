@@ -4,19 +4,18 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ModuleHeader,
-  DataTable,
   StatusPill,
 } from "@/components/app/ModulePage";
-import {
-  fieldControlClass,
-  notify,
-} from "@/components/app/ModuleToolkit";
+import { notify } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { downloadTextTemplate } from "@/lib/export/list-export";
 import {
   buildContratoDocText,
   downloadContratoDocPdf,
   type ContratoDocTipo,
 } from "@/lib/export/contrato-docs";
+import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 
 const MODELOS: {
@@ -43,11 +42,15 @@ const MODELOS: {
 
 export default function DocumentosContratoPage() {
   const { state, saldoDevedor } = useCarteira();
-  const [contractId, setContractId] = useState(state.contracts[0]?.id ?? "");
+  const { filterByDevelopmentEmpresa } = useEmpresa();
+  const contracts = useMemo(
+    () => filterByDevelopmentEmpresa(state.contracts, state.developments),
+    [filterByDevelopmentEmpresa, state.contracts, state.developments]
+  );
+  const [contractId, setContractId] = useState(contracts[0]?.id ?? "");
   const contrato = useMemo(
-    () =>
-      state.contracts.find((c) => c.id === contractId) ?? state.contracts[0],
-    [state.contracts, contractId]
+    () => contracts.find((c) => c.id === contractId) ?? contracts[0],
+    [contracts, contractId]
   );
 
   const docInput = contrato
@@ -74,65 +77,84 @@ export default function DocumentosContratoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Documentos do contrato"
-        description="Modelos LoteWin: contrato, promissórias e mala direta (H14)."
+        description="H14 — modelos LoteWin; contratos filtrados pela empresa (C01)."
         actions={
-          <select
-            className={fieldControlClass + " w-auto min-w-[200px]"}
-            value={contrato?.id ?? ""}
-            onChange={(e) => setContractId(e.target.value)}
-          >
-            {state.contracts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.numero} · {c.compradorNome}
-              </option>
-            ))}
-          </select>
+          <div className="w-[240px]">
+            <SearchSelect
+              value={contrato?.id ?? ""}
+              onChange={setContractId}
+              placeholder="Buscar contrato…"
+              options={contracts.map((c) => ({
+                value: c.id,
+                label: `${c.numero} · ${c.compradorNome}`,
+              }))}
+            />
+          </div>
         }
       />
-      <DataTable
+      <ProcessList
+        storageKey="docs-contrato-modelos"
         exportName="modelos-contrato"
+        rows={MODELOS}
+        empty="Sem modelos."
         columns={[
-          { key: "nome", label: "Modelo" },
-          { key: "desc", label: "Descrição" },
-          { key: "status", label: "Status" },
-          { key: "acao", label: "" },
+          {
+            key: "nome",
+            label: "Modelo",
+            filter: { type: "text" },
+            getValue: (m) => m.nome,
+          },
+          {
+            key: "desc",
+            label: "Descrição",
+            filter: { type: "text" },
+            getValue: (m) => m.descricao,
+          },
+          {
+            key: "status",
+            label: "Status",
+            getValue: () => "disponivel",
+            render: () => <StatusPill tone="ok">Disponível</StatusPill>,
+          },
+          {
+            key: "acao",
+            label: "",
+            getValue: () => "",
+            render: (m) => (
+              <div className="flex flex-wrap gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!docInput}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!docInput) return;
+                    downloadTextTemplate(
+                      `${m.id}-${docInput.numero}.txt`,
+                      buildContratoDocText(m.id, docInput)
+                    );
+                    notify("TXT gerado", m.nome);
+                  }}
+                >
+                  TXT
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!docInput}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!docInput) return;
+                    downloadContratoDocPdf(m.id, docInput);
+                    notify("PDF gerado", m.nome);
+                  }}
+                >
+                  PDF
+                </Button>
+              </div>
+            ),
+          },
         ]}
-        rows={MODELOS.map((m) => ({
-          nome: m.nome,
-          desc: m.descricao,
-          status: <StatusPill tone="ok">Disponível</StatusPill>,
-          acao: (
-            <div className="flex flex-wrap gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!docInput}
-                onClick={() => {
-                  if (!docInput) return;
-                  downloadTextTemplate(
-                    `${m.id}-${docInput.numero}.txt`,
-                    buildContratoDocText(m.id, docInput)
-                  );
-                  notify("TXT gerado", m.nome);
-                }}
-              >
-                TXT
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!docInput}
-                onClick={() => {
-                  if (!docInput) return;
-                  downloadContratoDocPdf(m.id, docInput);
-                  notify("PDF gerado", m.nome);
-                }}
-              >
-                PDF
-              </Button>
-            </div>
-          ),
-        }))}
       />
     </div>
   );

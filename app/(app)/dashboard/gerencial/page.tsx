@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
   emAtrasoContratos,
   emAtrasoFinanceiroTitulos,
 } from "@/lib/indicators/receivables";
+import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useObras } from "@/lib/store/obras-store";
 import { useCompras } from "@/lib/store/compras-store";
@@ -25,6 +27,33 @@ export default function DashboardGerencialPage() {
   const { state: compras } = useCompras();
   const { fluxoMensal, state: fin } = useFinanceiro();
   const { state: fluxo } = useFluxo();
+  const { selectedId, filterByEmpresa, filterByDevelopmentEmpresa } =
+    useEmpresa();
+
+  const developments = useMemo(
+    () => filterByEmpresa(cart.developments),
+    [filterByEmpresa, cart.developments]
+  );
+  const lots = useMemo(
+    () => filterByDevelopmentEmpresa(cart.lots, cart.developments),
+    [filterByDevelopmentEmpresa, cart.lots, cart.developments]
+  );
+  const installments = useMemo(
+    () =>
+      filterByDevelopmentEmpresa(
+        cart.installments.map((i) => {
+          const c = cart.contracts.find((x) => x.id === i.contractId);
+          return { ...i, developmentId: c?.developmentId };
+        }),
+        cart.developments
+      ),
+    [
+      filterByDevelopmentEmpresa,
+      cart.installments,
+      cart.contracts,
+      cart.developments,
+    ]
+  );
 
   const leads = fluxo.leads.length;
   const convertidas = fluxo.proposals.filter(
@@ -40,8 +69,8 @@ export default function DashboardGerencialPage() {
       ? Math.round((inad.length / abertoRec.length) * 1000) / 10
       : 0;
   const emAtrasoFin = emAtrasoFinanceiroTitulos(fin.recebimentos);
-  const emAtrasoCtr = emAtrasoContratos(cart.installments);
-  const aReceberCtr = aReceberContratos(cart.installments);
+  const emAtrasoCtr = emAtrasoContratos(installments);
+  const aReceberCtr = aReceberContratos(installments);
 
   const fluxoGeral = fluxoMensal("geral");
   const fluxoEmpresa = fluxoMensal("empresa");
@@ -55,9 +84,9 @@ export default function DashboardGerencialPage() {
     {}
   );
 
-  const vendasPorEmp = cart.developments.map((d) => ({
+  const vendasPorEmp = developments.map((d) => ({
     nome: d.nome,
-    vendidos: cart.lots.filter(
+    vendidos: lots.filter(
       (l) => l.developmentId === d.id && l.status === "vendido"
     ).length,
   }));
@@ -66,7 +95,7 @@ export default function DashboardGerencialPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Dashboard · Gerencial"
-        description="Direção e Financeiro — conversão, inadimplência, fluxo e obras."
+        description={`Direção — empresa: ${selectedId === "todas" ? "Todas" : selectedId.slice(0, 8)}…`}
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/dashboard/operacional">Números gerais</Link>
