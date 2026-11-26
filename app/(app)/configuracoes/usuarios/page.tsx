@@ -6,45 +6,84 @@ import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
   StatusPill,
 } from "@/components/app/ModulePage";
-import {
-  Field,
-  FilterBar,
-  FormDialog,
-  fieldControlClass,
-  notify,
-} from "@/components/app/ModuleToolkit";
+import { Field, FormDialog, notify } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
+import { SearchSelect } from "@/components/app/SearchSelect";
+import { useEmpresa } from "@/lib/empresa/context";
+import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
+import { useObras } from "@/lib/store/obras-store";
 
 export default function UsuariosConfigPage() {
   const { state, addUser, updateUser } = useFase1();
-  const [q, setQ] = useState("");
+  const { empresas } = useEmpresa();
+  const { state: cart } = useCarteira();
+  const { state: obras } = useObras();
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
     nome: "",
     email: "",
     profileId: state.profiles[0]?.id ?? "",
+    chave: false,
     todasEmpresas: true,
-    verObras: true,
+    organizationIds: [] as string[],
+    verTodasObras: true,
+    developmentIds: [] as string[],
+    obraIds: [] as string[],
   });
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return state.users;
-    return state.users.filter((u) =>
-      [u.nome, u.email].join(" ").toLowerCase().includes(term)
-    );
-  }, [state.users, q]);
+  const editUser = useMemo(
+    () => (editId ? state.users.find((u) => u.id === editId) : null),
+    [editId, state.users]
+  );
+
+  const openCreate = () => {
+    setEditId(null);
+    setForm({
+      nome: "",
+      email: "",
+      profileId: state.profiles[0]?.id ?? "",
+      chave: false,
+      todasEmpresas: true,
+      organizationIds: [state.organization.id],
+      verTodasObras: true,
+      developmentIds: [],
+      obraIds: [],
+    });
+    setOpen(true);
+  };
+
+  const openEdit = (id: string) => {
+    const u = state.users.find((x) => x.id === id);
+    if (!u) return;
+    setEditId(id);
+    setForm({
+      nome: u.nome,
+      email: u.email,
+      profileId: u.profileId,
+      chave: u.chave,
+      todasEmpresas: u.todasEmpresas ?? u.organizationIds.length > 1,
+      organizationIds: u.organizationIds,
+      verTodasObras: u.verTodasObras ?? true,
+      developmentIds: u.developmentIds ?? [],
+      obraIds: u.obraIds ?? [],
+    });
+    setOpen(true);
+  };
+
+  const toggleId = (list: string[], id: string) =>
+    list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Usuários"
-        description="Nome, e-mail, perfil, status e usuário-chave. Visibilidade de empresas e empreendimentos no cadastro."
+        description="J02 — perfil, usuário-chave e visibilidade de empresas, empreendimentos e obras."
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={openCreate}>
             Novo usuário
           </Button>
         }
@@ -62,61 +101,159 @@ export default function UsuariosConfigPage() {
           },
         ]}
       />
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar usuário…" />
-      <DataTable
-        columns={[
-          { key: "nome", label: "Nome" },
-          { key: "email", label: "E-mail" },
-          { key: "perfil", label: "Perfil" },
-          { key: "chave", label: "Chave" },
-          { key: "status", label: "Status" },
-          { key: "acao", label: "" },
+      <ProcessList
+        storageKey="usuarios-config"
+        exportName="usuarios"
+        rows={state.users}
+        empty="Sem usuários."
+        bulkActions={[
+          {
+            label: "Ativar seleção",
+            onClick: (ids) => {
+              for (const id of ids) updateUser(id, { status: "ativo" });
+              notify(`${ids.length} ativado(s)`);
+            },
+          },
+          {
+            label: "Inativar seleção",
+            onClick: (ids) => {
+              for (const id of ids) updateUser(id, { status: "inativo" });
+              notify(`${ids.length} inativado(s)`);
+            },
+          },
         ]}
-        rows={filtered.map((u) => {
-          const perfil = state.profiles.find((p) => p.id === u.profileId);
-          return {
-            nome: <span className="font-medium">{u.nome}</span>,
-            email: u.email,
-            perfil: perfil?.nome ?? "—",
-            chave: u.chave ? "Sim" : "Não",
-            status: (
+        columns={[
+          {
+            key: "nome",
+            label: "Nome",
+            filter: { type: "text" },
+            getValue: (u) => u.nome,
+            render: (u) => <span className="font-medium">{u.nome}</span>,
+          },
+          {
+            key: "email",
+            label: "E-mail",
+            filter: { type: "text" },
+            getValue: (u) => u.email,
+          },
+          {
+            key: "perfil",
+            label: "Perfil",
+            filter: { type: "text" },
+            getValue: (u) =>
+              state.profiles.find((p) => p.id === u.profileId)?.nome ?? "",
+          },
+          {
+            key: "empresas",
+            label: "Empresas",
+            filter: { type: "text" },
+            getValue: (u) =>
+              u.todasEmpresas
+                ? "todas"
+                : String(u.organizationIds.length),
+            render: (u) =>
+              u.todasEmpresas
+                ? "Todas"
+                : `${u.organizationIds.length} empresa(s)`,
+          },
+          {
+            key: "chave",
+            label: "Chave",
+            filter: {
+              type: "status",
+              options: [
+                { value: "sim", label: "Sim" },
+                { value: "nao", label: "Não" },
+              ],
+            },
+            getValue: (u) => (u.chave ? "sim" : "nao"),
+            render: (u) => (u.chave ? "Sim" : "Não"),
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: [
+                { value: "ativo", label: "Ativo" },
+                { value: "inativo", label: "Inativo" },
+              ],
+            },
+            getValue: (u) => u.status,
+            render: (u) => (
               <StatusPill tone={u.status === "ativo" ? "ok" : "warn"}>
                 {u.status}
               </StatusPill>
             ),
-            acao: (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const next = u.status === "ativo" ? "inativo" : "ativo";
-                  updateUser(u.id, { status: next });
-                  notify("Status atualizado", next);
-                }}
-              >
-                Alternar
-              </Button>
+          },
+          {
+            key: "acao",
+            label: "",
+            getValue: () => "",
+            render: (u) => (
+              <div className="flex flex-wrap gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(u.id);
+                  }}
+                >
+                  Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = u.status === "ativo" ? "inativo" : "ativo";
+                    updateUser(u.id, { status: next });
+                    notify("Status atualizado", next);
+                  }}
+                >
+                  Alternar
+                </Button>
+              </div>
             ),
-          };
-        })}
+          },
+        ]}
       />
 
       <FormDialog
         open={open}
         onOpenChange={setOpen}
-        title="Novo usuário"
-        submitLabel="Criar"
+        title={editUser ? "Editar usuário" : "Novo usuário"}
+        submitLabel={editUser ? "Salvar" : "Criar"}
         onSubmit={() => {
-          if (!form.nome || !form.email) return;
-          addUser({
+          if (!form.nome || !form.email) {
+            notify("Nome e e-mail obrigatórios");
+            return;
+          }
+          const orgs = form.todasEmpresas
+            ? empresas.map((e) => e.id)
+            : form.organizationIds.length
+              ? form.organizationIds
+              : [state.organization.id];
+          const payload = {
             nome: form.nome,
             email: form.email,
-            status: "ativo",
-            chave: false,
+            status: "ativo" as const,
+            chave: form.chave,
             profileId: form.profileId,
-            organizationIds: [state.organization.id],
-          });
-          notify("Usuário criado", form.email);
+            organizationIds: orgs,
+            todasEmpresas: form.todasEmpresas,
+            verTodasObras: form.verTodasObras,
+            developmentIds: form.verTodasObras ? [] : form.developmentIds,
+            obraIds: form.verTodasObras ? [] : form.obraIds,
+          };
+          if (editId) {
+            updateUser(editId, payload);
+            notify("Usuário atualizado", form.email);
+          } else {
+            addUser(payload);
+            notify("Usuário criado", form.email);
+          }
           setOpen(false);
         }}
       >
@@ -136,20 +273,26 @@ export default function UsuariosConfigPage() {
           />
         </Field>
         <Field label="Perfil">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
             value={form.profileId}
-            onChange={(e) => setForm({ ...form, profileId: e.target.value })}
-          >
-            {state.profiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
+            onChange={(profileId) => setForm({ ...form, profileId })}
+            placeholder="Buscar perfil…"
+            options={state.profiles.map((p) => ({
+              value: p.id,
+              label: p.nome,
+            }))}
+          />
         </Field>
-        <Field label="Visibilidade de empresas (C01)">
-          <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.chave}
+            onChange={(e) => setForm({ ...form, chave: e.target.checked })}
+          />
+          Usuário-chave
+        </label>
+        <Field label="Visibilidade de empresas (J02)">
+          <label className="mb-2 flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={form.todasEmpresas}
@@ -159,18 +302,91 @@ export default function UsuariosConfigPage() {
             />
             Todas as empresas
           </label>
+          {!form.todasEmpresas ? (
+            <div className="space-y-1">
+              {empresas.map((e) => (
+                <label key={e.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.organizationIds.includes(e.id)}
+                    onChange={() =>
+                      setForm({
+                        ...form,
+                        organizationIds: toggleId(
+                          form.organizationIds,
+                          e.id
+                        ),
+                      })
+                    }
+                  />
+                  {e.nome}
+                </label>
+              ))}
+            </div>
+          ) : null}
         </Field>
-        <Field label="Visibilidade de obras">
-          <label className="flex items-center gap-2 text-sm">
+        <Field label="Visibilidade de obras / empreendimentos">
+          <label className="mb-2 flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={form.verObras}
+              checked={form.verTodasObras}
               onChange={(e) =>
-                setForm({ ...form, verObras: e.target.checked })
+                setForm({ ...form, verTodasObras: e.target.checked })
               }
             />
-            Ver todas as obras / empreendimentos
+            Ver todas as obras e empreendimentos
           </label>
+          {!form.verTodasObras ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">
+                  Empreendimentos
+                </p>
+                {cart.developments.map((d) => (
+                  <label
+                    key={d.id}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.developmentIds.includes(d.id)}
+                      onChange={() =>
+                        setForm({
+                          ...form,
+                          developmentIds: toggleId(
+                            form.developmentIds,
+                            d.id
+                          ),
+                        })
+                      }
+                    />
+                    {d.nome}
+                  </label>
+                ))}
+              </div>
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">Obras</p>
+                {obras.obras.map((o) => (
+                  <label
+                    key={o.id}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.obraIds.includes(o.id)}
+                      onChange={() =>
+                        setForm({
+                          ...form,
+                          obraIds: toggleId(form.obraIds, o.id),
+                        })
+                      }
+                    />
+                    {o.nome}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </Field>
       </FormDialog>
     </div>

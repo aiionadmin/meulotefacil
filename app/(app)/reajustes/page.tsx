@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
   StatusPill,
   ModuleSection,
 } from "@/components/app/ModulePage";
@@ -16,6 +15,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { formatBRL } from "@/lib/masks/br";
@@ -83,68 +83,147 @@ export default function ReajustesPage() {
       />
 
       <ModuleSection title="Histórico de reajustes">
-        <DataTable
+        <ProcessList
+          storageKey="reajustes-hist"
+          exportName="reajustes"
+          rows={state.adjustments}
+          empty="Sem reajustes."
           columns={[
-            { key: "indice", label: "Índice" },
-            { key: "fator", label: "Fator" },
-            { key: "mes", label: "Mês-base" },
-            { key: "qtd", label: "Parcelas" },
-            { key: "res", label: "Resíduos" },
-            { key: "quando", label: "Quando" },
-            { key: "status", label: "Status" },
+            {
+              key: "indice",
+              label: "Índice",
+              filter: { type: "text" },
+              getValue: (a) => a.indice,
+            },
+            {
+              key: "fator",
+              label: "Fator",
+              filter: { type: "range" },
+              getValue: (a) => a.fator,
+              render: (a) => a.fator.toFixed(4),
+            },
+            {
+              key: "mes",
+              label: "Mês-base",
+              filter: { type: "text" },
+              getValue: (a) =>
+                `${String(a.mesBase).padStart(2, "0")}/${a.ano}`,
+            },
+            {
+              key: "qtd",
+              label: "Parcelas",
+              filter: { type: "range" },
+              getValue: (a) => a.qtdParcelas,
+            },
+            {
+              key: "res",
+              label: "Resíduos",
+              filter: { type: "range" },
+              getValue: (a) => a.residuosGerados ?? 0,
+            },
+            {
+              key: "quando",
+              label: "Quando",
+              filter: { type: "period" },
+              getValue: (a) => a.criadoEm,
+            },
+            {
+              key: "status",
+              label: "Status",
+              filter: {
+                type: "status",
+                options: [
+                  { value: "aplicado", label: "Aplicado" },
+                  { value: "desfeito", label: "Desfeito" },
+                ],
+              },
+              getValue: (a) => (a.desfeito ? "desfeito" : "aplicado"),
+              render: (a) => (
+                <StatusPill tone={a.desfeito ? "neutral" : "ok"}>
+                  {a.desfeito ? "Desfeito" : "Aplicado"}
+                </StatusPill>
+              ),
+            },
           ]}
-          rows={state.adjustments.map((a) => ({
-            indice: a.indice,
-            fator: a.fator.toFixed(4),
-            mes: `${String(a.mesBase).padStart(2, "0")}/${a.ano}`,
-            qtd: a.qtdParcelas,
-            res: a.residuosGerados ?? 0,
-            quando: a.criadoEm,
-            status: (
-              <StatusPill tone={a.desfeito ? "neutral" : "ok"}>
-                {a.desfeito ? "Desfeito" : "Aplicado"}
-              </StatusPill>
-            ),
-          }))}
         />
       </ModuleSection>
 
       <ModuleSection title="Resíduos em aberto">
-        <DataTable
-          columns={[
-            { key: "contrato", label: "Contrato" },
-            { key: "cliente", label: "Cliente" },
-            { key: "n", label: "Nº" },
-            { key: "valor", label: "Valor" },
-            { key: "venc", label: "Vencimento" },
-          ]}
-          rows={residuos.map((p) => ({
-            contrato: p.contratoNumero,
-            cliente: p.compradorNome,
-            n: p.n,
-            valor: formatBRL(p.valor),
-            venc: p.vencimento,
-          }))}
+        <ProcessList
+          storageKey="reajustes-residuos"
+          exportName="residuos"
+          rows={residuos}
           empty="Nenhum resíduo gerado."
+          columns={[
+            {
+              key: "contrato",
+              label: "Contrato",
+              filter: { type: "text" },
+              getValue: (p) => p.contratoNumero,
+            },
+            {
+              key: "cliente",
+              label: "Cliente",
+              filter: { type: "text" },
+              getValue: (p) => p.compradorNome,
+            },
+            {
+              key: "n",
+              label: "Nº",
+              filter: { type: "range" },
+              getValue: (p) => p.n,
+            },
+            {
+              key: "valor",
+              label: "Valor",
+              filter: { type: "range" },
+              getValue: (p) => p.valor,
+              render: (p) => formatBRL(p.valor),
+            },
+            {
+              key: "venc",
+              label: "Vencimento",
+              filter: { type: "period" },
+              getValue: (p) => p.vencimento,
+            },
+          ]}
         />
       </ModuleSection>
 
       <ModuleSection title="Operações do contrato">
-        <DataTable
+        <ProcessList
+          storageKey="reajustes-ops"
+          exportName="operacoes-contrato"
+          rows={state.operations}
+          empty="Sem operações."
           columns={[
-            { key: "tipo", label: "Tipo" },
-            { key: "contrato", label: "Contrato" },
-            { key: "detalhe", label: "Detalhe" },
-            { key: "quando", label: "Quando" },
+            {
+              key: "tipo",
+              label: "Tipo",
+              filter: { type: "text" },
+              getValue: (o) => o.tipo,
+            },
+            {
+              key: "contrato",
+              label: "Contrato",
+              filter: { type: "text" },
+              getValue: (o) =>
+                state.contracts.find((c) => c.id === o.contractId)?.numero ??
+                o.contractId,
+            },
+            {
+              key: "detalhe",
+              label: "Detalhe",
+              filter: { type: "text" },
+              getValue: (o) => o.detalhe,
+            },
+            {
+              key: "quando",
+              label: "Quando",
+              filter: { type: "period" },
+              getValue: (o) => o.quando,
+            },
           ]}
-          rows={state.operations.map((o) => ({
-            tipo: o.tipo,
-            contrato:
-              state.contracts.find((c) => c.id === o.contractId)?.numero ??
-              o.contractId,
-            detalhe: o.detalhe,
-            quando: o.quando,
-          }))}
         />
       </ModuleSection>
 

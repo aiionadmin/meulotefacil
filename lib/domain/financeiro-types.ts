@@ -55,6 +55,8 @@ export type ContaBancaria = {
   ativa: boolean;
   bloqueioAte?: string;
   boleto: boolean;
+  /** C02 — conta por empresa. */
+  empresaId?: string;
 };
 
 export type CentroFin = {

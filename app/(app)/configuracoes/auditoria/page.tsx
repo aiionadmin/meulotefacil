@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
 } from "@/components/app/ModulePage";
-import { FilterBar } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
 import { useFase1 } from "@/lib/store/fase1-store";
 
 function formatQuando(value: string) {
@@ -27,57 +25,79 @@ function summarize(value: unknown) {
 
 export default function AuditoriaPage() {
   const { state } = useFase1();
-  const [q, setQ] = useState("");
-
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return state.audit;
-    return state.audit.filter((a) =>
-      [a.usuarioNome, a.rotina, a.acao, a.registroTipo, a.registroId]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
-    );
-  }, [state.audit, q]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Auditoria"
-        description="Quem, quando, rotina, ação, registro e valores antes/depois. Dados pessoais sensíveis não entram no log."
+        description="Quem, quando, rotina, ação e valores — lista filtrável (C14/C16)."
       />
       <KpiGrid items={[{ label: "Eventos", value: state.audit.length }]} />
-      <FilterBar value={q} onChange={setQ} placeholder="Filtrar auditoria…" />
-      <DataTable
+      <ProcessList
+        storageKey="auditoria"
+        exportName="auditoria"
+        rows={state.audit}
+        empty="Sem eventos de auditoria."
         columns={[
-          { key: "quando", label: "Quando" },
-          { key: "usuario", label: "Usuário" },
-          { key: "rotina", label: "Rotina" },
-          { key: "acao", label: "Ação" },
-          { key: "registro", label: "Registro" },
-          { key: "antes", label: "Antes" },
-          { key: "depois", label: "Depois" },
+          {
+            key: "quando",
+            label: "Quando",
+            filter: { type: "period" },
+            getValue: (a) => a.quando,
+            render: (a) => formatQuando(a.quando),
+          },
+          {
+            key: "usuario",
+            label: "Usuário",
+            filter: { type: "text" },
+            getValue: (a) => a.usuarioNome,
+          },
+          {
+            key: "rotina",
+            label: "Rotina",
+            filter: { type: "text" },
+            getValue: (a) => a.rotina,
+          },
+          {
+            key: "acao",
+            label: "Ação",
+            filter: { type: "text" },
+            getValue: (a) => a.acao,
+          },
+          {
+            key: "registro",
+            label: "Registro",
+            filter: { type: "text" },
+            getValue: (a) =>
+              a.registroTipo
+                ? `${a.registroTipo}${a.registroId ? ` #${a.registroId}` : ""}`
+                : "",
+            render: (a) =>
+              a.registroTipo
+                ? `${a.registroTipo}${a.registroId ? ` #${a.registroId}` : ""}`
+                : "—",
+          },
+          {
+            key: "antes",
+            label: "Antes",
+            getValue: (a) => summarize(a.antes),
+            render: (a) => (
+              <span className="font-mono text-xs text-ink/70">
+                {summarize(a.antes)}
+              </span>
+            ),
+          },
+          {
+            key: "depois",
+            label: "Depois",
+            getValue: (a) => summarize(a.depois),
+            render: (a) => (
+              <span className="font-mono text-xs text-ink/70">
+                {summarize(a.depois)}
+              </span>
+            ),
+          },
         ]}
-        rows={filtered.map((a) => ({
-          quando: formatQuando(a.quando),
-          usuario: a.usuarioNome,
-          rotina: a.rotina,
-          acao: a.acao,
-          registro: a.registroTipo
-            ? `${a.registroTipo}${a.registroId ? ` #${a.registroId}` : ""}`
-            : "—",
-          antes: (
-            <span className="font-mono text-xs text-ink/70">
-              {summarize(a.antes)}
-            </span>
-          ),
-          depois: (
-            <span className="font-mono text-xs text-ink/70">
-              {summarize(a.depois)}
-            </span>
-          ),
-        }))}
       />
     </div>
   );
