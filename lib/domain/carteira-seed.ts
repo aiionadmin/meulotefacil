@@ -509,5 +509,16 @@ export function seedCarteira(): CarteiraState {
       },
     ],
     caixaSaldo: 48250.4,
+    receiptParams: {
+      multaAcumulativa: false,
+      naoReceberAtuaisComAtrasadas: true,
+      pagamentoParcial: true,
+      unirVendasNoCaixa: false,
+      despesaBancariaPadrao: 2.5,
+      textoRecibo: "Recebemos a importância acima em pagamento de parcela(s).",
+      reciboVias: 1,
+      autenticacao: true,
+      estornoSoAdmin: true,
+    },
   };
 }
