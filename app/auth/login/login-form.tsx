@@ -59,7 +59,12 @@ export function LoginForm() {
           password: data.password,
         });
         if (authError) {
-          setError(authError.message);
+          const msg = authError.message || "Falha na autenticação";
+          setError(
+            /failed to fetch|networkerror|load failed/i.test(msg)
+              ? "Não foi possível falar com o Auth. Atualize a página (Ctrl+Shift+R) e tente de novo."
+              : msg
+          );
           setLoading(false);
           return;
         }
@@ -74,8 +79,13 @@ export function LoginForm() {
       }
       router.push(next);
       router.refresh();
-    } catch {
-      setError("Não foi possível entrar. Tente novamente.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      setError(
+        /failed to fetch|networkerror|load failed/i.test(msg)
+          ? "Não foi possível falar com o Auth. Atualize a página (Ctrl+Shift+R) e tente de novo."
+          : "Não foi possível entrar. Tente novamente."
+      );
       setLoading(false);
     }
   };

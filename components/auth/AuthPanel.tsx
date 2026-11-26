@@ -81,10 +81,6 @@ export function AuthPanel() {
           boletos, obras, compras, financeiro, fiscal, REURB e relatórios.
         </p>
       </div>
-
-      <p className="relative z-10 text-sm text-paper/85">
-        Modo demo disponível sem configurar Supabase.
-      </p>
     </div>
   );
 }
