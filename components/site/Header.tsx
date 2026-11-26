@@ -65,21 +65,21 @@ export function Header() {
           "site-header fixed inset-x-0 top-0 z-[100] transition-[background-color,border-color,color,backdrop-filter] duration-300",
           solid
             ? "border-b border-linha/80 bg-paper/95 text-ink backdrop-blur-md"
-            : "border-b border-transparent bg-transparent text-paper"
+            : "border-b border-transparent bg-gradient-to-b from-ink/70 via-ink/35 to-transparent text-paper backdrop-blur-[2px]"
         )}
       >
         <div className="site-container">
-          <div className="flex h-14 items-center justify-between gap-3 sm:h-16 sm:gap-4">
+          <div className="flex h-14 items-center justify-between gap-3 pt-[env(safe-area-inset-top)] sm:h-16 sm:gap-4">
             <Link
               href="/"
-              className="relative z-10 min-w-0 shrink-0"
+              className="relative z-10 min-w-0 shrink"
               aria-label="Meu Lote Fácil, Home"
               prefetch
             >
               <Logo
                 variant="full"
                 tone={solid ? "ink" : "paper"}
-                className="max-w-[min(100%,11rem)] scale-90 sm:max-w-none sm:scale-100"
+                className="max-w-[min(100%,9.5rem)] scale-90 sm:max-w-none sm:scale-100"
               />
             </Link>
 

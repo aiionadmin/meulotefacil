@@ -203,15 +203,15 @@ export function ScrollHero() {
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-ink/40" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-ink/95 via-ink/50 to-transparent" />
 
-          {/* Text layer */}
-          <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 pb-28 pt-28 sm:px-6 lg:px-8">
-            <div className="mx-auto w-full max-w-7xl">
+          {/* Text layer — pt cobre o header; overflow evita colidir com a logo no mobile */}
+          <div className="absolute inset-0 z-10 flex flex-col justify-end overflow-hidden px-4 pb-[4.75rem] pt-[4.25rem] sm:px-6 sm:pb-28 sm:pt-28 lg:px-8">
+            <div className="mx-auto max-h-full w-full max-w-7xl overflow-y-auto overscroll-contain">
               <StepCopy step={activeStep} wa={wa} />
             </div>
           </div>
 
           {/* Progress markers */}
-          <ol className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 sm:gap-3">
+          <ol className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 sm:bottom-8 sm:gap-3">
             {HERO_MARKERS.map((m) => {
               const active = activeStep.id === m.id;
               return (
@@ -239,15 +239,17 @@ export function ScrollHero() {
             })}
           </ol>
 
-          <div
-            ref={hintRef}
-            className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1 text-brand-cream/90 transition-opacity duration-300"
-          >
-            <span className="text-xs uppercase tracking-widest drop-shadow-[0_1px_8px_rgba(0,0,0,0.55)]">
-              Role para descobrir
-            </span>
-            <ChevronDown className="h-4 w-4 animate-bounce" />
-          </div>
+          {!activeStep.showCtas ? (
+            <div
+              ref={hintRef}
+              className="absolute bottom-12 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1 text-brand-cream/90 transition-opacity duration-300 sm:bottom-16"
+            >
+              <span className="text-[10px] uppercase tracking-widest drop-shadow-[0_1px_8px_rgba(0,0,0,0.55)] sm:text-xs">
+                Role para descobrir
+              </span>
+              <ChevronDown className="h-4 w-4 animate-bounce" />
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -269,6 +271,8 @@ export function ScrollHero() {
 }
 
 function StepCopy({ step, wa }: { step: HeroStep; wa: string }) {
+  const dense = Boolean(step.showStats && step.showCtas);
+
   return (
     <div
       key={step.id}
@@ -277,22 +281,38 @@ function StepCopy({ step, wa }: { step: HeroStep; wa: string }) {
         animation: "heroStepIn 0.55s ease forwards",
       }}
     >
-      <p className="text-sm font-semibold uppercase tracking-widest text-orange-300">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-300 sm:text-sm sm:tracking-widest">
         {step.eyebrow}
       </p>
-      <h1 className="font-display mt-3 text-3xl leading-[1.08] sm:text-5xl lg:text-6xl">
+      <h1
+        className={cn(
+          "font-display leading-[1.08]",
+          dense
+            ? "mt-2 text-[1.65rem] sm:mt-3 sm:text-5xl lg:text-6xl"
+            : "mt-2 text-[1.85rem] sm:mt-3 sm:text-5xl lg:text-6xl"
+        )}
+      >
         {step.title}
       </h1>
-      <p className="mt-4 max-w-xl text-base text-brand-cream/95 sm:text-lg">{step.body}</p>
+      <p
+        className={cn(
+          "max-w-xl text-brand-cream/95",
+          dense
+            ? "mt-2 text-sm leading-snug sm:mt-4 sm:text-lg sm:leading-normal"
+            : "mt-3 text-sm sm:mt-4 sm:text-lg"
+        )}
+      >
+        {step.body}
+      </p>
 
       {step.showStats && (
-        <dl className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 sm:mt-8 sm:grid-cols-4 sm:gap-4">
           {HERO_STATS_DISPLAY.map((s) => (
-            <div key={s.label}>
-              <dt className="text-[10px] uppercase tracking-wider text-brand-cream/85">
+            <div key={s.label} className="min-w-0">
+              <dt className="text-[9px] uppercase tracking-wider text-brand-cream/85 sm:text-[10px]">
                 {s.label}
               </dt>
-              <dd className="font-display text-xl text-orange-300 sm:text-2xl">
+              <dd className="font-display text-lg text-orange-300 sm:text-2xl">
                 {s.value}
               </dd>
             </div>
@@ -301,13 +321,23 @@ function StepCopy({ step, wa }: { step: HeroStep; wa: string }) {
       )}
 
       {step.showCtas && (
-        <div className="mt-8 flex flex-wrap gap-3 [text-shadow:none]">
-          <Button asChild size="lg" variant="cream">
+        <div className="mt-5 flex w-full flex-col gap-2.5 [text-shadow:none] sm:mt-8 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-3">
+          <Button
+            asChild
+            size="default"
+            variant="cream"
+            className="w-full sm:h-11 sm:w-auto sm:px-8 sm:text-base"
+          >
             <a href={wa} target="_blank" rel="noopener noreferrer">
               Falar no WhatsApp
             </a>
           </Button>
-          <Button asChild size="lg" variant="ghostDark">
+          <Button
+            asChild
+            size="default"
+            variant="ghostDark"
+            className="w-full sm:h-11 sm:w-auto sm:px-8 sm:text-base"
+          >
             <Link href="/regularizacao">Ver regularizações</Link>
           </Button>
         </div>
@@ -320,7 +350,7 @@ function ReducedHero({ wa }: { wa: string }) {
   return (
     <section
       id="hero-scroll"
-      className="relative min-h-[100svh] bg-ink pt-24 text-paper"
+      className="relative min-h-[100svh] bg-ink pt-[4.5rem] text-paper sm:pt-24"
       aria-label="Hero, regularização fundiária"
     >
       <div className="absolute inset-0">
@@ -334,22 +364,36 @@ function ReducedHero({ wa }: { wa: string }) {
         />
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/40" />
-      <div className="relative z-10 mx-auto flex max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:gap-12 sm:px-6 sm:py-16 lg:px-8">
         {HERO_STEPS.map((step) => (
           <div key={step.id} className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-widest text-orange-300">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-300 sm:text-sm sm:tracking-widest">
               {step.marker}, {step.eyebrow}
             </p>
-            <h2 className="font-display mt-2 text-2xl sm:text-4xl">{step.title}</h2>
-            <p className="mt-3 text-paper/95">{step.body}</p>
+            <h2 className="font-display mt-2 text-[1.65rem] sm:text-4xl">
+              {step.title}
+            </h2>
+            <p className="mt-2 text-sm text-paper/95 sm:mt-3 sm:text-base">
+              {step.body}
+            </p>
             {step.showCtas && (
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild size="lg" variant="cream">
+              <div className="mt-5 flex w-full flex-col gap-2.5 sm:mt-6 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-3">
+                <Button
+                  asChild
+                  size="default"
+                  variant="cream"
+                  className="w-full sm:h-11 sm:w-auto sm:px-8 sm:text-base"
+                >
                   <a href={wa} target="_blank" rel="noopener noreferrer">
                     Falar no WhatsApp
                   </a>
                 </Button>
-                <Button asChild size="lg" variant="ghostDark">
+                <Button
+                  asChild
+                  size="default"
+                  variant="ghostDark"
+                  className="w-full sm:h-11 sm:w-auto sm:px-8 sm:text-base"
+                >
                   <Link href="/regularizacao">Ver regularizações</Link>
                 </Button>
               </div>
