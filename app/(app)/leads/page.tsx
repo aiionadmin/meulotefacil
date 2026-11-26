@@ -17,6 +17,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { SearchSelect } from "@/components/app/SearchSelect";
+import { useServerPage } from "@/lib/ui/use-server-page";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Lead, LeadOrigem } from "@/lib/domain/fluxo-types";
@@ -27,6 +28,11 @@ export default function LeadsPage() {
   const { state, addLead, moveLead } = useFluxo();
   const { state: carteira } = useCarteira();
   const [open, setOpen] = useState(false);
+  const server = useServerPage({
+    url: "/api/list/leads",
+    page: 1,
+    pageSize: 25,
+  });
   const [form, setForm] = useState({
     nome: "",
     telefone: "",
@@ -119,13 +125,12 @@ export default function LeadsPage() {
               .length,
           },
           {
-            label: "Score médio",
-            value: activeLeads.length
-              ? Math.round(
-                  activeLeads.reduce((a, l) => a + (l.score ?? 0), 0) /
-                    activeLeads.length
-                )
-              : 0,
+            label: "API B17",
+            value: server.loading
+              ? "…"
+              : server.data
+                ? `${server.data.total} · ${Math.round(server.data.elapsedMs ?? 0)}ms`
+                : server.error ?? "—",
           },
         ]}
       />

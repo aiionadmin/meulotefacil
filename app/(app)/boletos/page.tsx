@@ -18,6 +18,7 @@ import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { downloadTextTemplate } from "@/lib/export/list-export";
 import { parseCnab400Retorno } from "@/lib/cnab/retorno";
+import { useServerPage } from "@/lib/ui/use-server-page";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { BankSlip } from "@/lib/domain/carteira-types";
 
@@ -26,6 +27,12 @@ export default function BoletosPage() {
     useCarteira();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<BankSlip | null>(null);
+  const server = useServerPage({
+    url: "/api/list/boletos",
+    page: 1,
+    pageSize: 25,
+    q,
+  });
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -157,8 +164,12 @@ export default function BoletosPage() {
             value: state.bankSlips.filter((b) => b.status === "remessa").length,
           },
           {
-            label: "Pagos",
-            value: state.bankSlips.filter((b) => b.status === "pago").length,
+            label: "API B17",
+            value: server.loading
+              ? "…"
+              : server.data
+                ? `${server.data.total} · ${Math.round(server.data.elapsedMs ?? 0)}ms`
+                : server.error ?? "—",
           },
         ]}
       />

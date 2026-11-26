@@ -11,6 +11,7 @@ import {
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import { notify } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import { parseNfeXml } from "@/lib/import/nfe-xml";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { NotaFiscal } from "@/lib/domain/financeiro-types";
@@ -18,6 +19,7 @@ import type { NotaFiscal } from "@/lib/domain/financeiro-types";
 export default function NotasFiscaisPage() {
   const { state } = useFinanceiro();
   const [certName, setCertName] = useState<string | null>(null);
+  const [xmlPreview, setXmlPreview] = useState<string>("");
 
   const STATUS_COLS = [
     { id: "pendente", label: "Pendente" },
@@ -51,10 +53,27 @@ export default function NotasFiscaisPage() {
                 type="file"
                 accept=".xml,.pdf"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const f = e.target.files?.[0];
                   if (!f) return;
-                  notify("XML/PDF recebido", f.name);
+                  if (f.name.toLowerCase().endsWith(".xml")) {
+                    const text = await f.text();
+                    const p = parseNfeXml(text);
+                    setXmlPreview(
+                      p.ok
+                        ? `${p.tipo.toUpperCase()} ${p.serie ?? ""}-${p.numero ?? ""} · ${p.emissor ?? "—"} · ${p.valor != null ? formatBRL(p.valor) : "—"}`
+                        : `Leitura parcial: ${p.erros.join("; ") || f.name}`
+                    );
+                    notify(
+                      p.ok ? "XML interpretado" : "XML com avisos",
+                      p.numero
+                        ? `NF ${p.numero}${p.valor != null ? ` · ${formatBRL(p.valor)}` : ""}`
+                        : f.name
+                    );
+                  } else {
+                    setXmlPreview(`PDF recebido: ${f.name}`);
+                    notify("PDF recebido", f.name);
+                  }
                 }}
               />
               <span className="inline-flex h-8 items-center rounded-md border border-input px-3 text-xs font-medium hover:bg-accent">
@@ -64,6 +83,9 @@ export default function NotasFiscaisPage() {
           </>
         }
       />
+      {xmlPreview ? (
+        <p className="text-sm text-muted-foreground">{xmlPreview}</p>
+      ) : null}
       <ModuleSection title="Meus CNPJs (G19)">
         <PaginatedTable
           columns={[
