@@ -25,14 +25,16 @@ export function buildDimobText(opts: {
   contracts: DimobContract[];
   metaContratos?: number;
 }): string {
+  const total = opts.contracts.reduce((a, c) => a + c.preco, 0);
   const lines = [
-    `DIMOB|ANO=${opts.ano}|EMPRESA=${opts.empresa}`,
+    `DIMOB|ANO=${opts.ano}|EMPRESA=${opts.empresa}|GERADO=${new Date().toISOString().slice(0, 10)}`,
     `EMPREENDIMENTOS|${opts.empreendimentos}|META=${opts.metaEmpreendimentos ?? opts.empreendimentos}`,
-    `CONTRATOS|${opts.contracts.length}|META=${opts.metaContratos ?? opts.contracts.length}`,
+    `CONTRATOS|${opts.contracts.length}|META=${opts.metaContratos ?? opts.contracts.length}|TOTAL=${total.toFixed(2)}`,
     ...opts.contracts.map(
       (c) =>
         `R01|${c.numero}|${c.compradorNome}|${c.empNome}|${c.preco.toFixed(2)}|${c.dataContrato ?? ""}|${c.documento ?? ""}`
     ),
+    `R99|FIM|${opts.contracts.length}|${total.toFixed(2)}`,
   ];
   return lines.join("\n") + "\n";
 }

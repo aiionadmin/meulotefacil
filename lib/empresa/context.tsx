@@ -26,6 +26,13 @@ type EmpresaApi = {
   filterByEmpresa: <T extends { empresaId?: string; organizationId?: string }>(
     rows: T[]
   ) => T[];
+  /** Filtra itens ligados a empreendimentos da empresa selecionada (C01). */
+  filterByDevelopmentEmpresa: <
+    T extends { developmentId?: string; empreendimentoId?: string },
+  >(
+    rows: T[],
+    developments: { id: string; empresaId?: string }[]
+  ) => T[];
 };
 
 const Ctx = createContext<EmpresaApi | null>(null);
@@ -82,6 +89,18 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
         return rows.filter((r) => {
           const id = r.empresaId ?? r.organizationId;
           return !id || id === selectedId;
+        });
+      },
+      filterByDevelopmentEmpresa: (rows, developments) => {
+        if (selectedId === "todas") return rows;
+        const allowed = new Set(
+          developments
+            .filter((d) => !d.empresaId || d.empresaId === selectedId)
+            .map((d) => d.id)
+        );
+        return rows.filter((r) => {
+          const did = r.developmentId ?? r.empreendimentoId;
+          return !did || allowed.has(did);
         });
       },
     }),

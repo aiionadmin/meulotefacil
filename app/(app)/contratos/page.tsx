@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL } from "@/lib/masks/br";
 import { aReceberContratos } from "@/lib/indicators/receivables";
+import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useClientCard } from "@/lib/client/client-card-context";
 import type { Contract } from "@/lib/domain/carteira-types";
@@ -35,6 +36,7 @@ const STATUS_COLS = [
 
 export default function ContratosPage() {
   const { state, saldoDevedor, addContract, registrarOperacao } = useCarteira();
+  const { filterByDevelopmentEmpresa } = useEmpresa();
   const { openClient } = useClientCard();
   const [selected, setSelected] = useState<Contract | null>(null);
   const [open, setOpen] = useState(false);
@@ -48,12 +50,32 @@ export default function ContratosPage() {
     valorParcela: 2500,
   });
 
+  const contracts = useMemo(
+    () => filterByDevelopmentEmpresa(state.contracts, state.developments),
+    [filterByDevelopmentEmpresa, state.contracts, state.developments]
+  );
+  const installments = useMemo(
+    () => filterByDevelopmentEmpresa(
+      state.installments.map((i) => {
+        const c = state.contracts.find((x) => x.id === i.contractId);
+        return { ...i, developmentId: c?.developmentId };
+      }),
+      state.developments
+    ),
+    [
+      filterByDevelopmentEmpresa,
+      state.installments,
+      state.contracts,
+      state.developments,
+    ]
+  );
+
   const disponiveis = state.lots.filter(
     (l) => l.developmentId === form.developmentId && l.status === "disponivel"
   );
 
-  const ativos = state.contracts.filter((c) => c.status === "ativo").length;
-  const aReceber = aReceberContratos(state.installments);
+  const ativos = contracts.filter((c) => c.status === "ativo").length;
+  const aReceber = aReceberContratos(installments);
 
   const toCard = useCallback(
     (c: Contract) => ({
@@ -89,7 +111,7 @@ export default function ContratosPage() {
 
       <KpiGrid
         items={[
-          { label: "Contratos", value: state.contracts.length },
+          { label: "Contratos", value: contracts.length },
           { label: "Ativos", value: ativos },
           { label: "A receber de contratos", value: formatBRL(aReceber) },
         ]}
@@ -98,7 +120,7 @@ export default function ContratosPage() {
       <ProcessBoard
         storageKey="contratos"
         columns={STATUS_COLS}
-        rows={state.contracts}
+        rows={contracts}
         toCard={toCard}
         columnTotals={(_, items) =>
           items.reduce((a, c) => a + c.preco, 0)

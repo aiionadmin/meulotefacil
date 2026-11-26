@@ -29,6 +29,7 @@ import {
   type LoteImportPreview,
 } from "@/lib/import/lotes-csv";
 import { parseXlsxBytes, xlsxRowsToCsv } from "@/lib/import/xlsx-parse";
+import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { statusLabel } from "@/lib/status/labels";
@@ -66,6 +67,12 @@ export default function EmpreendimentosPage() {
     changeLotStatus,
     updateLot,
   } = useCarteira();
+  const { selectedId, filterByEmpresa, filterByDevelopmentEmpresa } =
+    useEmpresa();
+  const developments = useMemo(
+    () => filterByEmpresa(state.developments),
+    [filterByEmpresa, state.developments]
+  );
   const [q, setQ] = useState("");
   const [empFilter, setEmpFilter] = useState("todos");
   const [openEmp, setOpenEmp] = useState(false);
@@ -121,7 +128,7 @@ export default function EmpreendimentosPage() {
   });
 
   const lotes = useMemo(() => {
-    let list = state.lots;
+    let list = filterByDevelopmentEmpresa(state.lots, state.developments);
     if (empFilter !== "todos") {
       list = list.filter((l) => l.developmentId === empFilter);
     }
@@ -136,10 +143,16 @@ export default function EmpreendimentosPage() {
       );
     }
     return list;
-  }, [state.lots, q, empFilter]);
+  }, [
+    state.lots,
+    state.developments,
+    q,
+    empFilter,
+    filterByDevelopmentEmpresa,
+  ]);
 
-  const disponiveis = state.lots.filter((l) => l.status === "disponivel").length;
-  const vendidos = state.lots.filter((l) => l.status === "vendido").length;
+  const disponiveis = lotes.filter((l) => l.status === "disponivel").length;
+  const vendidos = lotes.filter((l) => l.status === "vendido").length;
 
   const LOT_COLS = LOT_STATUSES.map((s) => ({
     id: s,
@@ -193,8 +206,8 @@ export default function EmpreendimentosPage() {
 
       <KpiGrid
         items={[
-          { label: "Empreendimentos", value: state.developments.length },
-          { label: "Lotes", value: state.lots.length },
+          { label: "Empreendimentos", value: developments.length },
+          { label: "Lotes", value: lotes.length },
           { label: "Disponíveis", value: disponiveis },
           { label: "Vendidos", value: vendidos },
         ]}
@@ -211,7 +224,7 @@ export default function EmpreendimentosPage() {
             { key: "status", label: "Status" },
             { key: "lotes", label: "Lotes" },
           ]}
-          rows={state.developments.map((d) => ({
+          rows={developments.map((d) => ({
             codigo: d.codigo,
             nome: d.nome,
             tipo: d.tipo,
@@ -234,7 +247,7 @@ export default function EmpreendimentosPage() {
           onChange={(e) => setEmpFilter(e.target.value)}
         >
           <option value="todos">Todos empreendimentos</option>
-          {state.developments.map((d) => (
+          {developments.map((d) => (
             <option key={d.id} value={d.id}>
               {d.nome}
             </option>
@@ -364,7 +377,11 @@ export default function EmpreendimentosPage() {
             notify("Código e nome obrigatórios");
             return;
           }
-          addDevelopment(empForm);
+          addDevelopment({
+            ...empForm,
+            empresaId:
+              selectedId === "todas" ? developments[0]?.empresaId : selectedId,
+          });
           notify("Empreendimento criado", empForm.nome);
           setOpenEmp(false);
         }}
@@ -530,7 +547,7 @@ export default function EmpreendimentosPage() {
             value={mass.developmentId}
             onChange={(e) => setMass({ ...mass, developmentId: e.target.value })}
           >
-            {state.developments.map((d) => (
+            {developments.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.nome}
               </option>
@@ -663,7 +680,7 @@ export default function EmpreendimentosPage() {
             value={importDevId}
             onChange={(e) => setImportDevId(e.target.value)}
           >
-            {state.developments.map((d) => (
+            {developments.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.nome}
               </option>

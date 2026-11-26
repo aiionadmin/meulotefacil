@@ -5,16 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
-  DataTable,
   KpiGrid,
 } from "@/components/app/ModulePage";
 import {
   Field,
   FormDialog,
-  fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { downloadCsv } from "@/lib/export/list-export";
 
@@ -30,6 +31,11 @@ type DespesaEmp = {
 
 export default function DespesasEmpreendimentoPage() {
   const { state } = useCarteira();
+  const { filterByEmpresa, filterByDevelopmentEmpresa } = useEmpresa();
+  const developments = useMemo(
+    () => filterByEmpresa(state.developments),
+    [filterByEmpresa, state.developments]
+  );
   const [itens, setItens] = useState<DespesaEmp[]>([
     {
       id: "de-1",
@@ -50,16 +56,21 @@ export default function DespesasEmpreendimentoPage() {
     data: new Date().toISOString().slice(0, 10),
   });
 
+  const filtrados = useMemo(
+    () => filterByDevelopmentEmpresa(itens, state.developments),
+    [filterByDevelopmentEmpresa, itens, state.developments]
+  );
+
   const total = useMemo(
-    () => itens.reduce((a, i) => a + i.valor, 0),
-    [itens]
+    () => filtrados.reduce((a, i) => a + i.valor, 0),
+    [filtrados]
   );
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Despesas do empreendimento"
-        description="Custos rateados por empreendimento (H24)."
+        description="H24 — custos rateados; filtro por empresa (C01) e lista (C14/C15)."
         actions={
           <>
             <Button
@@ -69,7 +80,7 @@ export default function DespesasEmpreendimentoPage() {
                 downloadCsv(
                   "despesas-empreendimento.csv",
                   ["data", "empreendimento", "categoria", "descricao", "valor"],
-                  itens.map((i) => [
+                  filtrados.map((i) => [
                     i.data,
                     i.empNome,
                     i.categoria,
@@ -90,26 +101,49 @@ export default function DespesasEmpreendimentoPage() {
       />
       <KpiGrid
         items={[
-          { label: "Despesas", value: itens.length },
+          { label: "Despesas", value: filtrados.length },
           { label: "Total", value: formatBRL(total) },
         ]}
       />
-      <DataTable
-        columns={[
-          { key: "data", label: "Data" },
-          { key: "emp", label: "Empreendimento" },
-          { key: "cat", label: "Categoria" },
-          { key: "desc", label: "Descrição" },
-          { key: "valor", label: "Valor" },
-        ]}
-        rows={itens.map((i) => ({
-          data: formatDateBR(i.data),
-          emp: i.empNome,
-          cat: i.categoria,
-          desc: i.descricao,
-          valor: formatBRL(i.valor),
-        }))}
+      <ProcessList
+        storageKey="despesas-empreendimento"
+        exportName="despesas-empreendimento"
+        rows={filtrados}
         empty="Sem despesas."
+        columns={[
+          {
+            key: "data",
+            label: "Data",
+            filter: { type: "period" },
+            getValue: (i) => i.data,
+            render: (i) => formatDateBR(i.data),
+          },
+          {
+            key: "emp",
+            label: "Empreendimento",
+            filter: { type: "text" },
+            getValue: (i) => i.empNome,
+          },
+          {
+            key: "cat",
+            label: "Categoria",
+            filter: { type: "text" },
+            getValue: (i) => i.categoria,
+          },
+          {
+            key: "desc",
+            label: "Descrição",
+            filter: { type: "text" },
+            getValue: (i) => i.descricao,
+          },
+          {
+            key: "valor",
+            label: "Valor",
+            filter: { type: "range" },
+            getValue: (i) => i.valor,
+            render: (i) => formatBRL(i.valor),
+          },
+        ]}
       />
       <FormDialog
         open={open}
@@ -120,7 +154,7 @@ export default function DespesasEmpreendimentoPage() {
             notify("Descrição e valor obrigatórios");
             return;
           }
-          const emp = state.developments.find((d) => d.id === form.developmentId);
+          const emp = developments.find((d) => d.id === form.developmentId);
           setItens((list) => [
             {
               id: `de-${Date.now()}`,
@@ -138,19 +172,15 @@ export default function DespesasEmpreendimentoPage() {
         }}
       >
         <Field label="Empreendimento">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
             value={form.developmentId}
-            onChange={(e) =>
-              setForm({ ...form, developmentId: e.target.value })
-            }
-          >
-            {state.developments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nome}
-              </option>
-            ))}
-          </select>
+            onChange={(developmentId) => setForm({ ...form, developmentId })}
+            placeholder="Buscar empreendimento…"
+            options={developments.map((d) => ({
+              value: d.id,
+              label: d.nome,
+            }))}
+          />
         </Field>
         <Field label="Data">
           <Input
