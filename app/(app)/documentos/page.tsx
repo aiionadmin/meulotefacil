@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { docsMorador, processos } from "@/lib/data/processos";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import {
@@ -11,11 +10,34 @@ import {
   StatusPill,
 } from "@/components/app/ModulePage";
 import { notify } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { useDemoStore } from "@/lib/store/demo-store";
+
+type DocStatus = "pendente" | "enviado" | "aprovado" | "recusado";
+type DocRow = {
+  id: string;
+  nome: string;
+  status: DocStatus;
+  processoId: string;
+};
+
+const STATUS_COLS: { id: DocStatus; label: string }[] = [
+  { id: "pendente", label: "Pendente" },
+  { id: "enviado", label: "Enviado" },
+  { id: "aprovado", label: "Aprovado" },
+  { id: "recusado", label: "Recusado" },
+];
 
 export default function DocumentosPage() {
   const { addArquivo } = useDemoStore();
-  const [docs, setDocs] = useState(docsMorador);
+  const [docs, setDocs] = useState<DocRow[]>(
+    docsMorador.map((d) => ({
+      id: d.id,
+      nome: d.nome,
+      processoId: d.processoId,
+      status: (d.status === "enviado" ? "enviado" : "pendente") as DocStatus,
+    }))
+  );
   const [dragging, setDragging] = useState(false);
 
   const onFiles = (files: FileList | null) => {
@@ -39,11 +61,23 @@ export default function DocumentosPage() {
     notify("Documento enviado", file.name);
   };
 
+  const toCard = useCallback(
+    (d: DocRow) => ({
+      id: d.id,
+      columnId: d.status,
+      title: d.nome,
+      subtitle:
+        processos.find((p) => p.id === d.processoId)?.protocolo ?? d.processoId,
+      badge: d.status,
+    }),
+    []
+  );
+
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Documentos do morador"
-        description="Checklist por processo. Uploads entram no repositório de Arquivos ()."
+        description="Kanban | Lista por status (C19). Uploads entram em Arquivos."
       />
       <KpiGrid
         items={[
@@ -54,7 +88,7 @@ export default function DocumentosPage() {
           },
           {
             label: "Pendentes",
-            value: docs.filter((d) => d.status !== "enviado").length,
+            value: docs.filter((d) => d.status === "pendente").length,
           },
           { label: "Processos", value: processos.length },
         ]}
@@ -94,42 +128,62 @@ export default function DocumentosPage() {
         </label>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Checklist</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="px-3 py-2">Documento</th>
-                <th className="px-3 py-2">Processo</th>
-                <th className="px-3 py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map((d) => {
-                const proc = processos.find((p) => p.id === d.processoId);
-                return (
-                  <tr key={d.id} className="border-b border-linha/70">
-                    <td className="px-3 py-3 font-medium text-ink">{d.nome}</td>
-                    <td className="px-3 py-3">
-                      {proc?.protocolo ?? d.processoId}
-                    </td>
-                    <td className="px-3 py-3">
-                      <StatusPill
-                        tone={d.status === "enviado" ? "ok" : "warn"}
-                      >
-                        {d.status}
-                      </StatusPill>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      <ProcessBoard
+        storageKey="documentos-morador"
+        columns={STATUS_COLS}
+        rows={docs}
+        toCard={toCard}
+        onMove={(id, to) => {
+          setDocs((list) =>
+            list.map((d) =>
+              d.id === id ? { ...d, status: to as DocStatus } : d
+            )
+          );
+          return true;
+        }}
+        exportName="documentos-morador"
+        listColumns={[
+          {
+            key: "nome",
+            label: "Documento",
+            filter: { type: "text" },
+            getValue: (d) => d.nome,
+          },
+          {
+            key: "proc",
+            label: "Processo",
+            filter: { type: "text" },
+            getValue: (d) =>
+              processos.find((p) => p.id === d.processoId)?.protocolo ??
+              d.processoId,
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: STATUS_COLS.map((c) => ({
+                value: c.id,
+                label: c.label,
+              })),
+            },
+            getValue: (d) => d.status,
+            render: (d) => (
+              <StatusPill
+                tone={
+                  d.status === "aprovado"
+                    ? "ok"
+                    : d.status === "recusado"
+                      ? "danger"
+                      : "info"
+                }
+              >
+                {d.status}
+              </StatusPill>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
