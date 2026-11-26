@@ -20,6 +20,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { maskCPF, maskCNPJ, maskPhone } from "@/lib/masks/br";
+import { useServerPage } from "@/lib/ui/use-server-page";
 import { useFase1 } from "@/lib/store/fase1-store";
 import type { Person, PersonPapel } from "@/lib/domain/fase1-types";
 
@@ -93,6 +94,14 @@ export function PeopleModule({
   const pageSafe = Math.min(page, pageCount - 1);
   const rows = base.slice(pageSafe * pageSize, pageSafe * pageSize + pageSize);
 
+  const server = useServerPage<Person>({
+    url: "/api/list/pessoas",
+    page: pageSafe + 1,
+    pageSize,
+    q,
+    extraParams: papelFilter ? { papel: papelFilter } : undefined,
+  });
+
   const exportCsv = () => {
     const header = ["nome", "documento", "papeis", "cidade", "status"];
     const lines = [
@@ -143,8 +152,12 @@ export function PeopleModule({
             value: `${pageSafe + 1}/${pageCount}`,
           },
           {
-            label: "Por página",
-            value: pageSize,
+            label: "API B17",
+            value: server.loading
+              ? "…"
+              : server.data
+                ? `${server.data.total} · ${Math.round(server.data.elapsedMs ?? 0)}ms`
+                : server.error ?? "—",
           },
         ]}
       />
