@@ -47,6 +47,19 @@ export type ScItem = {
   status: string;
 };
 
+export type ScComentario = {
+  id: string;
+  texto: string;
+  autor: string;
+  quando: string;
+};
+
+export type ScArquivo = {
+  id: string;
+  nome: string;
+  quando: string;
+};
+
 export type Solicitacao = {
   id: string;
   numero: string;
@@ -55,12 +68,16 @@ export type Solicitacao = {
   solicitante: string;
   criadoEm: string;
   necessidade: string;
+  /** E04 — previsão de entrega. */
+  previsaoEntrega?: string;
   urgente: boolean;
   status: ScStatus;
   itens: ScItem[];
   motivoRecusa?: string;
   cotacaoIds: string[];
   ordemIds: string[];
+  comentarios?: ScComentario[];
+  arquivos?: ScArquivo[];
 };
 
 export type CotacaoFornecedor = {

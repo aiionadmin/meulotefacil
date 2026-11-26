@@ -22,6 +22,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { canApprove } from "@/lib/alcadas/check";
+import { scTimeline } from "@/lib/compras/sc-timeline";
 import { formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
 import { useObras } from "@/lib/store/obras-store";
@@ -49,6 +50,9 @@ export default function ComprasSolicitacoesPage() {
     aprovarSolicitacao,
     recusarSolicitacao,
     marcarRecebimento,
+    addComentarioSc,
+    addArquivoSc,
+    setPrevisaoEntregaSc,
     criarCotacaoDeSc,
   } = useCompras();
   const { state: obras } = useObras();
@@ -60,6 +64,8 @@ export default function ComprasSolicitacoesPage() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Solicitacao | null>(null);
   const [motivo, setMotivo] = useState("");
+  const [comentario, setComentario] = useState("");
+  const [arquivoNome, setArquivoNome] = useState("");
   const [form, setForm] = useState({
     descricao: "",
     centroKey: "",
@@ -246,6 +252,22 @@ export default function ComprasSolicitacoesPage() {
       >
         {live ? (
           <div className="space-y-3">
+            <div className="grid grid-cols-4 gap-1">
+              {scTimeline(live.status).map((p) => (
+                <div
+                  key={p.id}
+                  className={`rounded-md border px-1.5 py-2 text-center text-[10px] leading-tight ${
+                    p.current
+                      ? "border-brand-orange bg-brand-orange/10 font-semibold text-brand-orange"
+                      : p.done
+                        ? "border-brand-green/40 bg-brand-green/5 text-brand-green"
+                        : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {p.label}
+                </div>
+              ))}
+            </div>
             <DetailRow label="Descrição" value={live.descricao} />
             <DetailRow label="Centro" value={live.centro.label} />
             <DetailRow label="Solicitante" value={live.solicitante} />
@@ -257,6 +279,16 @@ export default function ComprasSolicitacoesPage() {
             {live.motivoRecusa ? (
               <DetailRow label="Motivo recusa" value={live.motivoRecusa} />
             ) : null}
+            <Field label="Previsão de entrega">
+              <Input
+                type="date"
+                value={live.previsaoEntrega ?? ""}
+                onChange={(e) => {
+                  setPrevisaoEntregaSc(live.id, e.target.value);
+                  notify("Previsão atualizada");
+                }}
+              />
+            </Field>
             <div className="text-sm font-medium">Itens</div>
             <ul className="space-y-1 text-sm text-muted-foreground">
               {live.itens.map((it) => (
@@ -282,6 +314,75 @@ export default function ComprasSolicitacoesPage() {
                 </li>
               ))}
             </ul>
+            <div className="space-y-2 border-t pt-3">
+              <div className="text-sm font-medium">Comentários</div>
+              <ul className="max-h-28 space-y-1 overflow-y-auto text-xs text-muted-foreground">
+                {(live.comentarios ?? []).length === 0 ? (
+                  <li>Nenhum comentário.</li>
+                ) : (
+                  (live.comentarios ?? []).map((c) => (
+                    <li key={c.id}>
+                      <span className="font-medium text-foreground">
+                        {c.autor}
+                      </span>
+                      : {c.texto}
+                    </li>
+                  ))
+                )}
+              </ul>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Novo comentário"
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (!addComentarioSc(live.id, comentario)) {
+                      notify("Informe o comentário");
+                      return;
+                    }
+                    setComentario("");
+                    notify("Comentário adicionado");
+                  }}
+                >
+                  +
+                </Button>
+              </div>
+              <div className="text-sm font-medium pt-1">Arquivos</div>
+              <ul className="space-y-1 text-xs text-muted-foreground">
+                {(live.arquivos ?? []).length === 0 ? (
+                  <li>Nenhum arquivo.</li>
+                ) : (
+                  (live.arquivos ?? []).map((a) => (
+                    <li key={a.id}>{a.nome}</li>
+                  ))
+                )}
+              </ul>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nome do arquivo"
+                  value={arquivoNome}
+                  onChange={(e) => setArquivoNome(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (!addArquivoSc(live.id, arquivoNome)) {
+                      notify("Informe o nome");
+                      return;
+                    }
+                    setArquivoNome("");
+                    notify("Arquivo anexado");
+                  }}
+                >
+                  +
+                </Button>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2 pt-2">
               {live.status === "rascunho" ? (
                 <Button

@@ -133,6 +133,9 @@ type CarteiraApi = {
     contratoNumero?: string;
   }) => CaixaMovimento | null;
   estornarCaixa: (id: string) => boolean;
+  /** H12 — liberar / pagar comissão. */
+  liberarComissao: (id: string) => boolean;
+  pagarComissao: (id: string) => boolean;
 };
 
 const Ctx = createContext<CarteiraApi | null>(null);
@@ -931,6 +934,54 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
             caixaSaldo: Math.max(
               0,
               Math.round((s.caixaSaldo - mov.valor) * 100) / 100
+            ),
+          };
+        });
+        return ok;
+      },
+      liberarComissao: (id) => {
+        let ok = false;
+        setState((s) => {
+          const c = s.comissoes.find((x) => x.id === id);
+          if (!c || c.status === "paga") return s;
+          ok = true;
+          return {
+            ...s,
+            comissoes: s.comissoes.map((x) =>
+              x.id === id
+                ? {
+                    ...x,
+                    status: "liberada" as const,
+                    valorLiberado: x.valorPrevisto,
+                  }
+                : x
+            ),
+          };
+        });
+        return ok;
+      },
+      pagarComissao: (id) => {
+        let ok = false;
+        setState((s) => {
+          const c = s.comissoes.find((x) => x.id === id);
+          if (!c || c.status === "paga") return s;
+          const valor = c.valorLiberado || c.valorPrevisto;
+          ok = true;
+          return {
+            ...s,
+            comissoes: s.comissoes.map((x) =>
+              x.id === id
+                ? {
+                    ...x,
+                    status: "paga" as const,
+                    valorLiberado: valor,
+                    valorPago: valor,
+                  }
+                : x
+            ),
+            caixaSaldo: Math.max(
+              0,
+              Math.round((s.caixaSaldo - valor) * 100) / 100
             ),
           };
         });
