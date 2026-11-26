@@ -8,6 +8,11 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { formatBRL } from "@/lib/masks/br";
+import {
+  aReceberContratos,
+  aReceberFinanceiroTitulos,
+  emAtrasoFinanceiroTitulos,
+} from "@/lib/indicators/receivables";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
@@ -41,9 +46,9 @@ export default function DashboardOperacionalPage() {
     (c) => c.status === "ativo"
   ).length;
 
-  const aReceber = fin.recebimentos
-    .filter((r) => r.status !== "recebido")
-    .reduce((a, r) => a + (r.valor - r.valorRecebido), 0);
+  const aReceber = aReceberFinanceiroTitulos(fin.recebimentos);
+  const emAtrasoFin = emAtrasoFinanceiroTitulos(fin.recebimentos);
+  const aReceberCtr = aReceberContratos(cart.installments);
 
   const venc7 = fin.recebimentos.filter(
     (r) =>
@@ -131,10 +136,13 @@ export default function DashboardOperacionalPage() {
               (p) => p.status === "aberta" || p.status === "reservada"
             ).length,
           },
-          { label: "A receber", value: formatBRL(aReceber) },
           {
-            label: "Venc. 7 / 30 dias",
-            value: `${venc7} / ${venc30}`,
+            label: "A receber financeiro",
+            value: formatBRL(aReceber),
+          },
+          {
+            label: "A receber de contratos",
+            value: formatBRL(aReceberCtr),
           },
         ]}
       />
@@ -142,8 +150,12 @@ export default function DashboardOperacionalPage() {
       <KpiGrid
         items={[
           {
-            label: "Inadimplência",
-            value: formatBRL(inad.reduce((a, r) => a + r.valor, 0)),
+            label: "Venc. 7 / 30 dias",
+            value: `${venc7} / ${venc30}`,
+          },
+          {
+            label: "Em atraso (financeiro)",
+            value: formatBRL(emAtrasoFin),
             hint: `${inad.length} títulos`,
           },
           {

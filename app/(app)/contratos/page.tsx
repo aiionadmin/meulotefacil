@@ -19,6 +19,7 @@ import {
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL } from "@/lib/masks/br";
+import { aReceberContratos } from "@/lib/indicators/receivables";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useClientCard } from "@/lib/client/client-card-context";
 import type { Contract } from "@/lib/domain/carteira-types";
@@ -52,9 +53,7 @@ export default function ContratosPage() {
   );
 
   const ativos = state.contracts.filter((c) => c.status === "ativo").length;
-  const aReceber = state.contracts
-    .filter((c) => c.status === "ativo")
-    .reduce((a, c) => a + saldoDevedor(c.id), 0);
+  const aReceber = aReceberContratos(state.installments);
 
   const toCard = useCallback(
     (c: Contract) => ({

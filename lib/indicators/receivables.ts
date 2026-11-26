@@ -39,6 +39,32 @@ export function aReceberFinanceiro(receivables: ReceivableLike[]) {
     .reduce((a, r) => a + r.valor, 0);
 }
 
+/** Títulos do módulo Financeiro (Mais Controle) — saldo = valor − recebido. */
+export function aReceberFinanceiroTitulos(
+  recebimentos: {
+    status: string;
+    valor: number;
+    valorRecebido?: number;
+  }[]
+) {
+  return recebimentos
+    .filter((r) => r.status !== "recebido")
+    .reduce((a, r) => a + (r.valor - (r.valorRecebido ?? 0)), 0);
+}
+
+/** Em atraso no Financeiro (títulos vencidos). */
+export function emAtrasoFinanceiroTitulos(
+  recebimentos: {
+    status: string;
+    valor: number;
+    valorRecebido?: number;
+  }[]
+) {
+  return recebimentos
+    .filter((r) => r.status === "vencido")
+    .reduce((a, r) => a + (r.valor - (r.valorRecebido ?? 0)), 0);
+}
+
 /** A receber total = contratos + financeiro operacional. */
 export function aReceberTotal(
   installments: InstallmentLike[],

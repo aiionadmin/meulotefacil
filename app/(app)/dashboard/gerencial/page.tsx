@@ -8,6 +8,11 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { formatBRL } from "@/lib/masks/br";
+import {
+  aReceberContratos,
+  emAtrasoContratos,
+  emAtrasoFinanceiroTitulos,
+} from "@/lib/indicators/receivables";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useObras } from "@/lib/store/obras-store";
 import { useCompras } from "@/lib/store/compras-store";
@@ -34,6 +39,9 @@ export default function DashboardGerencialPage() {
     abertoRec.length > 0
       ? Math.round((inad.length / abertoRec.length) * 1000) / 10
       : 0;
+  const emAtrasoFin = emAtrasoFinanceiroTitulos(fin.recebimentos);
+  const emAtrasoCtr = emAtrasoContratos(cart.installments);
+  const aReceberCtr = aReceberContratos(cart.installments);
 
   const fluxoGeral = fluxoMensal("geral");
   const fluxoEmpresa = fluxoMensal("empresa");
@@ -69,14 +77,15 @@ export default function DashboardGerencialPage() {
       <KpiGrid
         items={[
           { label: "Conversão funil", value: `${conversao}%` },
-          { label: "Inadimplência %", value: `${inadPct}%` },
+          { label: "Inadimplência % (financeiro)", value: `${inadPct}%` },
           {
-            label: "Inadimplência R$",
-            value: formatBRL(inad.reduce((a, r) => a + r.valor, 0)),
+            label: "Em atraso (financeiro)",
+            value: formatBRL(emAtrasoFin),
           },
           {
-            label: "Títulos vencidos",
-            value: inad.length,
+            label: "Em atraso (contratos)",
+            value: formatBRL(emAtrasoCtr),
+            hint: `a receber ctr ${formatBRL(aReceberCtr)}`,
           },
         ]}
       />
