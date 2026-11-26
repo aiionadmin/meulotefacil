@@ -57,6 +57,10 @@ type ComprasApi = {
   aprovarSolicitacao: (id: string) => boolean;
   recusarSolicitacao: (id: string, motivo: string) => boolean;
   marcarRecebimento: (scId: string, itemId: string, qtd: number) => boolean;
+  /** E04 — comentários, arquivos e previsão. */
+  addComentarioSc: (id: string, texto: string, autor?: string) => boolean;
+  addArquivoSc: (id: string, nome: string) => boolean;
+  setPrevisaoEntregaSc: (id: string, data: string) => boolean;
   criarCotacaoDeSc: (
     requestId: string,
     fornecedores: { fornecedor: string; email?: string; telefone?: string }[]
@@ -174,6 +178,78 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      addComentarioSc: (id, texto, autor) => {
+        const t = texto.trim();
+        if (!t) return false;
+        let ok = false;
+        setState((s) => {
+          if (!s.solicitacoes.some((x) => x.id === id)) return s;
+          ok = true;
+          return {
+            ...s,
+            solicitacoes: s.solicitacoes.map((x) =>
+              x.id === id
+                ? {
+                    ...x,
+                    comentarios: [
+                      {
+                        id: uid("scc"),
+                        texto: t,
+                        autor: autor ?? "Admin Demo",
+                        quando: new Date().toISOString(),
+                      },
+                      ...(x.comentarios ?? []),
+                    ],
+                  }
+                : x
+            ),
+          };
+        });
+        return ok;
+      },
+      addArquivoSc: (id, nome) => {
+        const n = nome.trim();
+        if (!n) return false;
+        let ok = false;
+        setState((s) => {
+          if (!s.solicitacoes.some((x) => x.id === id)) return s;
+          ok = true;
+          return {
+            ...s,
+            solicitacoes: s.solicitacoes.map((x) =>
+              x.id === id
+                ? {
+                    ...x,
+                    arquivos: [
+                      {
+                        id: uid("sca"),
+                        nome: n,
+                        quando: new Date().toISOString(),
+                      },
+                      ...(x.arquivos ?? []),
+                    ],
+                  }
+                : x
+            ),
+          };
+        });
+        return ok;
+      },
+      setPrevisaoEntregaSc: (id, data) => {
+        if (!data) return false;
+        let ok = false;
+        setState((s) => {
+          if (!s.solicitacoes.some((x) => x.id === id)) return s;
+          ok = true;
+          return {
+            ...s,
+            solicitacoes: s.solicitacoes.map((x) =>
+              x.id === id ? { ...x, previsaoEntrega: data } : x
+            ),
+          };
+        });
+        return ok;
       },
       marcarRecebimento: (scId, itemId, qtd) => {
         if (qtd <= 0) return false;

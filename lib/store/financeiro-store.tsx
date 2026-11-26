@@ -93,6 +93,8 @@ type FinanceiroApi = {
   }) => { ok: boolean; faturamento?: Faturamento };
   baixarRecebimento: (id: string, valor: number) => boolean;
   estornarRecebimento: (id: string) => boolean;
+  /** C15 — baixar recebimentos em lote. */
+  baixarRecebimentosLote: (ids: string[]) => number;
   addConta: (input: Omit<ContaBancaria, "id" | "saldo" | "ativa"> & { ativa?: boolean }) => ContaBancaria;
   transferir: (input: {
     data: string;
@@ -570,6 +572,45 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      baixarRecebimentosLote: (ids) => {
+        const set = new Set(ids);
+        let n = 0;
+        setState((s) => {
+          const alvos = s.recebimentos.filter(
+            (r) =>
+              set.has(r.id) &&
+              r.status !== "recebido" &&
+              r.origem !== "contrato"
+          );
+          n = alvos.length;
+          if (!n) return s;
+          let contas = s.contas;
+          const recebimentos = s.recebimentos.map((r) => {
+            if (
+              !set.has(r.id) ||
+              r.status === "recebido" ||
+              r.origem === "contrato"
+            ) {
+              return r;
+            }
+            const baixa = Math.round((r.valor - r.valorRecebido) * 100) / 100;
+            if (baixa <= 0) return r;
+            contas = contas.map((c) =>
+              c.id === r.contaId
+                ? { ...c, saldo: Math.round((c.saldo + baixa) * 100) / 100 }
+                : c
+            );
+            return {
+              ...r,
+              valorRecebido: r.valor,
+              status: "recebido" as const,
+              recebidoEm: todayIso(),
+            };
+          });
+          return { ...s, recebimentos, contas };
+        });
+        return n;
       },
       addConta: (input) => {
         const c: ContaBancaria = {

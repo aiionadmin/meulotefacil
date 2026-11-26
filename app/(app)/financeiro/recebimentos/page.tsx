@@ -21,8 +21,10 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { useCarteira } from "@/lib/store/carteira-store";
 import type { FormaPagamento, Recebimento } from "@/lib/domain/financeiro-types";
 
 export default function RecebimentosPage() {
@@ -31,8 +33,10 @@ export default function RecebimentosPage() {
     addFaturamento,
     baixarRecebimento,
     estornarRecebimento,
+    baixarRecebimentosLote,
     setRecebimentoStatus,
   } = useFinanceiro();
+  const { state: cart } = useCarteira();
 
   const STATUS_COLS = [
     { id: "em_aberto", label: "Em aberto" },
@@ -153,6 +157,19 @@ export default function RecebimentosPage() {
           return ok;
         }}
         exportName="recebimentos"
+        bulkActions={[
+          {
+            label: "Receber seleção",
+            onClick: (ids) => {
+              const n = baixarRecebimentosLote(ids);
+              notify(
+                n
+                  ? `${n} recebimento(s) baixados`
+                  : "Nenhum elegível (contratos são só leitura)"
+              );
+            },
+          },
+        ]}
         listColumns={[
           {
             key: "venc",
@@ -333,32 +350,62 @@ export default function RecebimentosPage() {
           />
         </Field>
         <Field label="Cliente *">
-          <Input
+          <SearchSelect
             value={form.cliente}
-            onChange={(e) => setForm({ ...form, cliente: e.target.value })}
+            onChange={(cliente) => setForm({ ...form, cliente })}
+            placeholder="Buscar cliente…"
+            options={[
+              ...new Set(cart.contracts.map((c) => c.compradorNome).filter(Boolean)),
+            ].map((c) => ({ value: c as string, label: c as string }))}
           />
         </Field>
         <Field label="Natureza *">
-          <select
-            className={fieldControlClass}
-            value={form.naturezaId || state.naturezas[0]?.id}
-            onChange={(e) =>
-              setForm({ ...form, naturezaId: e.target.value })
-            }
-          >
-            {state.naturezas.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.nome}
-              </option>
-            ))}
-          </select>
+          <SearchSelect
+            value={form.naturezaId || state.naturezas[0]?.id || ""}
+            onChange={(naturezaId) => setForm({ ...form, naturezaId })}
+            placeholder="Buscar natureza…"
+            options={state.naturezas.map((n) => ({
+              value: n.id,
+              label: n.nome,
+            }))}
+          />
+        </Field>
+        <Field label="Conta *">
+          <SearchSelect
+            value={form.contaId || state.contas[0]?.id || ""}
+            onChange={(contaId) => setForm({ ...form, contaId })}
+            placeholder="Buscar conta…"
+            options={state.contas
+              .filter((c) => c.ativa)
+              .map((c) => ({
+                value: c.id,
+                label: c.nome,
+                meta: c.banco,
+              }))}
+          />
         </Field>
         <Field label="Centro de custo *">
-          <Input
+          <SearchSelect
             value={form.centroLabel}
-            onChange={(e) =>
-              setForm({ ...form, centroLabel: e.target.value })
-            }
+            onChange={(centroLabel) => setForm({ ...form, centroLabel })}
+            placeholder="Buscar centro…"
+            options={[
+              {
+                value: "Infraestrutura Residencial Horizonte",
+                label: "Infraestrutura Residencial Horizonte",
+                meta: "Obra",
+              },
+              {
+                value: "Meu Lote Fácil",
+                label: "Meu Lote Fácil",
+                meta: "Empresa",
+              },
+              ...cart.developments.map((d) => ({
+                value: d.nome,
+                label: d.nome,
+                meta: "Empreendimento",
+              })),
+            ]}
           />
         </Field>
         <div className="grid grid-cols-2 gap-2">
