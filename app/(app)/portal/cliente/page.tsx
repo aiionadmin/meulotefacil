@@ -17,6 +17,11 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { downloadTextTemplate } from "@/lib/export/list-export";
+import {
+  buildSegundaViaPix,
+  downloadInformeAnual,
+} from "@/lib/export/portal-cliente";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useCarteira } from "@/lib/store/carteira-store";
@@ -121,14 +126,61 @@ export default function PortalClientePage() {
             ref: r.contratoRef ?? "—",
           }))}
         />
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-2"
-          onClick={() => notify("2ª via / Pix gerados (demo)")}
-        >
-          Gerar 2ª via boleto / Pix
-        </Button>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const alvo = meusRecs.find((r) => r.status !== "recebido") ?? meusRecs[0];
+              const ctr = meusContratos[0];
+              if (!alvo || !ctr) {
+                notify("Sem parcela para 2ª via");
+                return;
+              }
+              const text = buildSegundaViaPix({
+                cliente: sess.nome,
+                contrato: ctr.numero,
+                valor: alvo.valor,
+                vencimento: alvo.vencimento,
+              });
+              downloadTextTemplate(
+                `segunda-via-${ctr.numero}.txt`,
+                text
+              );
+              notify("2ª via / Pix gerados", `Ctr ${ctr.numero}`);
+            }}
+          >
+            Gerar 2ª via boleto / Pix
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadInformeAnual({
+                ano: 2026,
+                cliente: sess.nome,
+                cpf: sess.cpf,
+                contratos: meusContratos.map((c) => ({
+                  numero: c.numero,
+                  empreendimento: c.empNome,
+                  preco: c.preco,
+                  saldo: saldoDevedor(c.id),
+                })),
+                parcelasPagas: meusRecs
+                  .filter((r) => r.status === "recebido")
+                  .map((r) => ({
+                    vencimento: r.vencimento,
+                    valor: r.valor,
+                    status: r.status,
+                    contratoRef: r.contratoRef,
+                  })),
+              });
+              notify("Informe anual", "2026");
+            }}
+          >
+            Informe anual
+          </Button>
+        </div>
       </ModuleSection>
 
       <ModuleSection title="Minhas demandas">

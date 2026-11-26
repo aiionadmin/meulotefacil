@@ -357,6 +357,15 @@ export default function PagamentosPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
+                    const gate = canApprove({
+                      rules: f1.approvalRules,
+                      tipo: "Estorno de recebimento",
+                      perfilNome,
+                    });
+                    if (!gate.ok) {
+                      notify("Alçada insuficiente", gate.reason);
+                      return;
+                    }
                     estornarPagamento(live.id);
                     notify("Estornado");
                   }}
