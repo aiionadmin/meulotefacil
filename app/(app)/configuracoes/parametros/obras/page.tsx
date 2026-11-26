@@ -1,28 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ModuleHeader } from "@/components/app/ModulePage";
-import { Field, notify } from "@/components/app/ModuleToolkit";
+import { Field, fieldControlClass, notify } from "@/components/app/ModuleToolkit";
+import { useObras } from "@/lib/store/obras-store";
 
 export default function ParametrosObrasPage() {
+  const { state, updateObrasConfig } = useObras();
   const [form, setForm] = useState({
-    expedienteHoras: 8,
-    bdiPadraoPct: 25,
-    casasDecimais: 2,
+    expedienteHoras: state.expedienteHoras ?? 8,
+    bdiModo: (state.bdiModo ?? "dinamico") as "dinamico" | "fixo",
+    arredondamento: state.arredondamento ?? 2,
     modeloProposta: "Padrão MLF",
   });
+
+  useEffect(() => {
+    setForm((f) => ({
+      ...f,
+      expedienteHoras: state.expedienteHoras ?? 8,
+      bdiModo: (state.bdiModo ?? "dinamico") as "dinamico" | "fixo",
+      arredondamento: state.arredondamento ?? 2,
+    }));
+  }, [state.expedienteHoras, state.bdiModo, state.arredondamento]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Obras"
-        description="Expediente, BDI padrão, arredondamento e modelo de proposta."
+        description="D11 — expediente, BDI, arredondamento e modelo de proposta."
         actions={
           <Button
             size="sm"
-            onClick={() => notify("Parâmetros salvos", "Obras")}
+            onClick={() => {
+              updateObrasConfig({
+                expedienteHoras: form.expedienteHoras,
+                bdiModo: form.bdiModo,
+                arredondamento: form.arredondamento,
+              });
+              notify(
+                "Parâmetros salvos",
+                `Expediente ${form.expedienteHoras}h · BDI ${form.bdiModo}`
+              );
+            }}
           >
             Salvar
           </Button>
@@ -32,27 +53,43 @@ export default function ParametrosObrasPage() {
         <Field label="Expediente (horas/dia)">
           <Input
             type="number"
+            min={1}
+            max={24}
             value={form.expedienteHoras}
             onChange={(e) =>
-              setForm({ ...form, expedienteHoras: Number(e.target.value) })
+              setForm({
+                ...form,
+                expedienteHoras: Number(e.target.value) || 8,
+              })
             }
           />
         </Field>
-        <Field label="BDI padrão (%)">
-          <Input
-            type="number"
-            value={form.bdiPadraoPct}
+        <Field label="Modo BDI">
+          <select
+            className={fieldControlClass}
+            value={form.bdiModo}
             onChange={(e) =>
-              setForm({ ...form, bdiPadraoPct: Number(e.target.value) })
+              setForm({
+                ...form,
+                bdiModo: e.target.value as "dinamico" | "fixo",
+              })
             }
-          />
+          >
+            <option value="dinamico">Dinâmico</option>
+            <option value="fixo">Fixo</option>
+          </select>
         </Field>
         <Field label="Casas decimais (arredondamento)">
           <Input
             type="number"
-            value={form.casasDecimais}
+            min={0}
+            max={6}
+            value={form.arredondamento}
             onChange={(e) =>
-              setForm({ ...form, casasDecimais: Number(e.target.value) })
+              setForm({
+                ...form,
+                arredondamento: Number(e.target.value) || 0,
+              })
             }
           />
         </Field>

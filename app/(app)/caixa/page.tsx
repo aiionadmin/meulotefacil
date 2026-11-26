@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ModuleHeader, DataTable, KpiGrid } from "@/components/app/ModulePage";
+import {
+  ModuleHeader,
+  DataTable,
+  KpiGrid,
+  ModuleSection,
+} from "@/components/app/ModulePage";
 import {
   Field,
   FormDialog,
@@ -17,7 +22,7 @@ import { useFase1 } from "@/lib/store/fase1-store";
 import { formatBRL } from "@/lib/masks/br";
 
 export default function CaixaPage() {
-  const { state, receberNoCaixa, estornarCaixa } = useCarteira();
+  const { state, receberNoCaixa, estornarCaixa, fecharCaixa } = useCarteira();
   const { currentUser, state: f1 } = useFase1();
   const perfilNome =
     f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
@@ -94,6 +99,25 @@ export default function CaixaPage() {
             >
               Imprimir
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (!window.confirm("Fechar o caixa com os movimentos abertos?"))
+                  return;
+                const f = fecharCaixa(currentUser?.nome ?? "Admin Demo");
+                if (!f) {
+                  notify("Nada a fechar — sem movimentos abertos");
+                  return;
+                }
+                notify(
+                  "Caixa fechado",
+                  `${f.data} · ${formatBRL(f.saldoDepois)} · ${f.qtdMovimentos} mov.`
+                );
+              }}
+            >
+              Fechar caixa
+            </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               Receber
             </Button>
@@ -105,12 +129,14 @@ export default function CaixaPage() {
           { label: "Saldo do caixa", value: formatBRL(state.caixaSaldo) },
           { label: "Movimentos", value: String(state.caixa.length) },
           {
-            label: "Parcial",
-            value: params.pagamentoParcial ? "Sim" : "Não",
+            label: "Abertos",
+            value: String(
+              state.caixa.filter((m) => !m.fechamentoId && !m.estornado).length
+            ),
           },
           {
-            label: "Atuais c/ atraso",
-            value: params.naoReceberAtuaisComAtrasadas ? "Bloqueado" : "Livre",
+            label: "Fechamentos",
+            value: String((state.caixaFechamentos ?? []).length),
           },
         ]}
       />
@@ -121,7 +147,7 @@ export default function CaixaPage() {
           { key: "valor", label: "Valor" },
           { key: "forma", label: "Forma" },
           { key: "auth", label: "Autenticação" },
-          { key: "vias", label: "Vias" },
+          { key: "fech", label: "Fechamento" },
           { key: "acao", label: "" },
         ]}
         rows={state.caixa.map((m) => ({
@@ -134,9 +160,11 @@ export default function CaixaPage() {
           ) : (
             m.autenticacao
           ),
-          vias: String(m.vias),
+          fech: m.fechamentoId ? "fechado" : "aberto",
           acao:
-            !m.estornado && (!params.estornoSoAdmin || isAdmin) ? (
+            !m.estornado &&
+            !m.fechamentoId &&
+            (!params.estornoSoAdmin || isAdmin) ? (
               <Button
                 size="sm"
                 variant="outline"
@@ -157,6 +185,30 @@ export default function CaixaPage() {
         }))}
         empty="Nenhum recebimento no caixa nesta sessão."
       />
+      {(state.caixaFechamentos ?? []).length ? (
+        <ModuleSection title="Histórico de fechamentos (H20)">
+          <DataTable
+            columns={[
+              { key: "data", label: "Data" },
+              { key: "antes", label: "Saldo antes" },
+              { key: "ent", label: "Entradas" },
+              { key: "est", label: "Estornos" },
+              { key: "depois", label: "Saldo depois" },
+              { key: "qtd", label: "Mov." },
+              { key: "quem", label: "Quem" },
+            ]}
+            rows={(state.caixaFechamentos ?? []).map((f) => ({
+              data: f.data,
+              antes: formatBRL(f.saldoAntes),
+              ent: formatBRL(f.entradas),
+              est: formatBRL(f.estornos),
+              depois: formatBRL(f.saldoDepois),
+              qtd: String(f.qtdMovimentos),
+              quem: f.quem,
+            }))}
+          />
+        </ModuleSection>
+      ) : null}
       <FormDialog
         open={open}
         onOpenChange={setOpen}

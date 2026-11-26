@@ -3,11 +3,11 @@
 import { Button } from "@/components/ui/button";
 import {
   ModuleHeader,
-  DataTable,
   StatusPill,
   KpiGrid,
 } from "@/components/app/ModulePage";
 import { notify } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
 import { downloadExcel, printList } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { formatBRL } from "@/lib/masks/br";
@@ -22,7 +22,7 @@ export default function ComissoesPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Comissões"
-        description="H12 — previsto, liberado e pago por corretor; liberar e pagar."
+        description="H12 — previsto, liberado e pago; lista com ações em lote (C15)."
         actions={
           <>
             <Button
@@ -70,63 +70,127 @@ export default function ComissoesPage() {
           { label: "Pago", value: formatBRL(pago) },
         ]}
       />
-      <DataTable
-        columns={[
-          { key: "corretor", label: "Corretor" },
-          { key: "venda", label: "Venda" },
-          { key: "previsto", label: "Previsto" },
-          { key: "liberado", label: "Liberado" },
-          { key: "pago", label: "Pago" },
-          { key: "status", label: "Status" },
-          { key: "acao", label: "" },
+      <ProcessList
+        storageKey="comissoes"
+        exportName="comissoes"
+        rows={state.comissoes}
+        empty="Sem comissões."
+        bulkActions={[
+          {
+            label: "Liberar seleção",
+            onClick: (ids) => {
+              let n = 0;
+              for (const id of ids) {
+                if (liberarComissao(id)) n += 1;
+              }
+              notify(n ? `${n} liberada(s)` : "Nenhuma prevista");
+            },
+          },
+          {
+            label: "Pagar seleção",
+            onClick: (ids) => {
+              let n = 0;
+              for (const id of ids) {
+                if (pagarComissao(id)) n += 1;
+              }
+              notify(n ? `${n} paga(s)` : "Nenhuma pendente");
+            },
+          },
         ]}
-        rows={state.comissoes.map((c) => ({
-          corretor: c.corretorNome,
-          venda: c.vendaRef,
-          previsto: formatBRL(c.valorPrevisto),
-          liberado: formatBRL(c.valorLiberado),
-          pago: formatBRL(c.valorPago),
-          status: (
-            <StatusPill tone={c.status === "paga" ? "ok" : "info"}>
-              {statusLabel(c.status)}
-            </StatusPill>
-          ),
-          acao:
-            c.status === "paga" ? (
-              "—"
-            ) : (
-              <div className="flex flex-wrap gap-1">
-                {c.status === "prevista" ? (
+        columns={[
+          {
+            key: "corretor",
+            label: "Corretor",
+            filter: { type: "text" },
+            getValue: (c) => c.corretorNome,
+          },
+          {
+            key: "venda",
+            label: "Venda",
+            filter: { type: "text" },
+            getValue: (c) => c.vendaRef,
+          },
+          {
+            key: "previsto",
+            label: "Previsto",
+            filter: { type: "range" },
+            getValue: (c) => c.valorPrevisto,
+            render: (c) => formatBRL(c.valorPrevisto),
+          },
+          {
+            key: "liberado",
+            label: "Liberado",
+            filter: { type: "range" },
+            getValue: (c) => c.valorLiberado,
+            render: (c) => formatBRL(c.valorLiberado),
+          },
+          {
+            key: "pago",
+            label: "Pago",
+            filter: { type: "range" },
+            getValue: (c) => c.valorPago,
+            render: (c) => formatBRL(c.valorPago),
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: [
+                { value: "prevista", label: "Prevista" },
+                { value: "liberada", label: "Liberada" },
+                { value: "paga", label: "Paga" },
+              ],
+            },
+            getValue: (c) => c.status,
+            render: (c) => (
+              <StatusPill tone={c.status === "paga" ? "ok" : "info"}>
+                {statusLabel(c.status)}
+              </StatusPill>
+            ),
+          },
+          {
+            key: "acao",
+            label: "",
+            getValue: () => "",
+            render: (c) =>
+              c.status === "paga" ? (
+                "—"
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {c.status === "prevista" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!liberarComissao(c.id)) {
+                          notify("Não foi possível liberar");
+                          return;
+                        }
+                        notify("Comissão liberada", c.corretorNome);
+                      }}
+                    >
+                      Liberar
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (!liberarComissao(c.id)) {
-                        notify("Não foi possível liberar");
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!pagarComissao(c.id)) {
+                        notify("Não foi possível pagar");
                         return;
                       }
-                      notify("Comissão liberada", c.corretorNome);
+                      notify("Comissão paga", c.corretorNome);
                     }}
                   >
-                    Liberar
+                    Pagar
                   </Button>
-                ) : null}
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    if (!pagarComissao(c.id)) {
-                      notify("Não foi possível pagar");
-                      return;
-                    }
-                    notify("Comissão paga", c.corretorNome);
-                  }}
-                >
-                  Pagar
-                </Button>
-              </div>
-            ),
-        }))}
-        empty="Sem comissões."
+                </div>
+              ),
+          },
+        ]}
       />
     </div>
   );

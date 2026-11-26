@@ -154,6 +154,143 @@ export default function RelatoriosPage() {
           >
             Sócios
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "relatorio-caixa.csv",
+                [
+                  "data",
+                  "cliente",
+                  "valor",
+                  "forma",
+                  "fechamento",
+                  "estornado",
+                ],
+                cart.caixa.map((m) => [
+                  m.data,
+                  m.cliente,
+                  m.valor,
+                  m.forma,
+                  m.fechamentoId ?? "aberto",
+                  m.estornado ? "sim" : "nao",
+                ])
+              );
+              notify("Relatório de caixa exportado");
+            }}
+          >
+            Caixa (resumo)
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "fechamento-caixa.csv",
+                [
+                  "data",
+                  "saldo_antes",
+                  "entradas",
+                  "estornos",
+                  "saldo_depois",
+                  "movimentos",
+                  "quem",
+                ],
+                (cart.caixaFechamentos ?? []).map((f) => [
+                  f.data,
+                  f.saldoAntes,
+                  f.entradas,
+                  f.estornos,
+                  f.saldoDepois,
+                  f.qtdMovimentos,
+                  f.quem,
+                ])
+              );
+              notify("Fechamento de caixa exportado");
+            }}
+          >
+            Fechamento caixa
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const hoje = new Date().toISOString().slice(0, 10);
+              downloadCsv(
+                "parcelas-adiantadas.csv",
+                ["contrato", "cliente", "vencimento", "pago_em", "valor"],
+                cart.installments
+                  .filter(
+                    (i) =>
+                      i.status === "paga" &&
+                      i.pagoEm &&
+                      i.pagoEm < i.vencimento
+                  )
+                  .map((i) => [
+                    i.contratoNumero,
+                    i.compradorNome,
+                    i.vencimento,
+                    i.pagoEm ?? "",
+                    i.valor,
+                  ])
+              );
+              notify("Parcelas adiantadas exportadas", hoje);
+            }}
+          >
+            Parcelas adiantadas
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "vendas-recebimentos-lotes.csv",
+                [
+                  "contrato",
+                  "cliente",
+                  "empreendimento",
+                  "preco",
+                  "status",
+                  "saldo",
+                ],
+                cart.contracts.map((c) => [
+                  c.numero,
+                  c.compradorNome,
+                  c.empNome,
+                  c.preco,
+                  c.status,
+                  saldoDevedor(c.id),
+                ])
+              );
+              notify("Vendas e recebimentos exportados");
+            }}
+          >
+            Vendas × recebimentos
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "historico-inadimplencia.csv",
+                ["contrato", "cliente", "vencimento", "valor", "juros", "multa"],
+                cart.installments
+                  .filter((i) => i.status === "vencida" || i.juros > 0)
+                  .map((i) => [
+                    i.contratoNumero,
+                    i.compradorNome,
+                    i.vencimento,
+                    i.valor,
+                    i.juros,
+                    i.multa,
+                  ])
+              );
+              notify("Histórico de inadimplência exportado");
+            }}
+          >
+            Hist. inadimplência
+          </Button>
         </div>
       </ModuleSection>
 
@@ -251,6 +388,91 @@ export default function RelatoriosPage() {
               ],
               ["quitados", "Quitados", () =>
                 cart.contracts.filter((c) => c.status === "quitado").map((c) => [c.numero, c.compradorNome, c.empNome, c.preco])
+              ],
+              ["cancelados", "Cancelados", () =>
+                cart.contracts
+                  .filter((c) => c.status === "cancelado")
+                  .map((c) => [
+                    c.numero,
+                    c.compradorNome,
+                    c.empNome,
+                    c.status,
+                    c.preco,
+                  ])
+              ],
+              ["cobranca", "Cobrança", () =>
+                cart.installments
+                  .filter(
+                    (i) => i.status === "vencida" || i.status === "em_aberto"
+                  )
+                  .map((i) => [
+                    i.contratoNumero,
+                    i.compradorNome,
+                    i.vencimento,
+                    i.valor + i.juros + i.multa,
+                    i.status,
+                  ])
+              ],
+              ["escrituras", "Escrituras", () =>
+                cart.escrituras.map((e) => {
+                  const c = cart.contracts.find((x) => x.id === e.contractId);
+                  const cartorio =
+                    cart.cartorios.find((x) => x.id === e.cartorioId)?.nome ??
+                    e.cartorioId;
+                  return [
+                    c?.numero ?? e.contractId,
+                    c?.compradorNome ?? "",
+                    e.protocolo,
+                    e.status,
+                    cartorio,
+                    e.data ?? "",
+                  ];
+                })
+              ],
+              ["lotes-plano", "Lotes por plano", () =>
+                cart.lots.map((l) => {
+                  const plano =
+                    cart.paymentPlans.find(
+                      (p) => p.developmentId === l.developmentId
+                    )?.nome ?? "—";
+                  return [
+                    l.empNome,
+                    `${l.quadra}/${l.lote}`,
+                    l.status,
+                    plano,
+                    l.valor,
+                  ];
+                })
+              ],
+              ["residuos", "Resíduos", () =>
+                cart.installments
+                  .filter((i) => /res[ií]duo/i.test(i.tipo))
+                  .map((i) => [
+                    i.contratoNumero,
+                    i.compradorNome,
+                    i.vencimento,
+                    i.valor,
+                    i.status,
+                  ])
+              ],
+              ["ficha-financeira", "Ficha financeira", () =>
+                cart.contracts.map((c) => [
+                  c.numero,
+                  c.compradorNome,
+                  c.empNome,
+                  c.preco,
+                  saldoDevedor(c.id),
+                  c.status,
+                ])
+              ],
+              ["veiculos-comms", "Veículos de comunicação", () =>
+                cart.contracts.map((c) => [
+                  c.numero,
+                  c.compradorNome,
+                  c.corretorNome ?? "direto",
+                  c.tipoReajuste,
+                  c.empNome,
+                ])
               ],
             ] as const
           ).map(([id, label, rows]) => (

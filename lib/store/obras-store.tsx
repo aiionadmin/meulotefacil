@@ -76,6 +76,12 @@ type ObrasApi = {
     status: RelatorioGerencial["status"]
   ) => boolean;
   gerarCurvaS: (obraId: string) => void;
+  /** D11 — expediente / BDI / arredondamento. */
+  updateObrasConfig: (patch: {
+    expedienteHoras?: number;
+    bdiModo?: "dinamico" | "fixo";
+    arredondamento?: number;
+  }) => void;
   nodesDaObra: (obraId: string) => OrcamentoNode[];
   totaisDaObra: (obraId: string) => {
     custo: number;
@@ -458,6 +464,18 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
         setState((s) => ({
           ...s,
           curvaS: { ...s.curvaS, [obraId]: pontos },
+        }));
+      },
+      updateObrasConfig: (patch) => {
+        setState((s) => ({
+          ...s,
+          expedienteHoras: Math.max(
+            1,
+            Math.min(24, patch.expedienteHoras ?? s.expedienteHoras ?? 8)
+          ),
+          bdiModo: patch.bdiModo ?? s.bdiModo,
+          arredondamento:
+            patch.arredondamento ?? s.arredondamento,
         }));
       },
       nodesDaObra,

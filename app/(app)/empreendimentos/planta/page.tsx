@@ -28,13 +28,14 @@ const COLORS: Record<LotStatus, string> = {
 };
 
 export default function PlantaPage() {
-  const { state, changeLotStatus } = useCarteira();
+  const { state, changeLotStatus, setLotPlantaPoligono } = useCarteira();
   const [devId, setDevId] = useState(state.developments[0]?.id ?? "");
   const [selected, setSelected] = useState<Lot | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfName, setPdfName] = useState("");
   const [zoom, setZoom] = useState(1);
   const [editMode, setEditMode] = useState(false);
+  const [polyDraft, setPolyDraft] = useState<{ x: number; y: number }[]>([]);
 
   const lots = useMemo(
     () => state.lots.filter((l) => l.developmentId === devId),
@@ -169,9 +170,45 @@ export default function PlantaPage() {
         <p className="mb-1 font-display text-lg text-ink">{emp?.nome}</p>
         <p className="mb-4 text-xs text-muted-foreground">
           {editMode
-            ? "Modo edição — clique no lote para marcar área"
+            ? "Modo edição — clique na área para pontos; selecione o lote e salve o polígono"
             : "Consulta — lote colorido pelo status"}
         </p>
+        {editMode ? (
+          <div
+            className="relative mb-4 h-48 cursor-crosshair rounded-sm border border-dashed border-ink/30 bg-white/40"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = Math.round(
+                ((e.clientX - rect.left) / rect.width) * 1000
+              );
+              const y = Math.round(
+                ((e.clientY - rect.top) / rect.height) * 1000
+              );
+              setPolyDraft((p) => [...p, { x, y }]);
+            }}
+          >
+            <svg
+              className="absolute inset-0 h-full w-full"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+            >
+              {polyDraft.length >= 2 ? (
+                <polyline
+                  points={polyDraft.map((p) => `${p.x},${p.y}`).join(" ")}
+                  fill="rgba(34,120,80,0.25)"
+                  stroke="#1a5c3a"
+                  strokeWidth="8"
+                />
+              ) : null}
+              {polyDraft.map((p, i) => (
+                <circle key={i} cx={p.x} cy={p.y} r="12" fill="#1a5c3a" />
+              ))}
+            </svg>
+            <p className="pointer-events-none absolute bottom-2 left-2 text-[10px] text-ink/60">
+              {polyDraft.length} ponto(s) · clique para adicionar
+            </p>
+          </div>
+        ) : null}
         <div className="space-y-4" style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}>
           {byQuadra.map(([quadra, items]) => (
             <div key={quadra}>
@@ -185,14 +222,23 @@ export default function PlantaPage() {
                     type="button"
                     className={cn(
                       "min-w-[3.25rem] rounded-sm px-2 py-2 text-center text-xs font-semibold text-white shadow-sm",
-                      COLORS[l.status]
+                      COLORS[l.status],
+                      (l.plantaPoligono?.length ?? 0) >= 3 &&
+                        "ring-2 ring-white/80"
                     )}
                     onClick={() => {
                       setSelected(l);
-                      if (editMode) {
+                      if (editMode && polyDraft.length >= 3) {
+                        setLotPlantaPoligono(l.id, polyDraft);
                         notify(
-                          "Área vinculada",
-                          `Lote ${l.quadra}/${l.lote} ligado ao polígono (sessão)`
+                          "Polígono salvo",
+                          `Lote ${l.quadra}/${l.lote} · ${polyDraft.length} vértices`
+                        );
+                        setPolyDraft([]);
+                      } else if (editMode) {
+                        notify(
+                          "Desenhe o polígono",
+                          "Mínimo 3 pontos na área acima, depois clique no lote"
                         );
                       }
                     }}
@@ -204,6 +250,17 @@ export default function PlantaPage() {
             </div>
           ))}
         </div>
+        {editMode ? (
+          <div className="mt-3 flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPolyDraft([])}
+            >
+              Limpar pontos
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <DetailSheet
@@ -224,6 +281,14 @@ export default function PlantaPage() {
             />
             <DetailRow label="Área" value={`${selected.area} m²`} />
             <DetailRow label="Valor" value={formatBRL(selected.valor)} />
+            <DetailRow
+              label="Polígono"
+              value={
+                (selected.plantaPoligono?.length ?? 0) >= 3
+                  ? `${selected.plantaPoligono!.length} vértices`
+                  : "—"
+              }
+            />
             <DetailRow
               label="Comprador"
               value={selected.compradorNome ?? "—"}

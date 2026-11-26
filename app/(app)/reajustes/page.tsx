@@ -16,6 +16,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { formatBRL } from "@/lib/masks/br";
 
@@ -226,19 +227,15 @@ export default function ReajustesPage() {
         }}
       >
         <Field label="Contrato">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
             value={opForm.contractId}
-            onChange={(e) =>
-              setOpForm({ ...opForm, contractId: e.target.value })
-            }
-          >
-            {state.contracts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.numero} · {c.compradorNome}
-              </option>
-            ))}
-          </select>
+            onChange={(contractId) => setOpForm({ ...opForm, contractId })}
+            placeholder="Buscar contrato…"
+            options={state.contracts.map((c) => ({
+              value: c.id,
+              label: `${c.numero} · ${c.compradorNome}`,
+            }))}
+          />
         </Field>
         <Field label="Tipo">
           <select

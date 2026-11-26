@@ -95,6 +95,19 @@ export default function CobrancaPage() {
           return false;
         }}
         exportName="inadimplentes"
+        bulkActions={[
+          {
+            label: "Pausar régua",
+            onClick: (ids) => {
+              let n = 0;
+              for (const id of ids) {
+                pausarRegua(id);
+                n += 1;
+              }
+              notify(`${n} caso(s) com régua pausada`);
+            },
+          },
+        ]}
         listColumns={[
           {
             key: "cliente",

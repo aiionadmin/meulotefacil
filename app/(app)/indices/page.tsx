@@ -1,6 +1,7 @@
 "use client";
 
-import { ModuleHeader, DataTable } from "@/components/app/ModulePage";
+import { ModuleHeader } from "@/components/app/ModulePage";
+import { ProcessList } from "@/components/app/ProcessList";
 import { useCarteira } from "@/lib/store/carteira-store";
 
 export default function IndicesPage() {
@@ -9,20 +10,34 @@ export default function IndicesPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Índices e cotações"
-        description="Moedas de referência por competência para reajuste e resíduos."
+        description="Moedas de referência por competência — lista filtrável (C14/C16)."
       />
-      <DataTable
-        columns={[
-          { key: "indice", label: "Índice" },
-          { key: "comp", label: "Competência" },
-          { key: "fator", label: "Fator" },
-        ]}
-        rows={state.indices.map((i) => ({
-          indice: i.indice,
-          comp: i.competencia,
-          fator: i.fator.toFixed(4),
-        }))}
+      <ProcessList
+        storageKey="indices"
+        exportName="indices"
+        rows={state.indices}
         empty="Sem cotações."
+        columns={[
+          {
+            key: "indice",
+            label: "Índice",
+            filter: { type: "text" },
+            getValue: (i) => i.indice,
+          },
+          {
+            key: "comp",
+            label: "Competência",
+            filter: { type: "period" },
+            getValue: (i) => i.competencia,
+          },
+          {
+            key: "fator",
+            label: "Fator",
+            filter: { type: "range" },
+            getValue: (i) => i.fator,
+            render: (i) => i.fator.toFixed(4),
+          },
+        ]}
       />
     </div>
   );
