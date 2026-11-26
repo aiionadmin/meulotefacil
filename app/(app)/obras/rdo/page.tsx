@@ -24,8 +24,10 @@ import {
   downloadRdoPdfProxy,
 } from "@/lib/export/rdo-report";
 import { downloadTextTemplate } from "@/lib/export/list-export";
+import { canApprove } from "@/lib/alcadas/check";
 import { formatDateBR } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 import type { Rdo, RdoStatus } from "@/lib/domain/obras-types";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +103,9 @@ function RdoInner() {
   const obraQ = search.get("obra") ?? "";
   const { state, addRdo, copyRdoFromPrevious, updateRdoStatus, nodesDaObra } =
     useObras();
+  const { currentUser, state: f1 } = useFase1();
+  const perfilNome =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const [q, setQ] = useState("");
   const [obraFilter, setObraFilter] = useState(obraQ || "todos");
   const [open, setOpen] = useState(false);
@@ -241,6 +246,15 @@ function RdoInner() {
             return true;
           }
           if (r.status === "enviado" && next === "aprovado") {
+            const gate = canApprove({
+              rules: f1.approvalRules,
+              tipo: "RDO",
+              perfilNome,
+            });
+            if (!gate.ok) {
+              notify("Alçada insuficiente", gate.reason);
+              return false;
+            }
             updateRdoStatus(id, "aprovado");
             notify("RDO aprovado · físico atualizado");
             return true;

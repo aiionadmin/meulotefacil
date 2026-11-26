@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,11 +10,22 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DetailRow } from "@/components/app/ModuleToolkit";
+import {
+  DetailRow,
+  fieldControlClass,
+  notify,
+} from "@/components/app/ModuleToolkit";
 import {
   useClientCard,
   type ClientCardTab,
 } from "@/lib/client/client-card-context";
+import {
+  buildMailtoLink,
+  buildTelLink,
+  buildWhatsAppLink,
+  defaultOutboundMessage,
+  type OutboundCanal,
+} from "@/lib/comms/outbound";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
@@ -45,13 +56,21 @@ function norm(s: string) {
 export function ClientCardSheet() {
   const { open, closeClient } = useClientCard();
   const { state: fase1 } = useFase1();
-  const { state: fluxo } = useFluxo();
+  const { state: fluxo, registrarConversa, registrarContato } = useFluxo();
   const { state: carteira, saldoDevedor } = useCarteira();
   const { state: parte5 } = useParte5();
+  const [canal, setCanal] = useState<OutboundCanal>("whatsapp");
+  const [msg, setMsg] = useState("");
 
   const data = useMemo(() => {
     if (!open) return null;
     const nomeN = norm(open.nome);
+    const cardKey =
+      open.personId ||
+      open.leadId ||
+      open.contractId ||
+      open.documento ||
+      nomeN;
 
     const person =
       (open.personId
@@ -116,8 +135,10 @@ export function ClientCardSheet() {
         f.nome.toLowerCase().includes(nomeN)
     );
 
-    const contatos = fluxo.contacts.filter((c) =>
-      cobranca.some((x) => x.id === c.caseId)
+    const contatos = fluxo.contacts.filter(
+      (c) =>
+        cobranca.some((x) => x.id === c.caseId) ||
+        c.caseId === `card:${cardKey}`
     );
 
     const moves = fluxo.cardMoves.filter(
@@ -186,9 +207,20 @@ export function ClientCardSheet() {
         texto: `Demanda ${d.numero} · ${statusLabel(d.status)} · ${d.descricao}`,
       });
     }
+    for (const c of contatos) {
+      historico.push({
+        quando: c.quando,
+        texto: `Contato ${statusLabel(c.canal)} · ${c.resultado}`,
+      });
+    }
     historico.sort((a, b) => (a.quando < b.quando ? 1 : -1));
 
+    const telefone =
+      person?.celular || person?.telefone1 || lead?.telefone || "";
+    const email = person?.email || lead?.email || "";
+
     return {
+      cardKey,
       person,
       lead,
       proposals,
@@ -202,6 +234,8 @@ export function ClientCardSheet() {
       contatos,
       demandas,
       historico,
+      telefone,
+      email,
     };
   }, [open, fase1, fluxo, carteira, parte5]);
 
@@ -209,6 +243,48 @@ export function ClientCardSheet() {
 
   const defaultTab = open.tab ?? "resumo";
   const titulo = data.person?.nome ?? open.nome;
+
+  const sendOutbound = () => {
+    const texto =
+      msg.trim() || defaultOutboundMessage(canal, titulo);
+    if (canal === "whatsapp") {
+      if (!data.telefone) {
+        notify("Sem telefone", "Cadastre o celular do cliente");
+        return;
+      }
+      window.open(buildWhatsAppLink(data.telefone, texto), "_blank");
+    } else if (canal === "email") {
+      if (!data.email) {
+        notify("Sem e-mail", "Cadastre o e-mail do cliente");
+        return;
+      }
+      window.open(
+        buildMailtoLink(data.email, `Meu Lote Fácil · ${titulo}`, texto),
+        "_blank"
+      );
+    } else {
+      if (!data.telefone) {
+        notify("Sem telefone", "Cadastre o telefone do cliente");
+        return;
+      }
+      window.open(buildTelLink(data.telefone), "_blank");
+    }
+    const caseId = data.cobranca[0]?.id;
+    if (caseId) {
+      registrarContato(caseId, canal, texto);
+    } else {
+      registrarConversa(data.cardKey, canal, texto);
+    }
+    notify(
+      canal === "whatsapp"
+        ? "WhatsApp aberto"
+        : canal === "email"
+          ? "E-mail aberto"
+          : "Discagem aberta",
+      "Registrado no histórico do card"
+    );
+    setMsg("");
+  };
 
   return (
     <Sheet open onOpenChange={(o) => !o && closeClient()}>
@@ -381,36 +457,72 @@ export function ClientCardSheet() {
             </TabsContent>
 
             <TabsContent value="conversas" className="mt-0 space-y-3">
-              {data.contatos.length === 0 && !data.lead?.ultimoContato ? (
+              <div className="space-y-2 rounded-md border border-border p-3">
+                <p className="text-sm font-medium">Registrar / enviar</p>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ["whatsapp", "WhatsApp"],
+                      ["email", "E-mail"],
+                      ["telefone", "Telefone"],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <Button
+                      key={id}
+                      size="sm"
+                      variant={canal === id ? "default" : "outline"}
+                      onClick={() => {
+                        setCanal(id);
+                        if (!msg) {
+                          setMsg(defaultOutboundMessage(id, titulo));
+                        }
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+                <textarea
+                  className={fieldControlClass + " min-h-[72px]"}
+                  value={msg}
+                  onChange={(e) => setMsg(e.target.value)}
+                  placeholder={defaultOutboundMessage(canal, titulo)}
+                />
+                <Button size="sm" onClick={sendOutbound}>
+                  Abrir {canal === "whatsapp" ? "WhatsApp" : canal === "email" ? "e-mail" : "telefone"}
+                </Button>
+                <p className="text-[11px] text-muted-foreground">
+                  Abre o canal no dispositivo e grava no card (sem gateway).
+                </p>
+              </div>
+              {data.lead?.ultimoContato ? (
+                <DetailRow
+                  label="Último contato (lead)"
+                  value={formatDateBR(data.lead.ultimoContato)}
+                />
+              ) : null}
+              {data.lead?.canalPreferido ? (
+                <DetailRow
+                  label="Canal preferido"
+                  value={statusLabel(data.lead.canalPreferido)}
+                />
+              ) : null}
+              {data.contatos.length === 0 ? (
                 <p className="text-muted-foreground">
                   Nenhuma conversa registrada.
                 </p>
               ) : (
-                <>
-                  {data.lead?.ultimoContato ? (
-                    <DetailRow
-                      label="Último contato (lead)"
-                      value={formatDateBR(data.lead.ultimoContato)}
-                    />
-                  ) : null}
-                  {data.lead?.canalPreferido ? (
-                    <DetailRow
-                      label="Canal preferido"
-                      value={data.lead.canalPreferido}
-                    />
-                  ) : null}
-                  {data.contatos.map((c) => (
-                    <div
-                      key={c.id}
-                      className="rounded-md border border-border px-3 py-2"
-                    >
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateBR(c.quando)} · {c.canal}
-                      </p>
-                      <p>{c.resultado}</p>
-                    </div>
-                  ))}
-                </>
+                data.contatos.map((c) => (
+                  <div
+                    key={c.id}
+                    className="rounded-md border border-border px-3 py-2"
+                  >
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateBR(c.quando)} · {statusLabel(c.canal)}
+                    </p>
+                    <p>{c.resultado}</p>
+                  </div>
+                ))
               )}
             </TabsContent>
 

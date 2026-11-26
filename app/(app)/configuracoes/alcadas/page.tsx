@@ -17,7 +17,7 @@ export default function AlcadasPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Alçadas"
-        description="Quem aprova ordem de compra, conciliação, desconto e estorno."
+        description="J03 — OC, SC, RDO, relatório gerencial, desconciliar, correção de card, conciliação, desconto e estorno."
       />
       <DataTable
         columns={[
