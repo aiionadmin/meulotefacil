@@ -11,20 +11,26 @@ import {
 } from "@/components/app/ModulePage";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import { fieldControlClass } from "@/components/app/ModuleToolkit";
-import { formatBRL } from "@/lib/masks/br";
+import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { statusLabel } from "@/lib/status/labels";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useObras } from "@/lib/store/obras-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 
 const ABAS = [
   "resumo",
+  "planta",
   "lotes",
   "vendas",
+  "boletos",
   "previsao",
   "inadimplencia",
+  "regularizacao",
   "demandas",
   "obras",
+  "arquivos",
 ] as const;
 
 export default function EmpreendimentoHubPage() {
@@ -32,6 +38,7 @@ export default function EmpreendimentoHubPage() {
   const { state: p5 } = useParte5();
   const { state: obras } = useObras();
   const { state: fluxo } = useFluxo();
+  const { state: fase1 } = useFase1();
   const [empId, setEmpId] = useState(cart.developments[0]?.id ?? "");
   const [aba, setAba] = useState<(typeof ABAS)[number]>("resumo");
 
@@ -58,6 +65,29 @@ export default function EmpreendimentoHubPage() {
   const propostasCount = fluxo.proposals.filter(
     (p) => p.empNome === emp?.nome
   ).length;
+  const boletos = useMemo(
+    () =>
+      cart.bankSlips.filter((b) =>
+        contratos.some((c) => c.id === b.contractId)
+      ),
+    [cart.bankSlips, contratos]
+  );
+  const regularizacao = useMemo(
+    () =>
+      fluxo.regularization.filter(
+        (r) => r.empNome === emp?.nome || r.empNome.includes(emp?.nome ?? "")
+      ),
+    [fluxo.regularization, emp?.nome]
+  );
+  const arquivos = useMemo(
+    () =>
+      fase1.files.filter(
+        (f) =>
+          f.comentario?.toLowerCase().includes((emp?.nome ?? "").toLowerCase()) ||
+          f.nome.toLowerCase().includes((emp?.codigo ?? "").toLowerCase())
+      ),
+    [fase1.files, emp?.nome, emp?.codigo]
+  );
 
   if (!emp) {
     return <p className="text-sm text-muted-foreground">Sem empreendimentos.</p>;
@@ -67,7 +97,7 @@ export default function EmpreendimentoHubPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Gestão do empreendimento"
-        description="Visão única — resumo, lotes, vendas, inadimplência, demandas e obras."
+        description="Visão única I02 — resumo, planta, lotes, vendas, boletos, carteira, regularização, demandas, obras e arquivos."
         actions={
           <>
             <select
@@ -119,9 +149,23 @@ export default function EmpreendimentoHubPage() {
         />
       ) : null}
 
+      {aba === "planta" ? (
+        <ModuleSection title="Planta">
+          <p className="mb-3 text-sm text-muted-foreground">
+            Visualização e edição de áreas na planta do empreendimento.
+          </p>
+          <Button size="sm" asChild>
+            <Link href={`/empreendimentos/planta?emp=${emp.id}`}>
+              Abrir planta
+            </Link>
+          </Button>
+        </ModuleSection>
+      ) : null}
+
       {aba === "lotes" ? (
         <ModuleSection title="Lotes">
           <PaginatedTable
+            exportName="hub-lotes"
             columns={[
               { key: "ql", label: "Q/L" },
               { key: "valor", label: "Valor" },
@@ -130,7 +174,7 @@ export default function EmpreendimentoHubPage() {
             rows={lotes.map((l) => ({
               ql: `${l.quadra}-${l.lote}`,
               valor: formatBRL(l.valor),
-              st: l.status,
+              st: statusLabel(l.status),
             }))}
           />
         </ModuleSection>
@@ -155,6 +199,31 @@ export default function EmpreendimentoHubPage() {
               preco: formatBRL(c.preco),
             }))}
           />
+        </ModuleSection>
+      ) : null}
+
+      {aba === "boletos" ? (
+        <ModuleSection title="Boletos">
+          <PaginatedTable
+            exportName="hub-boletos"
+            columns={[
+              { key: "nn", label: "Nosso nº" },
+              { key: "ctr", label: "Contrato" },
+              { key: "venc", label: "Vencimento" },
+              { key: "valor", label: "Valor" },
+              { key: "st", label: "Status" },
+            ]}
+            rows={boletos.map((b) => ({
+              nn: b.nossoNumero,
+              ctr: b.contratoNumero,
+              venc: formatDateBR(b.vencimento),
+              valor: formatBRL(b.valor),
+              st: statusLabel(b.status),
+            }))}
+          />
+          <Button size="sm" variant="outline" className="mt-3" asChild>
+            <Link href="/boletos">Módulo de boletos</Link>
+          </Button>
         </ModuleSection>
       ) : null}
 
@@ -201,6 +270,29 @@ export default function EmpreendimentoHubPage() {
                 valor: formatBRL(i.valor),
               }))}
           />
+        </ModuleSection>
+      ) : null}
+
+      {aba === "regularizacao" ? (
+        <ModuleSection title="Regularização">
+          <PaginatedTable
+            exportName="hub-regularizacao"
+            columns={[
+              { key: "cli", label: "Cliente" },
+              { key: "lote", label: "Lote" },
+              { key: "etapa", label: "Etapa" },
+              { key: "prazo", label: "Prazo" },
+            ]}
+            rows={regularizacao.map((r) => ({
+              cli: r.cliente,
+              lote: r.loteLabel,
+              etapa: statusLabel(r.etapa),
+              prazo: r.prazo ? formatDateBR(r.prazo) : "—",
+            }))}
+          />
+          <Button size="sm" variant="outline" className="mt-3" asChild>
+            <Link href="/quadros/regularizacao">Quadro regularização</Link>
+          </Button>
         </ModuleSection>
       ) : null}
 
@@ -251,6 +343,32 @@ export default function EmpreendimentoHubPage() {
                 </li>
               ))}
           </ul>
+        </ModuleSection>
+      ) : null}
+
+      {aba === "arquivos" ? (
+        <ModuleSection title="Arquivos">
+          <PaginatedTable
+            exportName="hub-arquivos"
+            columns={[
+              { key: "nome", label: "Nome" },
+              { key: "tag", label: "Tag" },
+              { key: "tam", label: "Tamanho" },
+            ]}
+            rows={arquivos.map((f) => ({
+              nome: f.nome,
+              tag: f.tag,
+              tam: f.tamanho,
+            }))}
+          />
+          {!arquivos.length ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Nenhum arquivo etiquetado com este empreendimento.
+            </p>
+          ) : null}
+          <Button size="sm" variant="outline" className="mt-3" asChild>
+            <Link href="/arquivos">Central de arquivos</Link>
+          </Button>
         </ModuleSection>
       ) : null}
     </div>

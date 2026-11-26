@@ -23,16 +23,20 @@ import {
   downloadInformeAnual,
 } from "@/lib/export/portal-cliente";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { statusLabel } from "@/lib/status/labels";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { useFluxo } from "@/lib/store/fluxo-store";
 
 export default function PortalClientePage() {
   const { state: p5, addDemanda, demandasDoCliente } = useParte5();
   const { state: cart, saldoDevedor } = useCarteira();
   const { state: fin } = useFinanceiro();
+  const { state: fluxo } = useFluxo();
   const sess = p5.portalCliente;
   const [open, setOpen] = useState(false);
+  const [docEnviado, setDocEnviado] = useState<string | null>(null);
   const [form, setForm] = useState({
     tipoId: "dt-1",
     descricao: "",
@@ -57,6 +61,22 @@ export default function PortalClientePage() {
       r.origem === "contrato" &&
       r.cliente.toLowerCase().includes(sess.nome.split(" ")[0].toLowerCase())
   );
+
+  const minhaReurb = useMemo(() => {
+    const nome = sess.nome.split(" ")[0].toLowerCase();
+    return fluxo.regularization.filter((r) =>
+      r.cliente.toLowerCase().includes(nome)
+    );
+  }, [fluxo.regularization, sess.nome]);
+
+  const etapas = [
+    "documentos",
+    "prefeitura",
+    "cartorio",
+    "registro",
+    "matricula",
+    "entregue",
+  ] as const;
 
   return (
     <div className="space-y-6">
@@ -181,6 +201,69 @@ export default function PortalClientePage() {
             Informe anual
           </Button>
         </div>
+      </ModuleSection>
+
+      <ModuleSection title="Regularização">
+        {minhaReurb.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhum protocolo de regularização vinculado.
+          </p>
+        ) : (
+          minhaReurb.map((r) => {
+            const idx = etapas.indexOf(
+              r.etapa as (typeof etapas)[number]
+            );
+            return (
+              <div
+                key={r.id}
+                className="mb-3 space-y-2 rounded-md border border-border p-3"
+              >
+                <p className="font-medium">
+                  {r.empNome} · {r.loteLabel}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Etapa atual: {statusLabel(r.etapa)}
+                  {r.prazo ? ` · previsão ${formatDateBR(r.prazo)}` : ""}
+                </p>
+                <ol className="flex flex-wrap gap-1 text-[11px]">
+                  {etapas.map((e, i) => (
+                    <li
+                      key={e}
+                      className={`rounded px-1.5 py-0.5 ${
+                        i <= idx
+                          ? "bg-brand-green/15 text-brand-green"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {statusLabel(e)}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            );
+          })
+        )}
+        <label className="mt-2 inline-flex cursor-pointer">
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              setDocEnviado(f.name);
+              notify("Documento enviado", f.name);
+            }}
+          />
+          <span className="inline-flex h-8 items-center rounded-md border border-input px-3 text-xs font-medium hover:bg-accent">
+            Enviar documento pendente
+          </span>
+        </label>
+        {docEnviado ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Último envio: {docEnviado}
+          </p>
+        ) : null}
       </ModuleSection>
 
       <ModuleSection title="Minhas demandas">
