@@ -18,6 +18,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
+import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { OrdemCompra } from "@/lib/domain/compras-types";
 
 export default function OrdensCompraPage() {
@@ -27,6 +28,7 @@ export default function OrdensCompraPage() {
     negarOrdem,
     marcarOcEntregue,
   } = useCompras();
+  const { state: fin, addLancamento } = useFinanceiro();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<OrdemCompra | null>(null);
 
@@ -201,11 +203,55 @@ export default function OrdensCompraPage() {
                         );
                         return;
                       }
-                      notify(
-                        r.payable
-                          ? `Aprovada · a pagar ${formatBRL(r.payable.valor)}`
-                          : "Aprovada"
-                      );
+                      if (r.payable) {
+                        const cat =
+                          fin.categorias.find((c) =>
+                            /compra|insumo|material/i.test(c.nome)
+                          ) ?? fin.categorias[0];
+                        const conta = fin.contas[0];
+                        if (cat && conta) {
+                          const lan = addLancamento({
+                            descricao: r.payable.descricao,
+                            favorecido: r.payable.favorecido,
+                            categoriaId: cat.id,
+                            competencia: new Date()
+                              .toISOString()
+                              .slice(0, 7),
+                            vencimento: new Date()
+                              .toISOString()
+                              .slice(0, 10),
+                            pagador: "Meu Lote Fácil",
+                            contaId: conta.id,
+                            valor: r.payable.valor,
+                            forma: "boleto",
+                            condicao: "a_vista",
+                            centros: [
+                              live.centro.tipo === "obra"
+                                ? {
+                                    tipo: "obra" as const,
+                                    obraId: live.centro.obraId,
+                                    label: live.centro.label,
+                                  }
+                                : {
+                                    tipo: "empresa" as const,
+                                    label: live.centro.label,
+                                  },
+                            ],
+                            numeroDoc: live.numero,
+                          });
+                          notify(
+                            lan.ok
+                              ? `Aprovada · lançamento ${formatBRL(r.payable.valor)}`
+                              : `Aprovada · a pagar ${formatBRL(r.payable.valor)}`
+                          );
+                        } else {
+                          notify(
+                            `Aprovada · a pagar ${formatBRL(r.payable.valor)}`
+                          );
+                        }
+                      } else {
+                        notify("Aprovada");
+                      }
                       setSelected(null);
                     }}
                   >
@@ -237,6 +283,55 @@ export default function OrdensCompraPage() {
                 >
                   Marcar entregue
                 </Button>
+              ) : null}
+              {live.aprovacaoStatus === "aprovado" ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const blob = new Blob(
+                        [
+                          `Ordem de Compra ${live.numero}\n`,
+                          `Fornecedor: ${live.fornecedor}\n`,
+                          `Valor: ${live.valor}\n`,
+                          `Centro: ${live.centro.label}\n`,
+                        ],
+                        { type: "application/pdf" }
+                      );
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${live.numero}.pdf`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      notify("PDF gerado", live.numero);
+                    }}
+                  >
+                    Imprimir PDF
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      notify(
+                        "WhatsApp",
+                        `OC ${live.numero} · ${formatBRL(live.valor)}`
+                      )
+                    }
+                  >
+                    Enviar WhatsApp
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      notify("E-mail", `OC ${live.numero} enviada`)
+                    }
+                  >
+                    Enviar e-mail
+                  </Button>
+                </>
               ) : null}
             </div>
           </div>

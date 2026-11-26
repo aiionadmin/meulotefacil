@@ -77,6 +77,9 @@ export default function VendasPage() {
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
+              <Link href="/vendas/nova">Nova venda</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
               <Link href="/contratos">Contratos</Link>
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
