@@ -114,6 +114,8 @@ type FinanceiroApi = {
   }) => PreLancamento;
   aprovarPre: (id: string) => boolean;
   recusarPre: (id: string, motivo: string) => boolean;
+  /** C15 — aprovar pré-lançamentos em lote. */
+  aprovarPresLote: (ids: string[]) => number;
   resultadosPorGrupo: (visao: "geral" | "empresa" | "obra", obraId?: string) => {
     grupo: string;
     valor: number;
@@ -789,6 +791,77 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      aprovarPresLote: (ids) => {
+        const set = new Set(ids);
+        const cat =
+          state.categorias.find((c) => c.nome === "Outras Despesas") ??
+          state.categorias[0];
+        const conta = state.contas[0];
+        if (!cat || !conta) return 0;
+        let n = 0;
+        setState((s) => {
+          const alvos = s.preLancamentos.filter(
+            (p) => set.has(p.id) && p.status === "pendente"
+          );
+          n = alvos.length;
+          if (!n) return s;
+          const novosLan: Lancamento[] = [];
+          const novosPag: Pagamento[] = [];
+          const mapLan = new Map<string, string>();
+          for (const pre of alvos) {
+            const lanId = uid("lan");
+            mapLan.set(pre.id, lanId);
+            novosLan.push({
+              id: lanId,
+              descricao: pre.descricao,
+              favorecido: pre.solicitante,
+              categoriaId: cat.id,
+              competencia: `${todayIso().slice(0, 7)}-01`,
+              vencimento: todayIso(),
+              pagador: "Meu Lote Fácil",
+              contaId: conta.id,
+              valor: pre.valor,
+              forma: "dinheiro",
+              condicao: "a_vista",
+              centros: [pre.centro],
+              criadoEm: todayIso(),
+            });
+            novosPag.push({
+              id: uid("pag"),
+              lancamentoId: lanId,
+              parcela: "1/1",
+              vencimento: todayIso(),
+              valor: pre.valor,
+              valorPago: 0,
+              status: "em_aberto",
+              favorecido: pre.solicitante,
+              descricao: pre.descricao,
+              categoriaId: cat.id,
+              contaId: conta.id,
+              centroLabel: pre.centro.label,
+              forma: "dinheiro",
+              condicao: "a_vista",
+              conciliado: false,
+              historico: [],
+            });
+          }
+          return {
+            ...s,
+            lancamentos: [...novosLan, ...s.lancamentos],
+            pagamentos: [...novosPag, ...s.pagamentos],
+            preLancamentos: s.preLancamentos.map((p) =>
+              mapLan.has(p.id)
+                ? {
+                    ...p,
+                    status: "aprovado" as const,
+                    lancamentoId: mapLan.get(p.id),
+                  }
+                : p
+            ),
+          };
+        });
+        return n;
       },
       resultadosPorGrupo: (visao, obraId) => {
         const pagos = state.pagamentos.filter(

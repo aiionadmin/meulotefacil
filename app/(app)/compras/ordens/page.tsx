@@ -1,27 +1,34 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   ModuleHeader,
   KpiGrid,
   StatusPill,
-  ModuleSection,
 } from "@/components/app/ModulePage";
-import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
   DetailRow,
   DetailSheet,
   FilterBar,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { canApprove } from "@/lib/alcadas/check";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useFase1 } from "@/lib/store/fase1-store";
-import type { OrdemCompra } from "@/lib/domain/compras-types";
+import type { OcAprovacao, OrdemCompra } from "@/lib/domain/compras-types";
+
+const APROV_COLS: { id: OcAprovacao; label: string }[] = [
+  { id: "aguardando_aprovacao", label: "Aguardando" },
+  { id: "em_aberto", label: "Em aberto" },
+  { id: "negociando", label: "Negociando" },
+  { id: "aprovado", label: "Aprovado" },
+  { id: "negado", label: "Negado" },
+];
 
 export default function OrdensCompraPage() {
   const {
@@ -29,6 +36,8 @@ export default function OrdensCompraPage() {
     aprovarOrdem,
     negarOrdem,
     marcarOcEntregue,
+    aprovarOrdensLote,
+    negarOrdensLote,
   } = useCompras();
   const { state: fin, addLancamento } = useFinanceiro();
   const { currentUser, state: f1 } = useFase1();
@@ -56,12 +65,21 @@ export default function OrdensCompraPage() {
     return {
       total: state.ordens.reduce((a, o) => a + o.valor, 0),
       aprovado: by("aprovado"),
-      em_aberto: by("em_aberto"),
-      negociando: by("negociando"),
       aguardando: by("aguardando_aprovacao"),
-      negado: by("negado"),
     };
   }, [state.ordens]);
+
+  const toCard = useCallback(
+    (o: OrdemCompra) => ({
+      id: o.id,
+      columnId: o.aprovacaoStatus,
+      title: o.numero,
+      subtitle: o.fornecedor,
+      badge: formatBRL(o.valor),
+      meta: o.centro.label,
+    }),
+    []
+  );
 
   const live = selected
     ? state.ordens.find((o) => o.id === selected.id) ?? selected
@@ -71,7 +89,7 @@ export default function OrdensCompraPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Ordens de compra"
-        description="OC nasce da cotação (padrão: sem cotação bloqueado)."
+        description="C19/C15 — Kanban por aprovação; ações em lote."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -98,53 +116,110 @@ export default function OrdensCompraPage() {
 
       <FilterBar value={q} onChange={setQ} placeholder="Buscar OC…" />
 
-      <ModuleSection title="Lista">
-        <PaginatedTable
-          columns={[
-            { key: "numero", label: "Nº" },
-            { key: "forn", label: "Fornecedor" },
-            { key: "valor", label: "Valor" },
-            { key: "desc", label: "Descrição" },
-            { key: "centro", label: "Centro" },
-            { key: "criacao", label: "Criação" },
-            { key: "aprov", label: "Aprovação" },
-            { key: "compra", label: "Compra" },
-          ]}
-          rows={filtered.map((o) => ({
-            numero: (
-              <button
-                type="button"
-                className="font-medium hover:text-brand-orange"
-                onClick={() => setSelected(o)}
-              >
-                {o.numero}
-              </button>
-            ),
-            forn: o.fornecedor,
-            valor: formatBRL(o.valor),
-            desc: o.descricao,
-            centro: o.centro.label,
-            criacao: formatDateBR(o.criadoEm),
-            aprov: (
+      <ProcessBoard
+        storageKey="ordens-compra"
+        columns={APROV_COLS}
+        rows={filtered}
+        toCard={toCard}
+        columnTotals={(_, items) => items.reduce((a, o) => a + o.valor, 0)}
+        onOpen={(id) =>
+          setSelected(state.ordens.find((o) => o.id === id) ?? null)
+        }
+        onMove={() => {
+          notify("Use Aprovar / Negar no detalhe ou em lote");
+          return false;
+        }}
+        exportName="ordens-compra"
+        bulkActions={[
+          {
+            label: "Aprovar seleção",
+            onClick: (ids) => {
+              const gate = canApprove({
+                rules: f1.approvalRules,
+                tipo: "Ordem de compra",
+                perfilNome,
+              });
+              if (!gate.ok) {
+                notify("Alçada insuficiente", gate.reason);
+                return;
+              }
+              const n = aprovarOrdensLote(ids);
+              notify(n ? `${n} OC aprovada(s)` : "Nenhuma aguardando");
+            },
+          },
+          {
+            label: "Negar seleção",
+            tone: "danger",
+            onClick: (ids) => {
+              const n = negarOrdensLote(ids);
+              notify(n ? `${n} OC negada(s)` : "Nenhuma aguardando");
+            },
+          },
+        ]}
+        listColumns={[
+          {
+            key: "numero",
+            label: "Nº",
+            filter: { type: "text" },
+            getValue: (o) => o.numero,
+          },
+          {
+            key: "forn",
+            label: "Fornecedor",
+            filter: { type: "text" },
+            getValue: (o) => o.fornecedor,
+          },
+          {
+            key: "valor",
+            label: "Valor",
+            filter: { type: "range" },
+            getValue: (o) => o.valor,
+            render: (o) => formatBRL(o.valor),
+          },
+          {
+            key: "centro",
+            label: "Centro",
+            filter: { type: "text" },
+            getValue: (o) => o.centro.label,
+          },
+          {
+            key: "criacao",
+            label: "Criação",
+            filter: { type: "period" },
+            getValue: (o) => o.criadoEm,
+            render: (o) => formatDateBR(o.criadoEm),
+          },
+          {
+            key: "aprov",
+            label: "Aprovação",
+            filter: {
+              type: "status",
+              options: APROV_COLS.map((c) => ({
+                value: c.id,
+                label: c.label,
+              })),
+            },
+            getValue: (o) => o.aprovacaoStatus,
+            render: (o) => (
               <StatusPill tone="info">
                 {o.aprovacaoStatus.replace(/_/g, " ")}
               </StatusPill>
             ),
-            compra: (
+          },
+          {
+            key: "compra",
+            label: "Compra",
+            filter: { type: "text" },
+            getValue: (o) => o.compraStatus,
+            render: (o) => (
               <StatusPill tone="ok">
                 {o.compraStatus.replace(/_/g, " ")}
               </StatusPill>
             ),
-          }))}
-        />
-      </ModuleSection>
+          },
+        ]}
+      />
 
-      <p className="text-xs text-muted-foreground">
-        Totais — Total {formatBRL(totais.total)} · Aprovado{" "}
-        {formatBRL(totais.aprovado)} · Em aberto {formatBRL(totais.em_aberto)} ·
-        Negociando {formatBRL(totais.negociando)} · Aguardando{" "}
-        {formatBRL(totais.aguardando)} · Negado {formatBRL(totais.negado)}
-      </p>
       {!state.config.permitirOcSemCotacao ? (
         <p className="text-xs text-muted-foreground">
           Configuração: OC sem cotação não permitida.
