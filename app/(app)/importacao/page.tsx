@@ -9,7 +9,7 @@ import {
   StatusPill,
   ModuleSection,
 } from "@/components/app/ModulePage";
-import { notify } from "@/components/app/ModuleToolkit";
+import { fieldControlClass, notify } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
 import { useOperacoes } from "@/lib/store/operacoes-store";
 import { LOTEWIN_PANEL_2026_11_24 } from "@/lib/domain/operacoes-seed";
@@ -23,8 +23,19 @@ import {
   runLotewinConference,
   conferenceSummary,
 } from "@/lib/import/conference";
+import {
+  type C17EntityId,
+  c17Headers,
+  modeloC17Csv,
+  parseC17Csv,
+} from "@/lib/import/c17-csv";
 
-const EXCEL_MODELS = [
+const EXCEL_MODELS: {
+  id: string;
+  label: string;
+  headers: string[];
+  c17?: C17EntityId;
+}[] = [
   {
     id: "quadras_lotes",
     label: "Quadras e lotes (C04)",
@@ -33,37 +44,44 @@ const EXCEL_MODELS = [
   {
     id: "clientes",
     label: "Clientes (C17)",
-    headers: ["nome", "cpf_cnpj", "telefone", "email", "cidade"],
+    headers: c17Headers("clientes"),
+    c17: "clientes",
   },
   {
     id: "fornecedores",
     label: "Fornecedores (C17)",
-    headers: ["razao_social", "cnpj", "telefone", "email"],
+    headers: c17Headers("fornecedores"),
+    c17: "fornecedores",
   },
   {
     id: "profissionais",
     label: "Profissionais (C17)",
-    headers: ["nome", "cpf", "especialidade", "telefone"],
+    headers: c17Headers("profissionais"),
+    c17: "profissionais",
   },
   {
     id: "insumos",
     label: "Insumos (C17)",
-    headers: ["codigo", "descricao", "unidade", "preco"],
+    headers: c17Headers("insumos"),
+    c17: "insumos",
   },
   {
     id: "composicoes",
     label: "Composições (C17)",
-    headers: ["codigo", "descricao", "unidade"],
+    headers: c17Headers("composicoes"),
+    c17: "composicoes",
   },
   {
     id: "lancamentos",
     label: "Lançamentos (C17)",
-    headers: ["data", "conta", "categoria", "valor", "historico"],
+    headers: c17Headers("lancamentos"),
+    c17: "lancamentos",
   },
   {
     id: "faturamentos",
     label: "Faturamentos (C17)",
-    headers: ["data", "cliente", "valor", "documento"],
+    headers: c17Headers("faturamentos"),
+    c17: "faturamentos",
   },
 ];
 
@@ -77,6 +95,8 @@ export default function ImportacaoPage() {
   const [k03, setK03] = useState<ReturnType<typeof runLotewinConference> | null>(
     null
   );
+  const [c17Entity, setC17Entity] = useState<C17EntityId | "lotes">("clientes");
+  const [c17Summary, setC17Summary] = useState<string>("");
 
   const ok = state.importQueue.filter((e) => e.status === "ok").length;
   const parcial = state.importQueue.filter((e) => e.status === "parcial").length;
@@ -218,11 +238,16 @@ export default function ImportacaoPage() {
               size="sm"
               variant="outline"
               onClick={() => {
-                downloadCsv(
-                  `modelo-${m.id}.csv`,
-                  m.headers,
-                  [m.headers.map(() => "")]
-                );
+                if (m.c17) {
+                  downloadTextTemplate(
+                    `modelo-${m.id}.csv`,
+                    modeloC17Csv(m.c17)
+                  );
+                } else {
+                  downloadCsv(`modelo-${m.id}.csv`, m.headers, [
+                    ["A", "01", "250", "180000", "disponivel"],
+                  ]);
+                }
                 notify(`Modelo ${m.label} baixado`);
               }}
             >
@@ -243,6 +268,33 @@ export default function ImportacaoPage() {
             Modelo .txt (fallback)
           </Button>
         </div>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label className="text-sm text-muted-foreground">Entidade</label>
+          <select
+            className={fieldControlClass + " max-w-[220px]"}
+            value={c17Entity}
+            onChange={(e) =>
+              setC17Entity(e.target.value as C17EntityId | "lotes")
+            }
+          >
+            <option value="lotes">Quadras e lotes (C04)</option>
+            {(
+              [
+                "clientes",
+                "fornecedores",
+                "profissionais",
+                "insumos",
+                "composicoes",
+                "lancamentos",
+                "faturamentos",
+              ] as C17EntityId[]
+            ).map((id) => (
+              <option key={id} value={id}>
+                {id} (C17)
+              </option>
+            ))}
+          </select>
+        </div>
         <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
           <input
             type="file"
@@ -252,33 +304,52 @@ export default function ImportacaoPage() {
               const f = e.target.files?.[0];
               if (!f) return;
               const text = await f.text();
-              const lines = text
-                .split(/\r?\n/)
-                .map((l) => l.trim())
-                .filter(Boolean);
-              const rows = lines.slice(1).map((line, i) => {
-                const cols = line.split(";");
-                const erros: string[] = [];
-                if (!cols[0]) erros.push("quadra vazia");
-                if (!cols[1]) erros.push("lote vazio");
-                return {
-                  linha: i + 2,
-                  payload: line,
-                  erros,
-                  acao: erros.length ? "corrigir" : "criar",
-                };
-              });
-              setConferenceRows(rows);
-              notify(
-                "Conferência pronta",
-                `${rows.length} linhas · ${rows.filter((r) => r.erros.length).length} com erro`
-              );
+              let summary = f.name;
+              if (c17Entity === "lotes") {
+                const lines = text
+                  .split(/\r?\n/)
+                  .map((l) => l.trim())
+                  .filter(Boolean);
+                const rows = lines.slice(1).map((line, i) => {
+                  const cols = line.split(/[;,]/);
+                  const erros: string[] = [];
+                  if (!cols[0]) erros.push("quadra vazia");
+                  if (!cols[1]) erros.push("lote vazio");
+                  return {
+                    linha: i + 2,
+                    payload: line,
+                    erros,
+                    acao: erros.length ? "corrigir" : "criar",
+                  };
+                });
+                setConferenceRows(rows);
+                summary = `${rows.length} linhas · ${rows.filter((r) => r.erros.length).length} com erro`;
+                setC17Summary(summary);
+              } else {
+                const preview = parseC17Csv(c17Entity, text);
+                setConferenceRows(
+                  preview.rows.map((r) => ({
+                    linha: r.linha,
+                    payload: Object.entries(r.payload)
+                      .map(([k, v]) => `${k}=${v}`)
+                      .join(" · "),
+                    erros: r.erros,
+                    acao: r.acao,
+                  }))
+                );
+                summary = `${preview.criar} criar · ${preview.atualizar} atualizar · ${preview.erros} com erro`;
+                setC17Summary(summary);
+              }
+              notify("Conferência pronta", summary);
             }}
           />
           <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
             Enviar planilha (CSV)
           </span>
         </label>
+        {c17Summary ? (
+          <p className="mt-2 text-xs text-muted-foreground">{c17Summary}</p>
+        ) : null}
         {conferenceRows.length > 0 ? (
           <div className="mt-4 space-y-3">
             <DataTable
