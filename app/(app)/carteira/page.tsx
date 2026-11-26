@@ -24,6 +24,7 @@ import { resolveInstallmentStatus } from "@/lib/money/installment-status";
 import { aReceberContratos } from "@/lib/indicators/receivables";
 import { statusLabel } from "@/lib/status/labels";
 import { paginate } from "@/lib/ui/pagination";
+import { downloadCsv } from "@/lib/export/list-export";
 
 const CONSULTA = "2026-11-24";
 
@@ -48,6 +49,9 @@ function CarteiraInner() {
     state,
     refreshEncargos,
     baixarParcela,
+    updateInstallment,
+    addInstallment,
+    cancelarBoleto,
     estornarParcela,
     saldoDevedor,
   } = useCarteira();
@@ -184,6 +188,66 @@ function CarteiraInner() {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => {
+                downloadCsv(
+                  "ficha-financeira.csv",
+                  [
+                    "tipo",
+                    "pagamento",
+                    "vencimento",
+                    "valor",
+                    "juros",
+                    "multa",
+                    "correcao",
+                    "despesa",
+                    "numero",
+                    "prestacao",
+                    "status",
+                  ],
+                  views.map((p) => {
+                    const totalParc = state.installments.filter(
+                      (i) => i.contractId === p.contractId
+                    ).length;
+                    return [
+                      p.tipo,
+                      p.pagoEm ?? "",
+                      p.vencimento,
+                      p.valorOriginal,
+                      p.juros,
+                      p.multa,
+                      p.correcao,
+                      p.despesaBancaria,
+                      p.nossoNumero ?? "",
+                      `${p.n}/${totalParc}`,
+                      p.statusResolved,
+                    ];
+                  })
+                );
+                notify("Ficha exportada");
+              }}
+            >
+              Exportar Excel
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!contratoFiltro}
+              onClick={() => {
+                if (!contratoFiltro) return;
+                const ok = addInstallment({
+                  contractId: contratoFiltro.id,
+                  tipo: "Prestação",
+                  vencimento: new Date().toISOString().slice(0, 10),
+                  valor: 500,
+                });
+                notify(ok ? "Parcela incluída" : "Falha ao incluir");
+              }}
+            >
+              Incluir parcela
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               disabled={!contratoFiltro}
               onClick={() => {
                 if (!contratoFiltro) return;
@@ -283,44 +347,73 @@ function CarteiraInner() {
       <DataTable
         paginate={false}
         columns={[
-          { key: "contrato", label: "Contrato" },
-          { key: "comprador", label: "Comprador" },
-          { key: "n", label: "Nº" },
+          { key: "tipo", label: "Tipo" },
+          { key: "pagoEm", label: "Pagamento" },
           { key: "vencimento", label: "Vencimento" },
-          { key: "original", label: "Valor original" },
-          { key: "atualizado", label: "Valor atualizado" },
+          { key: "valor", label: "Valor" },
+          { key: "juros", label: "Juros" },
+          { key: "multa", label: "Multa" },
+          { key: "correcao", label: "Correção" },
+          { key: "desp", label: "Desp. bancária" },
+          { key: "nosso", label: "Nº" },
+          { key: "parc", label: "Prestação" },
           { key: "status", label: "Status" },
         ]}
-        rows={views.map((p) => ({
-          contrato: (
-            <button
-              type="button"
-              className="font-medium hover:text-brand-orange"
-              onClick={() => setSelected(p)}
-            >
-              {p.contratoNumero}
-            </button>
-          ),
-          comprador: p.compradorNome,
-          n: `${p.tipo} ${p.n}`,
-          vencimento: formatDateBR(p.vencimento),
-          original: formatBRL(p.valorOriginal),
-          atualizado: formatBRL(p.valorAtualizado),
-          status: (
-            <StatusPill
-              tone={
-                p.statusResolved === "paga"
-                  ? "ok"
-                  : p.statusResolved === "vencida"
-                    ? "danger"
-                    : "warn"
-              }
-            >
-              {statusLabel(p.statusResolved)}
-            </StatusPill>
-          ),
-        }))}
+        rows={views.map((p) => {
+          const totalParc = state.installments.filter(
+            (i) => i.contractId === p.contractId
+          ).length;
+          return {
+            tipo: (
+              <button
+                type="button"
+                className="font-medium hover:text-brand-orange"
+                onClick={() => setSelected(p)}
+              >
+                {p.tipo}
+              </button>
+            ),
+            pagoEm: p.pagoEm ? formatDateBR(p.pagoEm) : "—",
+            vencimento: formatDateBR(p.vencimento),
+            valor: formatBRL(p.valorOriginal),
+            juros: formatBRL(p.juros),
+            multa: formatBRL(p.multa),
+            correcao: formatBRL(p.correcao),
+            desp: formatBRL(p.despesaBancaria),
+            nosso: p.nossoNumero ?? "—",
+            parc: `${p.n} / ${totalParc}`,
+            status: (
+              <StatusPill
+                tone={
+                  p.statusResolved === "paga"
+                    ? "ok"
+                    : p.statusResolved === "vencida"
+                      ? "danger"
+                      : "warn"
+                }
+              >
+                {statusLabel(p.statusResolved)}
+              </StatusPill>
+            ),
+          };
+        })}
       />
+
+
+      <p className="text-sm text-muted-foreground">
+        Quantidade: {views.length} · Total pago:{" "}
+        {formatBRL(
+          views
+            .filter((v) => v.statusResolved === "paga")
+            .reduce((a, v) => a + v.valorOriginal, 0)
+        )}{" "}
+        · Em aberto:{" "}
+        {formatBRL(
+          views
+            .filter((v) => v.statusResolved !== "paga")
+            .reduce((a, v) => a + v.valorAtualizado, 0)
+        )}
+      </p>
 
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-sm">
@@ -379,10 +472,22 @@ function CarteiraInner() {
               value={statusLabel(selected.statusResolved)}
             />
             <DetailRow
+              label="Correção monetária"
+              value={formatBRL(selected.correcao)}
+            />
+            <DetailRow
+              label="Despesa bancária"
+              value={formatBRL(selected.despesaBancaria)}
+            />
+            <DetailRow
               label="Nosso número"
               value={selected.nossoNumero ?? "—"}
             />
-            <div className="flex gap-2 pt-3">
+            <DetailRow
+              label="Pagamento"
+              value={selected.pagoEm ? formatDateBR(selected.pagoEm) : "—"}
+            />
+            <div className="flex flex-wrap gap-2 pt-3">
               {selected.status !== "paga" ? (
                 <Button
                   size="sm"
@@ -392,7 +497,7 @@ function CarteiraInner() {
                     setSelected(null);
                   }}
                 >
-                  Baixar
+                  Pagamento
                 </Button>
               ) : (
                 <Button
@@ -407,6 +512,43 @@ function CarteiraInner() {
                   Estornar
                 </Button>
               )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const d = new Date(selected.vencimento + "T12:00:00");
+                  d.setDate(d.getDate() + 7);
+                  updateInstallment(selected.id, {
+                    vencimento: d.toISOString().slice(0, 10),
+                  });
+                  notify("Vencimento +7 dias");
+                  setSelected(null);
+                }}
+              >
+                Alterar vencimento
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const ok = cancelarBoleto(selected.id);
+                  notify(
+                    ok ? "Boleto cancelado" : "Sem boleto ativo",
+                    selected.nossoNumero ?? ""
+                  );
+                }}
+              >
+                Cancelar boleto
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  notify("Recado", `Parcela ${selected.n} · ${selected.contratoNumero}`)
+                }
+              >
+                Recado
+              </Button>
             </div>
           </div>
         ) : null}

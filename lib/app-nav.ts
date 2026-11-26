@@ -50,6 +50,7 @@ export const APP_NAV: AppNavGroup[] = [
       { href: "/vendas/nova", label: "Nova venda", description: "Wizard LoteWin multi-lote" },
       { href: "/veiculos-comunicacao", label: "Veículos de comunicação", description: "Origem da venda" },
       { href: "/documentos-contrato", label: "Documentos do contrato", description: "Contrato, promissórias, mala direta" },
+      { href: "/despesas-empreendimento", label: "Despesas do empreendimento", description: "Custos por empreendimento" },
       { href: "/cadastros/pre-cadastro", label: "Pré-cadastro", description: "Origem da venda" },
       { href: "/contratos", label: "Contratos", description: "Venda, saldo e operações" },
     ],

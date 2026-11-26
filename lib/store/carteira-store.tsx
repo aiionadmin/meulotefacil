@@ -82,6 +82,22 @@ type CarteiraApi = {
     qtdParcelas: number;
     valorParcela: number;
   }) => Contract | null;
+  updateInstallment: (
+    id: string,
+    patch: Partial<{
+      vencimento: string;
+      valor: number;
+      tipo: string;
+      nossoNumero: string;
+    }>
+  ) => void;
+  addInstallment: (input: {
+    contractId: string;
+    tipo: string;
+    vencimento: string;
+    valor: number;
+  }) => boolean;
+  cancelarBoleto: (installmentId: string) => boolean;
 };
 
 const Ctx = createContext<CarteiraApi | null>(null);
@@ -612,6 +628,64 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           ],
         }));
         return contract;
+      },
+      updateInstallment: (id, patch) => {
+        setState((s) => ({
+          ...s,
+          installments: s.installments.map((p) =>
+            p.id === id ? { ...p, ...patch } : p
+          ),
+        }));
+      },
+      addInstallment: ({ contractId, tipo, vencimento, valor }) => {
+        const ct = state.contracts.find((c) => c.id === contractId);
+        if (!ct || valor <= 0) return false;
+        const n =
+          state.installments.filter((p) => p.contractId === contractId)
+            .length + 1;
+        setState((s) => ({
+          ...s,
+          installments: [
+            {
+              id: uid("par"),
+              contractId,
+              contratoNumero: ct.numero,
+              compradorNome: ct.compradorNome,
+              tipo,
+              n,
+              vencimento,
+              valor,
+              juros: 0,
+              multa: 0,
+              correcao: 0,
+              despesaBancaria: 0,
+              desconto: 0,
+              status: "em_aberto" as const,
+            },
+            ...s.installments,
+          ],
+        }));
+        return true;
+      },
+      cancelarBoleto: (installmentId) => {
+        let ok = false;
+        setState((s) => {
+          const has = s.bankSlips.some(
+            (b) =>
+              b.installmentId === installmentId && b.status !== "cancelado"
+          );
+          if (!has) return s;
+          ok = true;
+          return {
+            ...s,
+            bankSlips: s.bankSlips.map((b) =>
+              b.installmentId === installmentId && b.status !== "cancelado"
+                ? { ...b, status: "cancelado" as const }
+                : b
+            ),
+          };
+        });
+        return ok;
       },
     };
   }, [state, ready, saldoDevedor]);

@@ -184,6 +184,65 @@ export default function ObraDetalhePage() {
         )}
       </ModuleSection>
 
+      <ModuleSection title="Cronograma / Gantt (caminho crítico)">
+        {(() => {
+          const itens = state.cronograma.filter((c) => c.obraId === obra.id);
+          if (!itens.length) {
+            return (
+              <p className="text-sm text-muted-foreground">
+                Sem atividades no cronograma desta obra.
+              </p>
+            );
+          }
+          const min = Math.min(
+            ...itens.map((c) => new Date(c.inicio + "T12:00:00").getTime())
+          );
+          const max = Math.max(
+            ...itens.map((c) => new Date(c.fim + "T12:00:00").getTime())
+          );
+          const span = Math.max(1, max - min);
+          return (
+            <div className="space-y-2">
+              {itens.map((c) => {
+                const a = new Date(c.inicio + "T12:00:00").getTime();
+                const b = new Date(c.fim + "T12:00:00").getTime();
+                const left = ((a - min) / span) * 100;
+                const width = Math.max(4, ((b - a) / span) * 100);
+                return (
+                  <div
+                    key={c.id}
+                    className="grid grid-cols-[10rem_1fr] gap-2 text-xs"
+                  >
+                    <span
+                      className={
+                        c.critico ? "font-semibold text-destructive" : ""
+                      }
+                    >
+                      {c.label}
+                      {c.critico ? " ★" : ""}
+                    </span>
+                    <div className="relative h-6 rounded bg-muted">
+                      <div
+                        className={`absolute top-0.5 h-5 rounded ${
+                          c.critico
+                            ? "bg-destructive/80"
+                            : "bg-brand-orange/80"
+                        }`}
+                        style={{ left: `${left}%`, width: `${width}%` }}
+                        title={`${c.inicio} → ${c.fim} · ${c.duracaoDias}d`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground">
+                ★ caminho crítico · barras proporcionais ao período
+              </p>
+            </div>
+          );
+        })()}
+      </ModuleSection>
+
       <FormDialog
         open={openItem}
         onOpenChange={setOpenItem}
