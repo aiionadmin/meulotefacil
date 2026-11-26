@@ -1,18 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
 import { BoardViews } from "@/components/kanban/BoardViews";
-import {
-  DetailRow,
-  DetailSheet,
-  notify,
-} from "@/components/app/ModuleToolkit";
-import { useOperacoes } from "@/lib/store/operacoes-store";
-import { formatBRL, formatDateBR } from "@/lib/masks/br";
-import { statusLabel } from "@/lib/status/labels";
+import { useCompras } from "@/lib/store/compras-store";
+import { notify } from "@/components/app/ModuleToolkit";
 
 const COLS = [
   { id: "rascunho", label: "Rascunho" },
@@ -24,69 +17,51 @@ const COLS = [
 ];
 
 export default function QuadroComprasPage() {
-  const { state, avancarPurchase, aprovarPurchase } = useOperacoes();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = state.purchases.find((p) => p.id === selectedId) ?? null;
+  const { state, enviarSolicitacao, aprovarSolicitacao } = useCompras();
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Quadro: compras"
-        description="Solicitações por status."
+        description="Parte 3 — solicitações por status (SC → Cotação → OC)."
         actions={
           <Button size="sm" variant="outline" asChild>
-            <Link href="/compras">Lista SC/OC</Link>
+            <Link href="/compras">Lista SC</Link>
           </Button>
         }
       />
       <BoardViews
         storageKey="compras"
         columns={COLS}
-        cards={state.purchases.map((p) => ({
+        cards={state.solicitacoes.map((p) => ({
           id: p.id,
           columnId: p.status,
           title: p.numero,
           subtitle: p.descricao,
-          meta: formatBRL(p.valorEstimado),
-          badge: p.urgente ? "Urgente" : undefined,
+          meta: p.centro.label,
+          badge: p.urgente ? "urgente" : undefined,
         }))}
         onMove={(cardId, to) => {
+          if (to === "em_aprovacao") {
+            if (!enviarSolicitacao(cardId)) {
+              notify("Só rascunho com centro pode ir para aprovação");
+              return false;
+            }
+            notify("Enviada");
+            return true;
+          }
           if (to === "a_atender") {
-            aprovarPurchase(cardId);
+            if (!aprovarSolicitacao(cardId)) {
+              notify("Só em aprovação pode ser aprovada");
+              return false;
+            }
             notify("Aprovada");
             return true;
           }
-          avancarPurchase(cardId);
-          notify("Fluxo avançado");
-          return true;
+          notify("Use a lista SC para demais transições");
+          return false;
         }}
-        onOpen={setSelectedId}
       />
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelectedId(null)}
-        title={selected?.numero ?? ""}
-      >
-        {selected ? (
-          <div className="space-y-2">
-            <DetailRow label="Descrição" value={selected.descricao} />
-            <DetailRow label="Centro" value={selected.centroCusto} />
-            <DetailRow
-              label="Necessidade"
-              value={formatDateBR(selected.necessidade)}
-            />
-            <DetailRow
-              label="Estimado"
-              value={formatBRL(selected.valorEstimado)}
-            />
-            <DetailRow label="Status" value={statusLabel(selected.status)} />
-            <DetailRow
-              label="Urgente"
-              value={selected.urgente ? "Sim" : "Não"}
-            />
-          </div>
-        ) : null}
-      </DetailSheet>
     </div>
   );
 }

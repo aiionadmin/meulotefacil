@@ -5,6 +5,7 @@ export const STORE_KEYS = [
   "operacoes",
   "demo",
   "obras",
+  "compras",
 ] as const;
 
 export type StoreKey = (typeof STORE_KEYS)[number];

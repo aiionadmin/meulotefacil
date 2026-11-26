@@ -104,7 +104,9 @@ export const APP_NAV: AppNavGroup[] = [
     id: "compras",
     label: "10. Compras",
     items: [
-      { href: "/compras", label: "Solicitações e OC", description: "Fluxo SC → cotação → OC" },
+      { href: "/compras", label: "Solicitações", description: "SC com centro de custo" },
+      { href: "/compras/cotacoes", label: "Cotações", description: "Mapa e fornecedores" },
+      { href: "/compras/ordens", label: "Ordens de compra", description: "OC a partir da cotação" },
     ],
   },
   {
@@ -181,5 +183,6 @@ export const NOVO_ATALHOS = [
   { href: "/tarefas?novo=1", label: "Tarefa" },
   { href: "/boletos", label: "Boleto" },
   { href: "/compras", label: "Solicitação de compra" },
+  { href: "/compras/cotacoes", label: "Cotação" },
   { href: "/financeiro", label: "Lançamento a pagar" },
 ] as const;
