@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ModuleHeader, DataTable, KpiGrid } from "@/components/app/ModulePage";
@@ -10,11 +10,17 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { SearchSelect } from "@/components/app/SearchSelect";
+import { downloadExcel, printList } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 import { formatBRL } from "@/lib/masks/br";
 
 export default function CaixaPage() {
-  const { state } = useCarteira();
+  const { state, receberNoCaixa, estornarCaixa } = useCarteira();
+  const { currentUser, state: f1 } = useFase1();
+  const perfilNome =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const params = state.receiptParams ?? {
     multaAcumulativa: false,
     naoReceberAtuaisComAtrasadas: true,
@@ -31,19 +37,67 @@ export default function CaixaPage() {
     cliente: "",
     valor: 0,
     forma: "dinheiro",
-    vias: params.reciboVias,
+    vias: params.reciboVias as 1 | 2,
     parcial: false,
   });
+
+  const clientes = useMemo(() => {
+    const names = new Set<string>();
+    for (const c of state.contracts) names.add(c.compradorNome);
+    for (const m of state.caixa) names.add(m.cliente);
+    return [...names].filter(Boolean).sort();
+  }, [state.contracts, state.caixa]);
+
+  const isAdmin = /admin/i.test(perfilNome);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Caixa"
-        description="Recebimento com tolerância, recibo e regras H21."
+        description="H20 — recebimento, recibo, autenticação e estorno (admin)."
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
-            Receber
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                downloadExcel(
+                  "caixa",
+                  [
+                    "Data",
+                    "Cliente",
+                    "Valor",
+                    "Forma",
+                    "Autenticação",
+                    "Vias",
+                    "Estornado",
+                  ],
+                  state.caixa.map((m) => [
+                    m.data,
+                    m.cliente,
+                    m.valor,
+                    m.forma,
+                    m.autenticacao,
+                    m.vias,
+                    m.estornado ? "sim" : "não",
+                  ])
+                );
+                notify("Excel exportado");
+              }}
+            >
+              Excel
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => printList("Caixa")}
+            >
+              Imprimir
+            </Button>
+            <Button size="sm" onClick={() => setOpen(true)}>
+              Receber
+            </Button>
+          </>
         }
       />
       <KpiGrid
@@ -68,14 +122,38 @@ export default function CaixaPage() {
           { key: "forma", label: "Forma" },
           { key: "auth", label: "Autenticação" },
           { key: "vias", label: "Vias" },
+          { key: "acao", label: "" },
         ]}
         rows={state.caixa.map((m) => ({
           data: m.data,
           cliente: m.cliente,
           valor: formatBRL(m.valor),
           forma: m.forma,
-          auth: m.autenticacao,
+          auth: m.estornado ? (
+            <span className="text-destructive">ESTORNADO</span>
+          ) : (
+            m.autenticacao
+          ),
           vias: String(m.vias),
+          acao:
+            !m.estornado && (!params.estornoSoAdmin || isAdmin) ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (!window.confirm("Estornar este recebimento?")) return;
+                  if (!estornarCaixa(m.id)) {
+                    notify("Não foi possível estornar");
+                    return;
+                  }
+                  notify("Estorno registrado", m.autenticacao);
+                }}
+              >
+                Estornar
+              </Button>
+            ) : (
+              "—"
+            ),
         }))}
         empty="Nenhum recebimento no caixa nesta sessão."
       />
@@ -92,18 +170,37 @@ export default function CaixaPage() {
             notify("Pagamento parcial desabilitado nos parâmetros");
             return;
           }
+          const mov = receberNoCaixa({
+            cliente: form.cliente,
+            valor: form.valor,
+            forma: form.forma,
+            vias: form.vias,
+          });
+          if (!mov) {
+            notify("Falha ao registrar");
+            return;
+          }
           notify(
             "Recebido no caixa",
-            `${form.cliente} · ${formatBRL(form.valor)} · ${form.vias} via(s)`
+            `${mov.cliente} · ${formatBRL(mov.valor)} · ${mov.vias} via(s)`
           );
           notify("Recibo", params.textoRecibo);
           setOpen(false);
+          setForm({
+            cliente: "",
+            valor: 0,
+            forma: "dinheiro",
+            vias: params.reciboVias,
+            parcial: false,
+          });
         }}
       >
         <Field label="Cliente *">
-          <Input
+          <SearchSelect
             value={form.cliente}
-            onChange={(e) => setForm({ ...form, cliente: e.target.value })}
+            onChange={(cliente) => setForm({ ...form, cliente })}
+            placeholder="Buscar cliente…"
+            options={clientes.map((c) => ({ value: c, label: c }))}
           />
         </Field>
         <Field label="Valor *">
@@ -123,6 +220,7 @@ export default function CaixaPage() {
           >
             <option value="dinheiro">Dinheiro</option>
             <option value="pix">Pix</option>
+            <option value="transferencia">Transferência</option>
             <option value="boleto">Boleto</option>
           </select>
         </Field>
@@ -131,26 +229,26 @@ export default function CaixaPage() {
             className={fieldControlClass}
             value={form.vias}
             onChange={(e) =>
-              setForm({ ...form, vias: Number(e.target.value) as 1 | 2 })
+              setForm({
+                ...form,
+                vias: Number(e.target.value) === 2 ? 2 : 1,
+              })
             }
           >
             <option value={1}>1 via</option>
             <option value={2}>2 vias</option>
           </select>
         </Field>
-        {params.pagamentoParcial ? (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={form.parcial}
-              onChange={(e) =>
-                setForm({ ...form, parcial: e.target.checked })
-              }
-            />
-            Pagamento parcial
-          </label>
-        ) : null}
-        <p className="text-xs text-muted-foreground">{params.textoRecibo}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.parcial}
+            onChange={(e) =>
+              setForm({ ...form, parcial: e.target.checked })
+            }
+          />
+          Pagamento parcial
+        </label>
       </FormDialog>
     </div>
   );

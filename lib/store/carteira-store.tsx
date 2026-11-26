@@ -11,6 +11,7 @@ import {
 import { unifiedCarteiraSeed } from "@/lib/domain/unified-seed";
 import type {
   BankSlip,
+  CaixaMovimento,
   CarteiraState,
   Contract,
   ContractOperation,
@@ -123,6 +124,15 @@ type CarteiraApi = {
   cancelarBoleto: (installmentId: string) => boolean;
   /** C15 — cancelar boletos por id do slip. */
   cancelarBoletosPorIds: (ids: string[]) => number;
+  /** H20 — recebimento e estorno no caixa. */
+  receberNoCaixa: (input: {
+    cliente: string;
+    valor: number;
+    forma: string;
+    vias: 1 | 2;
+    contratoNumero?: string;
+  }) => CaixaMovimento | null;
+  estornarCaixa: (id: string) => boolean;
 };
 
 const Ctx = createContext<CarteiraApi | null>(null);
@@ -887,6 +897,44 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return n;
+      },
+      receberNoCaixa: (input) => {
+        if (!input.cliente.trim() || input.valor <= 0) return null;
+        const mov: CaixaMovimento = {
+          id: uid("cx"),
+          data: todayIso(),
+          cliente: input.cliente.trim(),
+          valor: Math.round(input.valor * 100) / 100,
+          forma: input.forma,
+          autenticacao: `AUTH-${Date.now().toString(36).toUpperCase()}`,
+          vias: input.vias,
+          contratoNumero: input.contratoNumero,
+        };
+        setState((s) => ({
+          ...s,
+          caixa: [mov, ...s.caixa],
+          caixaSaldo: Math.round((s.caixaSaldo + mov.valor) * 100) / 100,
+        }));
+        return mov;
+      },
+      estornarCaixa: (id) => {
+        let ok = false;
+        setState((s) => {
+          const mov = s.caixa.find((m) => m.id === id && !m.estornado);
+          if (!mov) return s;
+          ok = true;
+          return {
+            ...s,
+            caixa: s.caixa.map((m) =>
+              m.id === id ? { ...m, estornado: true } : m
+            ),
+            caixaSaldo: Math.max(
+              0,
+              Math.round((s.caixaSaldo - mov.valor) * 100) / 100
+            ),
+          };
+        });
+        return ok;
       },
     };
   }, [state, ready, saldoDevedor]);
