@@ -11,11 +11,14 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { FilterBar, notify } from "@/components/app/ModuleToolkit";
+import { downloadCsv } from "@/lib/export/list-export";
+import { useCarteira } from "@/lib/store/carteira-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { cn } from "@/lib/utils";
 
 export default function RelatoriosPage() {
   const { state, toggleReportFavorite, runReport } = useFluxo();
+  const { state: cart, saldoDevedor } = useCarteira();
   const [q, setQ] = useState("");
   const [grupo, setGrupo] = useState("todos");
 
@@ -42,6 +45,115 @@ export default function RelatoriosPage() {
         title="Central de relatórios"
         description="favoritos, execução em tela e histórico recente."
       />
+
+      <ModuleSection title="Relatórios financeiros LoteWin (H26)">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "posicao-financeira.csv",
+                ["contrato", "cliente", "empreendimento", "status", "saldo"],
+                cart.contracts.map((c) => [
+                  c.numero,
+                  c.compradorNome,
+                  c.empNome,
+                  c.status,
+                  saldoDevedor(c.id),
+                ])
+              );
+              notify("Posição financeira exportada");
+            }}
+          >
+            Posição financeira
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "previsao-carteira.csv",
+                ["vencimento", "contrato", "cliente", "valor", "status"],
+                cart.installments
+                  .filter((i) => i.status !== "paga" && i.status !== "cancelada")
+                  .map((i) => [
+                    i.vencimento,
+                    i.contratoNumero,
+                    i.compradorNome,
+                    i.valor,
+                    i.status,
+                  ])
+              );
+              notify("Previsão da carteira exportada");
+            }}
+          >
+            Previsão da carteira
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "inadimplencia.csv",
+                ["contrato", "cliente", "vencimento", "valor", "atraso"],
+                cart.installments
+                  .filter((i) => i.status === "vencida")
+                  .map((i) => [
+                    i.contratoNumero,
+                    i.compradorNome,
+                    i.vencimento,
+                    i.valor + i.juros + i.multa,
+                    i.status,
+                  ])
+              );
+              notify("Inadimplência exportada");
+            }}
+          >
+            Inadimplência
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "recebido-geral.csv",
+                ["pago_em", "contrato", "cliente", "valor"],
+                cart.installments
+                  .filter((i) => i.status === "paga")
+                  .map((i) => [
+                    i.pagoEm ?? "",
+                    i.contratoNumero,
+                    i.compradorNome,
+                    i.valor,
+                  ])
+              );
+              notify("Geral recebido exportado");
+            }}
+          >
+            Geral recebido
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "socios.csv",
+                ["empreendimento", "socio", "documento", "percentual"],
+                cart.socios.map((s) => {
+                  const emp =
+                    cart.developments.find((d) => d.id === s.developmentId)
+                      ?.nome ?? s.developmentId;
+                  return [emp, s.nome, s.documento, s.percentual];
+                })
+              );
+              notify("Relatório dos sócios exportado");
+            }}
+          >
+            Sócios
+          </Button>
+        </div>
+      </ModuleSection>
 
       <KpiGrid
         items={[

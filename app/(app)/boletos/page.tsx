@@ -99,6 +99,26 @@ export default function BoletosPage() {
             >
               Processar retorno
             </Button>
+            <label className="inline-flex cursor-pointer">
+              <input
+                type="file"
+                accept=".ret,.crt,.txt"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  const text = await f.text();
+                  const n = processarRetorno();
+                  notify(
+                    "Retorno importado",
+                    `${f.name} · ${text.split(/\r?\n/).filter(Boolean).length} linhas · ${n} baixas`
+                  );
+                }}
+              />
+              <span className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
+                Enviar retorno
+              </span>
+            </label>
           </>
         }
       />

@@ -18,9 +18,12 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { parseOfxText, type OfxTxn } from "@/lib/import/ofx-parse";
 
 export default function ContasPage() {
-  const { state, addConta } = useFinanceiro();
+  const { state, addConta, conciliarPagamento } = useFinanceiro();
+  const [ofxTxns, setOfxTxns] = useState<OfxTxn[]>([]);
+  const [ofxMeta, setOfxMeta] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     nome: "",
@@ -85,6 +88,81 @@ export default function ContasPage() {
           }))}
         />
       </ModuleSection>
+      <ModuleSection title="Conciliação OFX (G14)">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="file"
+            accept=".ofx,.OFX,text/plain"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              const text = await f.text();
+              const parsed = parseOfxText(text);
+              if (!parsed.ok) {
+                notify("OFX inválido", parsed.erro ?? "");
+                setOfxTxns([]);
+                return;
+              }
+              setOfxTxns(parsed.transacoes);
+              setOfxMeta(
+                `Banco ${parsed.banco || "—"} · Conta ${parsed.conta || "—"} · ${parsed.transacoes.length} lançamentos`
+              );
+              notify("OFX lido", `${parsed.transacoes.length} transações`);
+            }}
+          />
+          <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
+            Enviar OFX
+          </span>
+        </label>
+        {ofxMeta ? (
+          <p className="mt-2 text-xs text-muted-foreground">{ofxMeta}</p>
+        ) : null}
+        {ofxTxns.length > 0 ? (
+          <div className="mt-3">
+            <PaginatedTable
+              columns={[
+                { key: "data", label: "Data" },
+                { key: "tipo", label: "Tipo" },
+                { key: "valor", label: "Valor" },
+                { key: "memo", label: "Histórico" },
+                { key: "acao", label: "" },
+              ]}
+              rows={ofxTxns.map((tx) => ({
+                data: formatDateBR(tx.data),
+                tipo: tx.tipo,
+                valor: formatBRL(tx.valor),
+                memo: tx.memo,
+                acao: (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const match = state.pagamentos.find(
+                        (p) =>
+                          Math.abs(p.valor - tx.valor) < 0.01 &&
+                          p.status !== "pago"
+                      );
+                      if (match) {
+                        conciliarPagamento(match.id);
+                        notify("Conciliado", match.descricao);
+                      } else {
+                        notify(
+                          "Sem match automático",
+                          "Concilie manualmente em Pagamentos"
+                        );
+                      }
+                    }}
+                  >
+                    Conciliar
+                  </Button>
+                ),
+              }))}
+            />
+          </div>
+        ) : null}
+      </ModuleSection>
+
       <FormDialog
         open={open}
         onOpenChange={setOpen}
