@@ -17,6 +17,7 @@ import {
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { downloadTextTemplate } from "@/lib/export/list-export";
+import { parseCnab400Retorno } from "@/lib/cnab/retorno";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { BankSlip } from "@/lib/domain/carteira-types";
 
@@ -115,10 +116,24 @@ export default function BoletosPage() {
                   const f = e.target.files?.[0];
                   if (!f) return;
                   const text = await f.text();
-                  const n = processarRetorno();
+                  const preview = parseCnab400Retorno(text);
+                  const nn = preview.itens
+                    .filter(
+                      (i) =>
+                        i.ocorrencia === "liquidacao" ||
+                        i.ocorrencia === "baixa"
+                    )
+                    .map((i) => i.nossoNumero);
+                  const n = processarRetorno(nn.length ? nn : undefined);
                   notify(
-                    "Retorno importado",
-                    `${f.name} · ${text.split(/\r?\n/).filter(Boolean).length} linhas · ${n} baixas`
+                    preview.ok || nn.length
+                      ? "Retorno CNAB importado"
+                      : "Retorno sem liquidações",
+                    `${f.name} · ${preview.itens.length} título(s) · ${n} baixa(s)${
+                      preview.erros.length
+                        ? ` · ${preview.erros.length} aviso(s)`
+                        : ""
+                    }`
                   );
                 }}
               />
