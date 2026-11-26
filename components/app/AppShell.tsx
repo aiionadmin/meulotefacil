@@ -10,6 +10,8 @@ import { OperacoesStoreProvider } from "@/lib/store/operacoes-store";
 import { FluxoStoreProvider } from "@/lib/store/fluxo-store";
 import { ObrasStoreProvider } from "@/lib/store/obras-store";
 import { ComprasStoreProvider } from "@/lib/store/compras-store";
+import { ClientCardProvider } from "@/lib/client/client-card-context";
+import { ClientCardSheet } from "@/components/client/ClientCardSheet";
 import { EmpresaProvider } from "@/lib/empresa/context";
 import { AppSidebar } from "./AppSidebar";
 import { AppTopbar } from "./AppTopbar";
@@ -28,6 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <FluxoStoreProvider>
                 <ObrasStoreProvider>
                   <ComprasStoreProvider>
+                    <ClientCardProvider>
                     <DemoStoreProvider>
                       <div className="flex h-svh overflow-hidden bg-background text-foreground">
                         <div className="hidden lg:block">
@@ -60,7 +63,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         </div>
                       </div>
                       <Toaster richColors position="top-right" closeButton />
+                      <ClientCardSheet />
                     </DemoStoreProvider>
+                    </ClientCardProvider>
                   </ComprasStoreProvider>
                 </ObrasStoreProvider>
               </FluxoStoreProvider>

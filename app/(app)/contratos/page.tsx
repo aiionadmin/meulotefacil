@@ -20,6 +20,7 @@ import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useClientCard } from "@/lib/client/client-card-context";
 import type { Contract } from "@/lib/domain/carteira-types";
 
 const STATUS_COLS = [
@@ -33,6 +34,7 @@ const STATUS_COLS = [
 
 export default function ContratosPage() {
   const { state, saldoDevedor, addContract, registrarOperacao } = useCarteira();
+  const { openClient } = useClientCard();
   const [selected, setSelected] = useState<Contract | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -103,7 +105,16 @@ export default function ContratosPage() {
           items.reduce((a, c) => a + c.preco, 0)
         }
         onOpen={(id) => {
-          setSelected(state.contracts.find((c) => c.id === id) ?? null);
+          const c = state.contracts.find((x) => x.id === id) ?? null;
+          setSelected(c);
+          if (c) {
+            openClient({
+              nome: c.compradorNome,
+              personId: c.compradorId,
+              contractId: c.id,
+              tab: "contrato",
+            });
+          }
         }}
         onMove={() => {
           notify("Altere situação pela ficha / operação");

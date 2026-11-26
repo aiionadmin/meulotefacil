@@ -19,10 +19,12 @@ import { useFluxo } from "@/lib/store/fluxo-store";
 import type { JornadaColuna, Lead } from "@/lib/domain/fluxo-types";
 import { statusLabel } from "@/lib/status/labels";
 import { useFase1 } from "@/lib/store/fase1-store";
+import { useClientCard } from "@/lib/client/client-card-context";
 
 export default function JornadaPage() {
   const { state, moveLead, marcarFinal } = useFluxo();
   const { currentProfileName } = useFase1();
+  const { openClient } = useClientCard();
   const isAdmin = (currentProfileName ?? "")
     .toLowerCase()
     .includes("admin");
@@ -103,6 +105,13 @@ export default function JornadaPage() {
         onOpen={(id) => {
           const lead = state.leads.find((l) => l.id === id) ?? null;
           setSelected(lead);
+          if (lead) {
+            openClient({
+              nome: lead.nome,
+              leadId: lead.id,
+              tab: "resumo",
+            });
+          }
         }}
       />
 

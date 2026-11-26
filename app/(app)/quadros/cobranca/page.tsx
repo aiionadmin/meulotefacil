@@ -11,6 +11,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { useFluxo } from "@/lib/store/fluxo-store";
+import { useClientCard } from "@/lib/client/client-card-context";
 import { formatBRL } from "@/lib/masks/br";
 import { faixaAtrasoLabel } from "@/lib/cobranca/faixas";
 import type { CollectionCase } from "@/lib/domain/fluxo-types";
@@ -26,6 +27,7 @@ const COLS = [
 
 export default function QuadroCobrancaPage() {
   const { state, proporAcordo } = useFluxo();
+  const { openClient } = useClientCard();
   const [selected, setSelected] = useState<CollectionCase | null>(null);
 
   return (
@@ -60,6 +62,8 @@ export default function QuadroCobrancaPage() {
           return false;
         }}
         onOpen={(id) => {
+          const c = state.collection.find((x) => x.id === id);
+          if (c) openClient({ nome: c.cliente, collectionCaseId: c.id, tab: "cobranca" });
           setSelected(state.collection.find((c) => c.id === id) ?? null);
         }}
       />
