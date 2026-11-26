@@ -28,6 +28,7 @@ import {
   parseLotesCsv,
   type LoteImportPreview,
 } from "@/lib/import/lotes-csv";
+import { parseXlsxBytes, xlsxRowsToCsv } from "@/lib/import/xlsx-parse";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { statusLabel } from "@/lib/status/labels";
@@ -683,22 +684,32 @@ export default function EmpreendimentosPage() {
           <label className="inline-flex cursor-pointer">
             <input
               type="file"
-              accept=".csv,.txt,text/csv"
+              accept=".csv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="hidden"
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
-                const text = await f.text();
+                let text = "";
+                if (/\.xlsx$/i.test(f.name)) {
+                  const parsed = await parseXlsxBytes(await f.arrayBuffer());
+                  if (!parsed.ok) {
+                    notify("XLSX inválido", parsed.erro ?? "");
+                    return;
+                  }
+                  text = xlsxRowsToCsv(parsed.rows);
+                } else {
+                  text = await f.text();
+                }
                 const preview = parseLotesCsv(text);
                 setImportPreview(preview);
                 notify(
                   preview.ok ? "Conferência OK" : "Há erros na conferência",
-                  `${preview.criaveis} ok · ${preview.comErro} com erro`
+                  `${f.name} · ${preview.criaveis} ok · ${preview.comErro} com erro`
                 );
               }}
             />
             <span className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
-              Enviar CSV
+              Enviar CSV/XLSX
             </span>
           </label>
         </div>
