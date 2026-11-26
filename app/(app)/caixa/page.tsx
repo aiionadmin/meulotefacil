@@ -15,19 +15,31 @@ import { formatBRL } from "@/lib/masks/br";
 
 export default function CaixaPage() {
   const { state } = useCarteira();
+  const params = state.receiptParams ?? {
+    multaAcumulativa: false,
+    naoReceberAtuaisComAtrasadas: true,
+    pagamentoParcial: true,
+    unirVendasNoCaixa: false,
+    despesaBancariaPadrao: 2.5,
+    textoRecibo: "Recebemos a importância acima em pagamento de parcela(s).",
+    reciboVias: 1 as const,
+    autenticacao: true,
+    estornoSoAdmin: true,
+  };
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     cliente: "",
     valor: 0,
     forma: "dinheiro",
-    vias: 1 as 1 | 2,
+    vias: params.reciboVias,
+    parcial: false,
   });
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Caixa"
-        description="Recebimento com tolerância, recibo em 1 ou 2 vias e autenticação."
+        description="Recebimento com tolerância, recibo e regras H21."
         actions={
           <Button size="sm" onClick={() => setOpen(true)}>
             Receber
@@ -38,6 +50,14 @@ export default function CaixaPage() {
         items={[
           { label: "Saldo do caixa", value: formatBRL(state.caixaSaldo) },
           { label: "Movimentos", value: String(state.caixa.length) },
+          {
+            label: "Parcial",
+            value: params.pagamentoParcial ? "Sim" : "Não",
+          },
+          {
+            label: "Atuais c/ atraso",
+            value: params.naoReceberAtuaisComAtrasadas ? "Bloqueado" : "Livre",
+          },
         ]}
       />
       <DataTable
@@ -68,10 +88,15 @@ export default function CaixaPage() {
             notify("Cliente e valor obrigatórios");
             return;
           }
+          if (form.parcial && !params.pagamentoParcial) {
+            notify("Pagamento parcial desabilitado nos parâmetros");
+            return;
+          }
           notify(
             "Recebido no caixa",
-            `${form.cliente} · ${formatBRL(form.valor)} · recibo ${form.vias} via(s)`
+            `${form.cliente} · ${formatBRL(form.valor)} · ${form.vias} via(s)`
           );
+          notify("Recibo", params.textoRecibo);
           setOpen(false);
         }}
       >
@@ -113,6 +138,19 @@ export default function CaixaPage() {
             <option value={2}>2 vias</option>
           </select>
         </Field>
+        {params.pagamentoParcial ? (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.parcial}
+              onChange={(e) =>
+                setForm({ ...form, parcial: e.target.checked })
+              }
+            />
+            Pagamento parcial
+          </label>
+        ) : null}
+        <p className="text-xs text-muted-foreground">{params.textoRecibo}</p>
       </FormDialog>
     </div>
   );

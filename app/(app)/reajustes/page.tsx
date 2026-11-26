@@ -17,6 +17,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { formatBRL } from "@/lib/masks/br";
 
 export default function ReajustesPage() {
   const {
@@ -26,7 +27,12 @@ export default function ReajustesPage() {
     registrarOperacao,
   } = useCarteira();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ indice: "IGPM", fator: 1.045 });
+  const [form, setForm] = useState({
+    indice: "IGPM",
+    fator: 1.045,
+    mesBase: new Date().getMonth() + 1,
+    gerarResiduo: true,
+  });
   const [opOpen, setOpOpen] = useState(false);
   const [opForm, setOpForm] = useState({
     contractId: state.contracts[0]?.id ?? "",
@@ -34,11 +40,13 @@ export default function ReajustesPage() {
     detalhe: "",
   });
 
+  const residuos = state.installments.filter((p) => p.tipo === "Resíduo");
+
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Reajuste e operações"
-        description="reajuste anual por índice e operações sobre o contrato."
+        description="Correção monetária anual com mês-base, resíduos e histórico (H18)."
         actions={
           <>
             <Button size="sm" variant="outline" onClick={() => setOpOpen(true)}>
@@ -68,6 +76,7 @@ export default function ReajustesPage() {
             label: "Ativas",
             value: state.adjustments.filter((a) => !a.desfeito).length,
           },
+          { label: "Resíduos", value: residuos.length },
           { label: "Operações", value: state.operations.length },
         ]}
       />
@@ -77,14 +86,18 @@ export default function ReajustesPage() {
           columns={[
             { key: "indice", label: "Índice" },
             { key: "fator", label: "Fator" },
+            { key: "mes", label: "Mês-base" },
             { key: "qtd", label: "Parcelas" },
+            { key: "res", label: "Resíduos" },
             { key: "quando", label: "Quando" },
             { key: "status", label: "Status" },
           ]}
           rows={state.adjustments.map((a) => ({
             indice: a.indice,
             fator: a.fator.toFixed(4),
+            mes: `${String(a.mesBase).padStart(2, "0")}/${a.ano}`,
             qtd: a.qtdParcelas,
+            res: a.residuosGerados ?? 0,
             quando: a.criadoEm,
             status: (
               <StatusPill tone={a.desfeito ? "neutral" : "ok"}>
@@ -92,6 +105,26 @@ export default function ReajustesPage() {
               </StatusPill>
             ),
           }))}
+        />
+      </ModuleSection>
+
+      <ModuleSection title="Resíduos em aberto">
+        <DataTable
+          columns={[
+            { key: "contrato", label: "Contrato" },
+            { key: "cliente", label: "Cliente" },
+            { key: "n", label: "Nº" },
+            { key: "valor", label: "Valor" },
+            { key: "venc", label: "Vencimento" },
+          ]}
+          rows={residuos.map((p) => ({
+            contrato: p.contratoNumero,
+            cliente: p.compradorNome,
+            n: p.n,
+            valor: formatBRL(p.valor),
+            venc: p.vencimento,
+          }))}
+          empty="Nenhum resíduo gerado."
         />
       </ModuleSection>
 
@@ -106,7 +139,8 @@ export default function ReajustesPage() {
           rows={state.operations.map((o) => ({
             tipo: o.tipo,
             contrato:
-              state.contracts.find((c) => c.id === o.contractId)?.numero ?? o.contractId,
+              state.contracts.find((c) => c.id === o.contractId)?.numero ??
+              o.contractId,
             detalhe: o.detalhe,
             quando: o.quando,
           }))}
@@ -118,8 +152,11 @@ export default function ReajustesPage() {
         onOpenChange={setOpen}
         title="Aplicar reajuste anual"
         onSubmit={() => {
-          const n = aplicarReajuste(form.fator, form.indice);
-          notify(`${n} parcelas reajustadas`, `fator ${form.fator}`);
+          const n = aplicarReajuste(form.fator, form.indice, {
+            mesBase: form.mesBase,
+            gerarResiduo: form.gerarResiduo,
+          });
+          notify(`${n} parcelas reajustadas`, `mês-base ${form.mesBase}`);
           setOpen(false);
         }}
       >
@@ -134,6 +171,20 @@ export default function ReajustesPage() {
             <option value="INCC">INCC</option>
           </select>
         </Field>
+        <Field label="Mês-base (1–12)">
+          <Input
+            type="number"
+            min={1}
+            max={12}
+            value={form.mesBase}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                mesBase: Math.min(12, Math.max(1, Number(e.target.value) || 1)),
+              })
+            }
+          />
+        </Field>
         <Field label="Fator (ex.: 1.045 = +4,5%)">
           <Input
             type="number"
@@ -144,6 +195,16 @@ export default function ReajustesPage() {
             }
           />
         </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.gerarResiduo}
+            onChange={(e) =>
+              setForm({ ...form, gerarResiduo: e.target.checked })
+            }
+          />
+          Gerar resíduos de arredondamento
+        </label>
       </FormDialog>
 
       <FormDialog

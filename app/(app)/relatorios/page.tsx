@@ -13,12 +13,14 @@ import {
 import { FilterBar, notify } from "@/components/app/ModuleToolkit";
 import { downloadCsv } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useCompras } from "@/lib/store/compras-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { cn } from "@/lib/utils";
 
 export default function RelatoriosPage() {
   const { state, toggleReportFavorite, runReport } = useFluxo();
   const { state: cart, saldoDevedor } = useCarteira();
+  const { state: compras } = useCompras();
   const [q, setQ] = useState("");
   const [grupo, setGrupo] = useState("todos");
 
@@ -151,6 +153,79 @@ export default function RelatoriosPage() {
             }}
           >
             Sócios
+          </Button>
+        </div>
+      </ModuleSection>
+
+      <ModuleSection title="Relatórios de compras (E15)">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const rows: (string | number)[][] = [];
+              for (const sc of compras.solicitacoes) {
+                for (const it of sc.itens) {
+                  rows.push([
+                    sc.numero,
+                    sc.centro.label,
+                    it.descricao,
+                    it.unidade,
+                    it.quantidade,
+                    it.quantidadeCotada,
+                    it.quantidadeComprada,
+                    it.quantidadeRecebida,
+                  ]);
+                }
+              }
+              downloadCsv(
+                "insumos-orcados-x-comprados.csv",
+                [
+                  "sc",
+                  "centro",
+                  "item",
+                  "un",
+                  "orcado",
+                  "cotado",
+                  "comprado",
+                  "recebido",
+                ],
+                rows
+              );
+              notify("Insumos orçados × comprados exportado");
+            }}
+          >
+            Orçados × comprados
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadCsv(
+                "extrato-compras.csv",
+                [
+                  "oc",
+                  "fornecedor",
+                  "centro",
+                  "aprovacao",
+                  "status",
+                  "total",
+                  "criado",
+                ],
+                compras.ordens.map((o) => [
+                  o.numero,
+                  o.fornecedor,
+                  o.centro.label,
+                  o.aprovacaoStatus,
+                  o.compraStatus,
+                  o.valor,
+                  o.criadoEm,
+                ])
+              );
+              notify("Extrato de compras exportado");
+            }}
+          >
+            Extrato de compras
           </Button>
         </div>
       </ModuleSection>

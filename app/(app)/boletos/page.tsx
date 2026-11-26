@@ -16,6 +16,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { downloadTextTemplate } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { BankSlip } from "@/lib/domain/carteira-types";
 
@@ -81,11 +82,17 @@ export default function BoletosPage() {
               size="sm"
               variant="outline"
               onClick={() => {
-                const n = gerarRemessa();
-                notify(n ? "Remessa gerada" : "Sem boletos gerados", n ? `${n} itens` : undefined);
+                const { qtd, arquivo } = gerarRemessa();
+                if (arquivo) {
+                  downloadTextTemplate(arquivo.nome, arquivo.conteudo);
+                }
+                notify(
+                  qtd ? "Remessa CNAB gerada" : "Sem boletos gerados",
+                  qtd ? `${qtd} títulos · arquivo .rem` : undefined
+                );
               }}
             >
-              Remessa
+              Remessa CNAB
             </Button>
             <Button
               size="sm"
@@ -170,12 +177,24 @@ export default function BoletosPage() {
             { key: "quando", label: "Criado" },
             { key: "qtd", label: "Qtd" },
             { key: "status", label: "Status" },
+            { key: "acao", label: "" },
           ]}
           rows={state.remittances.map((r) => ({
             nome: r.nome,
             quando: r.criadoEm,
             qtd: r.qtd,
             status: <StatusPill tone="neutral">{r.status}</StatusPill>,
+            acao: r.conteudo ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => downloadTextTemplate(r.nome, r.conteudo!)}
+              >
+                Baixar
+              </Button>
+            ) : (
+              "—"
+            ),
           }))}
         />
       </ModuleSection>

@@ -20,11 +20,13 @@ import type {
   LotStatus,
 } from "@/lib/domain/carteira-types";
 import { resolveInstallmentStatus } from "@/lib/money/installment-status";
+import { buildCnab400Remessa } from "@/lib/cnab/remessa";
 import { aplicarFatorReajuste } from "@/lib/money/reajuste";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
 import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
+import type { ReceiptParams } from "@/lib/domain/carteira-types";
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -64,10 +66,15 @@ type CarteiraApi = {
   baixarParcela: (installmentId: string) => void;
   estornarParcela: (installmentId: string) => void;
   gerarBoletosMes: () => number;
-  gerarRemessa: () => number;
+  gerarRemessa: () => { qtd: number; arquivo?: { nome: string; conteudo: string } };
   processarRetorno: () => number;
-  aplicarReajuste: (fator: number, indice: string) => number;
+  aplicarReajuste: (
+    fator: number,
+    indice: string,
+    opts?: { mesBase?: number; gerarResiduo?: boolean }
+  ) => number;
   desfazerUltimoReajuste: () => boolean;
+  updateReceiptParams: (patch: Partial<ReceiptParams>) => void;
   registrarOperacao: (
     contractId: string,
     tipo: ContractOperation["tipo"],
@@ -113,6 +120,19 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
     state,
     setState,
     seed: unifiedCarteiraSeed,
+    merge: (seed, saved) => ({
+      ...seed,
+      ...saved,
+      receiptParams: {
+        ...seed.receiptParams,
+        ...(saved as CarteiraState).receiptParams,
+      },
+      adjustments: ((saved as CarteiraState).adjustments ?? []).map((a) => ({
+        ...a,
+        residuosGerados: a.residuosGerados ?? 0,
+        residuoIds: a.residuoIds ?? [],
+      })),
+    }),
   });
 
   const saldoDevedor = useCallback(
@@ -367,33 +387,47 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
       },
       gerarRemessa: () => {
         let qtd = 0;
+        let arquivo: { nome: string; conteudo: string } | undefined;
         setState((s) => {
-          const ids = s.bankSlips
-            .filter((b) => b.status === "gerado")
-            .map((b) => b.id);
-          qtd = ids.length;
+          const alvos = s.bankSlips.filter((b) => b.status === "gerado");
+          qtd = alvos.length;
           if (!qtd) return s;
           const remId = uid("rem");
+          const nome = `CNAB-341-${todayIso().replace(/-/g, "")}.rem`;
+          const conteudo = buildCnab400Remessa(
+            alvos.map((b) => {
+              const parc = s.installments.find((i) => i.id === b.installmentId);
+              return {
+                nossoNumero: b.nossoNumero,
+                vencimento: b.vencimento,
+                valor: b.valor,
+                contratoNumero: b.contratoNumero,
+                sacadoNome: parc?.compradorNome,
+              };
+            })
+          );
+          arquivo = { nome, conteudo };
           return {
             ...s,
             remittances: [
               {
                 id: remId,
-                nome: `CNAB-341-${todayIso().replace(/-/g, "")}.rem`,
+                nome,
                 criadoEm: nowLabel(),
                 qtd,
                 status: "gerada",
+                conteudo,
               },
               ...s.remittances,
             ],
             bankSlips: s.bankSlips.map((b) =>
-              ids.includes(b.id)
+              alvos.some((a) => a.id === b.id)
                 ? { ...b, status: "remessa" as const, remessaId: remId }
                 : b
             ),
           };
         });
-        return qtd;
+        return { qtd, arquivo };
       },
       processarRetorno: () => {
         let qtd = 0;
@@ -428,25 +462,63 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         });
         return qtd;
       },
-      aplicarReajuste: (fator, indice) => {
+      aplicarReajuste: (fator, indice, opts) => {
         let qtd = 0;
         setState((s) => {
-          const { atualizadas, qtd: n } = aplicarFatorReajuste(
+          const mesBase = opts?.mesBase ?? new Date().getMonth() + 1;
+          const gerarResiduo = opts?.gerarResiduo ?? true;
+          const { atualizadas, qtd: n, residuos } = aplicarFatorReajuste(
             s.installments,
-            fator
+            fator,
+            { gerarResiduo }
           );
           qtd = n;
+          const touched = new Set(
+            atualizadas
+              .filter((p) => p.status !== "paga" && p.status !== "cancelada")
+              .map((p) => p.contractId)
+          );
+          const extras: Installment[] = residuos.map((r) => {
+            const ct = s.contracts.find((c) => c.id === r.contractId);
+            const maxN = Math.max(
+              0,
+              ...atualizadas
+                .filter((p) => p.contractId === r.contractId)
+                .map((p) => p.n)
+            );
+            return {
+              id: uid("par"),
+              contractId: r.contractId,
+              contratoNumero: ct?.numero ?? r.contractId,
+              compradorNome: ct?.compradorNome ?? "",
+              tipo: "Resíduo",
+              n: maxN + 1,
+              vencimento: todayIso(),
+              valor: r.valor,
+              juros: 0,
+              multa: 0,
+              correcao: 0,
+              despesaBancaria: 0,
+              desconto: 0,
+              status: "em_aberto" as const,
+            };
+          });
           return {
             ...s,
-            installments: atualizadas,
+            installments: [...atualizadas, ...extras],
+            contracts: s.contracts.map((c) =>
+              touched.has(c.id) ? { ...c, mesBase, tipoReajuste: indice } : c
+            ),
             adjustments: [
               {
                 id: uid("adj"),
                 indice,
                 fator,
-                mesBase: new Date().getMonth() + 1,
+                mesBase,
                 ano: new Date().getFullYear(),
                 qtdParcelas: n,
+                residuosGerados: extras.length,
+                residuoIds: extras.map((e) => e.id),
                 criadoEm: nowLabel(),
                 desfeito: false,
               },
@@ -460,8 +532,10 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         const last = state.adjustments.find((a) => !a.desfeito);
         if (!last || last.fator === 0) return false;
         const inv = 1 / last.fator;
+        const drop = new Set(last.residuoIds ?? []);
         setState((s) => {
-          const { atualizadas } = aplicarFatorReajuste(s.installments, inv);
+          const semResiduos = s.installments.filter((p) => !drop.has(p.id));
+          const { atualizadas } = aplicarFatorReajuste(semResiduos, inv);
           return {
             ...s,
             installments: atualizadas,
@@ -471,6 +545,12 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return true;
+      },
+      updateReceiptParams: (patch) => {
+        setState((s) => ({
+          ...s,
+          receiptParams: { ...s.receiptParams, ...patch },
+        }));
       },
       registrarOperacao: (contractId, tipo, detalhe) => {
         setState((s) => {

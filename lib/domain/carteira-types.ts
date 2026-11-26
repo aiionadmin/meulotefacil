@@ -234,6 +234,8 @@ export type RemittanceFile = {
   criadoEm: string;
   qtd: number;
   status: "gerada" | "enviada" | "processada";
+  /** Conteúdo CNAB 400 para download (H22). */
+  conteudo?: string;
 };
 
 export type AdjustmentRun = {
@@ -243,8 +245,23 @@ export type AdjustmentRun = {
   mesBase: number;
   ano: number;
   qtdParcelas: number;
+  residuosGerados: number;
+  residuoIds: string[];
   criadoEm: string;
   desfeito: boolean;
+};
+
+/** H21 — parâmetros de recebimento / caixa. */
+export type ReceiptParams = {
+  multaAcumulativa: boolean;
+  naoReceberAtuaisComAtrasadas: boolean;
+  pagamentoParcial: boolean;
+  unirVendasNoCaixa: boolean;
+  despesaBancariaPadrao: number;
+  textoRecibo: string;
+  reciboVias: 1 | 2;
+  autenticacao: boolean;
+  estornoSoAdmin: boolean;
 };
 
 export type ContractOperation = {
@@ -319,4 +336,5 @@ export type CarteiraState = {
   lotHistory: LotStatusEvent[];
   cards: JourneyCard[];
   caixaSaldo: number;
+  receiptParams: ReceiptParams;
 };
