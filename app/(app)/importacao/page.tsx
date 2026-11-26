@@ -18,6 +18,11 @@ import {
   downloadCsv,
 } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { previewLotewinMdb } from "@/lib/import/mdb-reader";
+import {
+  runLotewinConference,
+  conferenceSummary,
+} from "@/lib/import/conference";
 
 const EXCEL_MODELS = [
   {
@@ -68,6 +73,10 @@ export default function ImportacaoPage() {
   const [conferenceRows, setConferenceRows] = useState<
     { linha: number; payload: string; erros: string[]; acao: string }[]
   >([]);
+  const [mdbNote, setMdbNote] = useState<string>("");
+  const [k03, setK03] = useState<ReturnType<typeof runLotewinConference> | null>(
+    null
+  );
 
   const ok = state.importQueue.filter((e) => e.status === "ok").length;
   const parcial = state.importQueue.filter((e) => e.status === "parcial").length;
@@ -77,7 +86,7 @@ export default function ImportacaoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Importação e conferência"
-        description="Modelos Excel/CSV, conferência por linha (C04/C17) e fila LoteWin."
+        description="11 entidades idempotentes, .mdb LoteWin, conferência 24/11/2026 e anti-duplicação de receita."
         actions={
           <>
             <Button
@@ -111,6 +120,95 @@ export default function ImportacaoPage() {
           Última simulação: {state.lastImportAt}
         </p>
       ) : null}
+
+      <ModuleSection title="LoteWin Access (.mdb) — K02">
+        <p className="mb-3 text-sm text-muted-foreground">
+          Quando a cópia do banco for entregue, envie o .mdb aqui. A importação
+          real segue em <code>scripts/import/run.ts</code> (idempotente por
+          legacy_id).
+        </p>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="file"
+            accept=".mdb,.accdb"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              const res = await previewLotewinMdb(
+                f ? { name: f.name, size: f.size } : null
+              );
+              if (!res.ok) {
+                setMdbNote(res.reason);
+                notify("MDB inválido", res.reason);
+                return;
+              }
+              setMdbNote(
+                `${res.note} · tabelas: ${res.tables
+                  .map((tb) => `${tb.name} (${tb.rowCount})`)
+                  .join(", ")}`
+              );
+              notify("MDB reconhecido", f?.name ?? "");
+            }}
+          />
+          <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
+            Enviar Finance.mdb
+          </span>
+        </label>
+        {mdbNote ? (
+          <p className="mt-3 text-xs text-muted-foreground">{mdbNote}</p>
+        ) : null}
+      </ModuleSection>
+
+      <ModuleSection title="Conferência painel 24/11/2026 — K03">
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const checks = runLotewinConference({
+                empreendimentos: LOTEWIN_PANEL_2026_11_24.empreendimentos,
+                lotes: LOTEWIN_PANEL_2026_11_24.lotes,
+                lotesVendidos: LOTEWIN_PANEL_2026_11_24.lotesVendidos,
+                clientes: LOTEWIN_PANEL_2026_11_24.clientes,
+                contratos: LOTEWIN_PANEL_2026_11_24.contratos,
+                contratosAtivos: LOTEWIN_PANEL_2026_11_24.contratosAtivos,
+                aReceber: LOTEWIN_PANEL_2026_11_24.aReceber,
+                emAtraso: LOTEWIN_PANEL_2026_11_24.emAtraso,
+              });
+              setK03(checks);
+              const s = conferenceSummary(checks);
+              notify(
+                s.allOk ? "Conferência OK" : "Divergências",
+                `${s.ok}/${s.total} indicadores`
+              );
+            }}
+          >
+            Rodar conferência (metas)
+          </Button>
+        </div>
+        {k03 ? (
+          <DataTable
+            columns={[
+              { key: "label", label: "Indicador" },
+              { key: "expected", label: "Esperado" },
+              { key: "actual", label: "Atual" },
+              { key: "status", label: "Status" },
+            ]}
+            rows={k03.map((c) => ({
+              label: c.label,
+              expected:
+                c.unit === "money" ? formatBRL(c.expected) : String(c.expected),
+              actual:
+                c.unit === "money" ? formatBRL(c.actual) : String(c.actual),
+              status: (
+                <StatusPill tone={c.ok ? "ok" : "danger"}>
+                  {c.ok ? "OK" : `Δ ${c.delta}`}
+                </StatusPill>
+              ),
+            }))}
+          />
+        ) : null}
+      </ModuleSection>
 
       <ModuleSection title="Modelos Excel / CSV">
         <div className="mb-4 flex flex-wrap gap-2">
