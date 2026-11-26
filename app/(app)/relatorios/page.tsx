@@ -155,6 +155,50 @@ export default function RelatoriosPage() {
         </div>
       </ModuleSection>
 
+      <ModuleSection title="Relatórios técnicos LoteWin (H27)">
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["lotes-status", "Lotes por status", () =>
+                cart.lots.map((l) => [l.empNome, `${l.quadra}/${l.lote}`, l.status, l.valor])
+              ],
+              ["lotes-vagos", "Vagos", () =>
+                cart.lots.filter((l) => l.status === "disponivel").map((l) => [l.empNome, `${l.quadra}/${l.lote}`, l.area, l.valor])
+              ],
+              ["vendidos", "Vendidos", () =>
+                cart.lots.filter((l) => l.status === "vendido" || l.status === "quitado").map((l) => [l.empNome, `${l.quadra}/${l.lote}`, l.compradorNome ?? "", l.valor])
+              ],
+              ["historico-lotes", "Histórico de lotes", () =>
+                cart.lotHistory.map((h) => [h.lotId, h.de, h.para, h.motivo, h.quando])
+              ],
+              ["reajustes", "Reajustes anuais", () =>
+                cart.adjustments.map((a) => [a.indice, a.fator, a.ano, a.mesBase, a.qtdParcelas, a.desfeito ? "sim" : "nao"])
+              ],
+              ["quitados", "Quitados", () =>
+                cart.contracts.filter((c) => c.status === "quitado").map((c) => [c.numero, c.compradorNome, c.empNome, c.preco])
+              ],
+            ] as const
+          ).map(([id, label, rows]) => (
+            <Button
+              key={id}
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const data = rows();
+                downloadCsv(
+                  `${id}.csv`,
+                  ["c1", "c2", "c3", "c4", "c5", "c6"].slice(0, (data[0]?.length ?? 1)),
+                  data
+                );
+                notify(`${label} exportado`);
+              }}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      </ModuleSection>
+
       <KpiGrid
         items={[
           { label: "Relatórios", value: state.reports.length },
