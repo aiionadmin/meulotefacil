@@ -104,6 +104,12 @@ type FluxoApi = {
     canal: "whatsapp" | "email" | "telefone" | "tarefa",
     resultado: string
   ) => void;
+  /** Conversa no card do cliente (sem caso de cobrança). */
+  registrarConversa: (
+    cardKey: string,
+    canal: "whatsapp" | "email" | "telefone" | "tarefa",
+    resultado: string
+  ) => void;
   proporAcordo: (
     caseId: string,
     desconto: number,
@@ -394,6 +400,22 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
           collection: s.collection.map((c) =>
             c.id === caseId ? { ...c, ultimoContato: todayIso() } : c
           ),
+        }));
+      },
+      registrarConversa: (cardKey, canal, resultado) => {
+        const caseId = `card:${cardKey}`;
+        setState((s) => ({
+          ...s,
+          contacts: [
+            {
+              id: uid("ct"),
+              caseId,
+              quando: nowLabel(),
+              canal,
+              resultado,
+            },
+            ...s.contacts,
+          ],
         }));
       },
       proporAcordo: (caseId, desconto, qtdParcelas) => {

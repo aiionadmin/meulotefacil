@@ -16,9 +16,11 @@ import {
   FilterBar,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { canApprove } from "@/lib/alcadas/check";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 import type { OrdemCompra } from "@/lib/domain/compras-types";
 
 export default function OrdensCompraPage() {
@@ -29,6 +31,9 @@ export default function OrdensCompraPage() {
     marcarOcEntregue,
   } = useCompras();
   const { state: fin, addLancamento } = useFinanceiro();
+  const { currentUser, state: f1 } = useFase1();
+  const perfilNome =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<OrdemCompra | null>(null);
 
@@ -194,6 +199,21 @@ export default function OrdensCompraPage() {
                   <Button
                     size="sm"
                     onClick={() => {
+                      const gate = canApprove({
+                        rules: f1.approvalRules,
+                        tipo: "Ordem de compra",
+                        valor:
+                          live.valor +
+                          live.frete +
+                          live.outrasDespesas +
+                          live.impostos -
+                          live.desconto,
+                        perfilNome,
+                      });
+                      if (!gate.ok) {
+                        notify("Alçada insuficiente", gate.reason);
+                        return;
+                      }
                       const r = aprovarOrdem(live.id);
                       if (!r.ok) {
                         notify(

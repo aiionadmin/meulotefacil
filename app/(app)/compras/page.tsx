@@ -20,9 +20,11 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { canApprove } from "@/lib/alcadas/check";
 import { formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
 import { useObras } from "@/lib/store/obras-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 import type { CentroCusto, ScStatus, Solicitacao } from "@/lib/domain/compras-types";
 
 const TABS: { id: "todas" | ScStatus; label: string }[] = [
@@ -49,6 +51,9 @@ export default function ComprasSolicitacoesPage() {
     criarCotacaoDeSc,
   } = useCompras();
   const { state: obras } = useObras();
+  const { currentUser, state: f1 } = useFase1();
+  const perfilNome =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("todas");
   const [open, setOpen] = useState(false);
@@ -297,6 +302,20 @@ export default function ComprasSolicitacoesPage() {
                   <Button
                     size="sm"
                     onClick={() => {
+                      const valorSc = live.itens.reduce(
+                        (a, it) => a + it.quantidade * 100,
+                        0
+                      );
+                      const gate = canApprove({
+                        rules: f1.approvalRules,
+                        tipo: "Solicitação de compra",
+                        valor: valorSc,
+                        perfilNome,
+                      });
+                      if (!gate.ok) {
+                        notify("Alçada insuficiente", gate.reason);
+                        return;
+                      }
                       aprovarSolicitacao(live.id);
                       notify("Aprovada");
                       setSelected(null);
