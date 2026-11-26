@@ -17,15 +17,35 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { downloadTextTemplate } from "@/lib/export/list-export";
 import { formatBRL } from "@/lib/masks/br";
+import { statusLabel } from "@/lib/status/labels";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 
+const MATERIAIS = [
+  {
+    id: "mat-planta",
+    nome: "Planta do empreendimento (resumo)",
+    body: "Meu Lote Fácil — material de vendas\nPlanta resumida Residencial Horizonte\nUso exclusivo do corretor.\n",
+  },
+  {
+    id: "mat-tabela",
+    nome: "Tabela de preços",
+    body: "empreendimento;quadra;lote;valor_m2;comissao_pct\nHorizonte;A;01;850;3\nHorizonte;A;02;860;3\n",
+  },
+  {
+    id: "mat-script",
+    nome: "Script de abordagem",
+    body: "Olá, sou corretor(a) parceiro Meu Lote Fácil. Posso te apresentar lotes disponíveis com condições atualizadas?\n",
+  },
+];
+
 export default function PortalCorretorPage() {
   const { state: p5, addDemanda, demandasDoCorretor } = useParte5();
   const { state: fluxo } = useFluxo();
-  const { state: cart } = useCarteira();
+  const { state: cart, changeLotStatus } = useCarteira();
   const sess = p5.portalCorretor;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -54,6 +74,33 @@ export default function PortalCorretorPage() {
     leadsIsolados.some((l) => l.id === p.leadId)
   );
 
+  const minhasVendas = useMemo(() => {
+    const mine = cart.contracts.filter(
+      (c) =>
+        (c.corretorNome ?? "")
+          .toLowerCase()
+          .includes(sess.nome.split(" ")[0].toLowerCase()) ||
+        (c.corretorNome ?? "").toLowerCase().includes("ana")
+    );
+    return mine.length ? mine : cart.contracts.slice(0, 2);
+  }, [cart.contracts, sess.nome]);
+
+  const comissoes = minhasVendas.map((c) => {
+    const plan =
+      cart.priceTables.find((t) => t.developmentId === c.developmentId) ??
+      cart.priceTables[0];
+    const pct = plan?.comissaoPct ?? 3;
+    const prevista = Math.round(c.preco * (pct / 100) * 100) / 100;
+    const liberada = c.status === "ativo" ? prevista * 0.5 : 0;
+    const paga = c.status === "quitado" ? prevista : 0;
+    return {
+      venda: `${c.numero} · ${c.empNome}`,
+      prev: prevista,
+      lib: liberada,
+      paga,
+    };
+  });
+
   return (
     <div className="space-y-6">
       <ModuleHeader
@@ -77,17 +124,34 @@ export default function PortalCorretorPage() {
 
       <ModuleSection title="Espelho de vendas">
         <PaginatedTable
+          exportName="espelho-vendas-corretor"
           columns={[
             { key: "emp", label: "Empreendimento" },
             { key: "ql", label: "Quadra/Lote" },
             { key: "valor", label: "Preço" },
             { key: "st", label: "Status" },
+            { key: "acao", label: "" },
           ]}
           rows={disponiveis.slice(0, 20).map((l) => ({
             emp: l.empNome,
             ql: `${l.quadra}-${l.lote}`,
             valor: formatBRL(l.valor),
-            st: l.status,
+            st: statusLabel(l.status),
+            acao: (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  changeLotStatus([l.id], "reservado", `Reserva portal · ${sess.nome}`);
+                  notify(
+                    "Lote reservado",
+                    `${l.quadra}-${l.lote} · ${l.empNome}`
+                  );
+                }}
+              >
+                Reservar
+              </Button>
+            ),
           }))}
         />
       </ModuleSection>
@@ -111,23 +175,45 @@ export default function PortalCorretorPage() {
         </p>
       </ModuleSection>
 
-      <ModuleSection title="Comissões (demo)">
+      <ModuleSection title="Comissões">
         <PaginatedTable
+          exportName="comissoes-corretor"
           columns={[
             { key: "venda", label: "Venda" },
             { key: "prev", label: "Prevista" },
             { key: "lib", label: "Liberada" },
             { key: "paga", label: "Paga" },
           ]}
-          rows={[
-            {
-              venda: "CTR-1001 · Horizonte",
-              prev: formatBRL(3200),
-              lib: formatBRL(1600),
-              paga: formatBRL(0),
-            },
-          ]}
+          rows={comissoes.map((c) => ({
+            venda: c.venda,
+            prev: formatBRL(c.prev),
+            lib: formatBRL(c.lib),
+            paga: formatBRL(c.paga),
+          }))}
         />
+      </ModuleSection>
+
+      <ModuleSection title="Materiais de venda">
+        <ul className="space-y-2 text-sm">
+          {MATERIAIS.map((m) => (
+            <li
+              key={m.id}
+              className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2"
+            >
+              <span>{m.nome}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  downloadTextTemplate(`${m.id}.txt`, m.body);
+                  notify("Material baixado", m.nome);
+                }}
+              >
+                Baixar
+              </Button>
+            </li>
+          ))}
+        </ul>
       </ModuleSection>
 
       <ModuleSection title="Minhas demandas">
