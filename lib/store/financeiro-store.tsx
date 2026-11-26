@@ -68,6 +68,11 @@ type FinanceiroApi = {
   ) => boolean;
   estornarPagamento: (id: string) => boolean;
   conciliarPagamento: (id: string) => boolean;
+  setPagamentoStatus: (id: string, status: PagamentoStatus) => boolean;
+  setRecebimentoStatus: (
+    id: string,
+    status: Recebimento["status"]
+  ) => boolean;
   addFaturamento: (input: {
     descricao: string;
     cliente: string;
@@ -327,6 +332,46 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           ...s,
           pagamentos: s.pagamentos.map((p) =>
             p.id === id ? { ...p, conciliado: true } : p
+          ),
+        }));
+        return true;
+      },
+      setPagamentoStatus: (id, status) => {
+        const p = state.pagamentos.find((x) => x.id === id);
+        if (!p) return false;
+        setState((s) => ({
+          ...s,
+          pagamentos: s.pagamentos.map((x) =>
+            x.id === id
+              ? {
+                  ...x,
+                  status,
+                  valorPago: status === "pago" ? x.valor : x.valorPago,
+                  pagoEm: status === "pago" ? todayIso() : x.pagoEm,
+                }
+              : x
+          ),
+        }));
+        return true;
+      },
+      setRecebimentoStatus: (id, status) => {
+        const r = state.recebimentos.find((x) => x.id === id);
+        if (!r) return false;
+        if (r.origem === "contrato" && status === "recebido") {
+          // parcelas de contrato só via carteira
+          return false;
+        }
+        setState((s) => ({
+          ...s,
+          recebimentos: s.recebimentos.map((x) =>
+            x.id === id
+              ? {
+                  ...x,
+                  status,
+                  valorRecebido:
+                    status === "recebido" ? x.valor : x.valorRecebido,
+                }
+              : x
           ),
         }));
         return true;

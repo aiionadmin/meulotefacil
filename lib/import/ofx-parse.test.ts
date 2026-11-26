@@ -1,5 +1,5 @@
 /** npx tsx lib/import/ofx-parse.test.ts */
-import { parseOfxText } from "./ofx-parse";
+import { parseOfxBytes, parseOfxText } from "./ofx-parse";
 
 function assert(cond: boolean, msg: string) {
   if (!cond) {
@@ -47,4 +47,15 @@ assert(ok.transacoes.length === 2, "2 txns");
 assert(ok.transacoes[0].tipo === "credito", "credito");
 assert(ok.transacoes[1].tipo === "debito", "debito");
 assert(ok.transacoes[0].data === "2026-11-15", "data");
+
+// UTF-16 LE com BOM
+const bom = new Uint8Array([0xff, 0xfe, ...Array.from(sample).flatMap((c) => {
+  const code = c.charCodeAt(0);
+  return [code & 0xff, code >> 8];
+})]);
+const fromBytes = parseOfxBytes(bom.buffer);
+assert(fromBytes.ok, "utf16 ofx ok");
+assert(fromBytes.encoding === "utf-16le", `enc ${fromBytes.encoding}`);
+assert(fromBytes.transacoes.length === 2, "utf16 txns");
+
 console.log("OK ofx-parse");

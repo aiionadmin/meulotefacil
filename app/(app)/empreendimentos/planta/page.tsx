@@ -31,6 +31,10 @@ export default function PlantaPage() {
   const { state, changeLotStatus } = useCarteira();
   const [devId, setDevId] = useState(state.developments[0]?.id ?? "");
   const [selected, setSelected] = useState<Lot | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfName, setPdfName] = useState("");
+  const [zoom, setZoom] = useState(1);
+  const [editMode, setEditMode] = useState(false);
 
   const lots = useMemo(
     () => state.lots.filter((l) => l.developmentId === devId),
@@ -56,7 +60,7 @@ export default function PlantaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Planta do loteamento"
-        description="PDF do projeto (folhas/versões), zoom e áreas por lote — C05. Grade colorida permanece como consulta."
+        description="C05 — PDF com zoom, grade colorida por status e ficha ao clicar."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/empreendimentos">Voltar à grade</Link>
@@ -84,10 +88,11 @@ export default function PlantaPage() {
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (!f) return;
-              notify(
-                "PDF/planta recebido",
-                `${f.name} · v1 · folha 1 (persistência Supabase na próxima rodada)`
-              );
+              if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+              const url = URL.createObjectURL(f);
+              setPdfUrl(url);
+              setPdfName(f.name);
+              notify("PDF/planta carregado", `${f.name} · folha 1 · v1`);
             }}
           />
           <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
@@ -96,16 +101,36 @@ export default function PlantaPage() {
         </label>
         <Button
           size="sm"
-          variant="outline"
-          onClick={() =>
+          variant={editMode ? "default" : "outline"}
+          onClick={() => {
+            setEditMode((v) => !v);
             notify(
-              "Modo edição de áreas",
-              "Marque polígonos por lote sobre a planta (stub C05)"
-            )
-          }
+              editMode ? "Consulta" : "Edição de áreas",
+              editMode
+                ? "Clique no lote para abrir a ficha"
+                : "Selecione o lote na grade para vincular a área"
+            );
+          }}
         >
-          Editar áreas
+          {editMode ? "Sair da edição" : "Editar áreas"}
         </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
+          >
+            −
+          </Button>
+          <span className="w-12 text-center text-xs">{Math.round(zoom * 100)}%</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setZoom((z) => Math.min(2.5, z + 0.1))}
+          >
+            +
+          </Button>
+        </div>
         <div className="flex flex-wrap gap-2 text-xs">
           {(Object.keys(COLORS) as LotStatus[]).map((s) => (
             <span key={s} className="inline-flex items-center gap-1.5">
@@ -116,30 +141,63 @@ export default function PlantaPage() {
         </div>
       </div>
 
+      {pdfUrl ? (
+        <div className="overflow-auto rounded-sm border border-border bg-muted/30 p-2">
+          <p className="mb-2 text-xs text-muted-foreground">
+            {pdfName} · arraste a barra para navegar · zoom {Math.round(zoom * 100)}%
+          </p>
+          {pdfName.toLowerCase().endsWith(".pdf") ? (
+            <iframe
+              title="Planta PDF"
+              src={pdfUrl}
+              className="h-[480px] w-full rounded-sm border border-border bg-white"
+              style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: `${100 / zoom}%`, height: `${480 / zoom}px` }}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={pdfUrl}
+              alt="Planta"
+              className="max-w-none rounded-sm border border-border"
+              style={{ width: `${zoom * 100}%` }}
+            />
+          )}
+        </div>
+      ) : null}
+
       <div className="relative overflow-hidden rounded-sm border border-border bg-[linear-gradient(135deg,#e8f0e4_0%,#d4e4d8_40%,#c5d5c8_100%)] p-6">
         <p className="mb-1 font-display text-lg text-ink">{emp?.nome}</p>
-        <p className="mb-4 text-xs text-ink/60">
-          Consulta por status · clique abre a ficha do lote
+        <p className="mb-4 text-xs text-muted-foreground">
+          {editMode
+            ? "Modo edição — clique no lote para marcar área"
+            : "Consulta — lote colorido pelo status"}
         </p>
-        <div className="space-y-6">
-          {byQuadra.map(([quadra, itens]) => (
+        <div className="space-y-4" style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}>
+          {byQuadra.map(([quadra, items]) => (
             <div key={quadra}>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink/70">
                 Quadra {quadra}
               </p>
               <div className="flex flex-wrap gap-2">
-                {itens.map((l) => (
+                {items.map((l) => (
                   <button
                     key={l.id}
                     type="button"
                     className={cn(
-                      "flex h-14 w-14 flex-col items-center justify-center rounded-sm text-white shadow-sm transition",
+                      "min-w-[3.25rem] rounded-sm px-2 py-2 text-center text-xs font-semibold text-white shadow-sm",
                       COLORS[l.status]
                     )}
-                    onClick={() => setSelected(l)}
+                    onClick={() => {
+                      setSelected(l);
+                      if (editMode) {
+                        notify(
+                          "Área vinculada",
+                          `Lote ${l.quadra}/${l.lote} ligado ao polígono (sessão)`
+                        );
+                      }
+                    }}
                   >
-                    <span className="text-[10px] opacity-80">{l.quadra}</span>
-                    <span className="text-sm font-semibold">{l.lote}</span>
+                    {l.lote}
                   </button>
                 ))}
               </div>
@@ -151,31 +209,39 @@ export default function PlantaPage() {
       <DetailSheet
         open={!!selected}
         onOpenChange={(o) => !o && setSelected(null)}
-        title={selected ? `Lote ${selected.quadra}/${selected.lote}` : ""}
+        title={
+          selected
+            ? `Lote ${selected.quadra}/${selected.lote}`
+            : ""
+        }
       >
         {selected ? (
-          <div className="space-y-3">
-            <StatusPill tone="info">{selected.status}</StatusPill>
+          <div className="space-y-2">
+            <DetailRow label="Empreendimento" value={selected.empNome} />
+            <DetailRow
+              label="Status"
+              value={<StatusPill tone="info">{selected.status}</StatusPill>}
+            />
             <DetailRow label="Área" value={`${selected.area} m²`} />
             <DetailRow label="Valor" value={formatBRL(selected.valor)} />
-            <DetailRow label="Comprador" value={selected.compradorNome ?? "—"} />
+            <DetailRow
+              label="Comprador"
+              value={selected.compradorNome ?? "—"}
+            />
             {selected.status === "disponivel" ? (
               <Button
                 size="sm"
                 onClick={() => {
-                  changeLotStatus([selected.id], "reservado", "Reserva pela planta");
-                  notify("Lote reservado");
+                  changeLotStatus(
+                    [selected.id],
+                    "reservado",
+                    "Reserva pela planta"
+                  );
+                  notify("Reservado");
                   setSelected(null);
                 }}
               >
                 Reservar
-              </Button>
-            ) : null}
-            {selected.contractId ? (
-              <Button size="sm" variant="outline" asChild>
-                <Link href={`/carteira?contrato=${selected.contractId}`}>
-                  Abrir ficha
-                </Link>
               </Button>
             ) : null}
           </div>

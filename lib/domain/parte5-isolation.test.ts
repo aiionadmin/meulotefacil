@@ -24,9 +24,9 @@ assert(
   "outro corretor não vê demandas de corr-1"
 );
 
-const cli1 = demandasDoCliente(seed, "cli-1");
+const cli1 = demandasDoCliente(seed, "p-ana");
 assert(
-  cli1.every((d) => d.clienteId === "cli-1"),
+  cli1.every((d) => d.clienteId === "p-ana"),
   "cliente só vê próprias demandas"
 );
 assert(
