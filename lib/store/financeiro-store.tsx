@@ -21,6 +21,7 @@ import type {
   CondicaoPagamento,
   ContaBancaria,
   Faturamento,
+  FinanceiroConfig,
   FinanceiroState,
   FormaPagamento,
   Lancamento,
@@ -117,6 +118,8 @@ type FinanceiroApi = {
     despesas: number;
     saldo: number;
   };
+  /** G20 — parâmetros financeiros. */
+  updateConfig: (patch: Partial<FinanceiroConfig>) => void;
 };
 
 const Ctx = createContext<FinanceiroApi | null>(null);
@@ -735,6 +738,22 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           despesas,
           saldo: Math.round((receitas - despesas) * 100) / 100,
         };
+      },
+      updateConfig: (patch) => {
+        setState((s) => ({
+          ...s,
+          config: {
+            ...s.config,
+            ...patch,
+            mesesProvisionamento: Math.max(
+              0,
+              Math.min(
+                36,
+                patch.mesesProvisionamento ?? s.config.mesesProvisionamento
+              )
+            ),
+          },
+        }));
       },
     }),
     [state, ready]

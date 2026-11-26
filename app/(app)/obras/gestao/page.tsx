@@ -16,7 +16,15 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { canApprove } from "@/lib/alcadas/check";
+import { downloadExcel } from "@/lib/export/list-export";
 import { formatBRL } from "@/lib/masks/br";
+import {
+  curvaAbc,
+  desempenhoCustos,
+  insumosOrcadosXRealizados,
+  orcamentoAnalitico,
+  orcamentoSintetico,
+} from "@/lib/obras/relatorios-d17";
 import { statusLabel } from "@/lib/status/labels";
 import { useObras } from "@/lib/store/obras-store";
 import { useFase1 } from "@/lib/store/fase1-store";
@@ -44,6 +52,19 @@ export default function GestaoObrasPage() {
   const obra = state.obras.find((o) => o.id === obraId) ?? filtered[0];
   const nodes = obra ? nodesDaObra(obra.id) : [];
   const itens = nodes.filter((n) => n.kind === "item");
+  const sint = useMemo(() => orcamentoSintetico(nodes), [nodes]);
+  const ana = useMemo(() => orcamentoAnalitico(nodes), [nodes]);
+  const abc = useMemo(() => curvaAbc(nodes), [nodes]);
+  const oxr = useMemo(
+    () =>
+      insumosOrcadosXRealizados({
+        nodes,
+        insumos: state.insumos,
+        composicoes: state.composicoes,
+      }),
+    [nodes, state.insumos, state.composicoes]
+  );
+  const desempenho = useMemo(() => desempenhoCustos(nodes), [nodes]);
   const grupos = custoPorGrupo(
     itens.map((n) => ({
       grupo: n.grupo ?? "outros",
@@ -56,7 +77,7 @@ export default function GestaoObrasPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Gestão da obra"
-        description="Orçado x realizado por etapa/item, grupos e Curva S."
+        description="D17 — relatórios sintético/analítico, Curva ABC, insumos O×R e desempenho."
         actions={
           obra ? (
             <Button size="sm" variant="outline" asChild>
@@ -151,6 +172,134 @@ export default function GestaoObrasPage() {
                 Abra a obra e clique em Gerar Curva S.
               </p>
             )}
+          </ModuleSection>
+
+          <ModuleSection title="Relatórios D17">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  downloadExcel(
+                    `orcamento-sintetico-${obra.codigo}`,
+                    ["Código", "Descrição", "Orçado", "Realizado", "Saldo", "% físico"],
+                    sint.map((r) => [
+                      r.codigo,
+                      r.descricao,
+                      r.orcado,
+                      r.realizado,
+                      r.saldo,
+                      r.fisicoPct,
+                    ])
+                  );
+                  notify("Orçamento sintético exportado");
+                }}
+              >
+                Sintético
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  downloadExcel(
+                    `orcamento-analitico-${obra.codigo}`,
+                    [
+                      "Código",
+                      "Descrição",
+                      "Unidade",
+                      "Qtd",
+                      "Grupo",
+                      "Orçado",
+                      "Realizado",
+                      "Saldo",
+                      "% físico",
+                    ],
+                    ana.map((r) => [
+                      r.codigo,
+                      r.descricao,
+                      r.unidade,
+                      r.quantidade,
+                      r.grupo,
+                      r.orcado,
+                      r.realizado,
+                      r.saldo,
+                      r.fisicoPct,
+                    ])
+                  );
+                  notify("Orçamento analítico exportado");
+                }}
+              >
+                Analítico
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  downloadExcel(
+                    `curva-abc-${obra.codigo}`,
+                    ["Código", "Descrição", "Orçado", "% acum.", "Classe"],
+                    abc.map((r) => [
+                      r.codigo,
+                      r.descricao,
+                      r.orcado,
+                      r.acumuladoPct,
+                      r.classe,
+                    ])
+                  );
+                  notify("Curva ABC exportada");
+                }}
+              >
+                Curva ABC
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  downloadExcel(
+                    `insumos-oxr-${obra.codigo}`,
+                    ["Código", "Nome", "Unidade", "Orçado", "Realizado", "Saldo"],
+                    oxr.map((r) => [
+                      r.codigo,
+                      r.nome,
+                      r.unidade,
+                      r.orcado,
+                      r.realizado,
+                      r.saldo,
+                    ])
+                  );
+                  notify("Insumos O×R exportados");
+                }}
+              >
+                Insumos O×R
+              </Button>
+            </div>
+            <KpiGrid
+              items={[
+                { label: "Itens", value: desempenho.itens },
+                { label: "Orçado D17", value: formatBRL(desempenho.orcado) },
+                {
+                  label: "Realizado D17",
+                  value: formatBRL(desempenho.realizado),
+                },
+                { label: "Físico médio", value: `${desempenho.fisicoMedio}%` },
+              ]}
+            />
+            <DataTable
+              columns={[
+                { key: "cod", label: "Código" },
+                { key: "desc", label: "Item" },
+                { key: "orc", label: "Orçado" },
+                { key: "cls", label: "ABC" },
+                { key: "ac", label: "% acum." },
+              ]}
+              rows={abc.slice(0, 12).map((r) => ({
+                cod: r.codigo,
+                desc: r.descricao,
+                orc: formatBRL(r.orcado),
+                cls: r.classe,
+                ac: `${r.acumuladoPct}%`,
+              }))}
+            />
           </ModuleSection>
 
           <ModuleSection title="Relatório gerencial (D18)">

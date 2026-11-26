@@ -16,15 +16,20 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
-import { downloadTextTemplate } from "@/lib/export/list-export";
+import { downloadExcel, downloadTextTemplate } from "@/lib/export/list-export";
 import { parseCnab400Retorno } from "@/lib/cnab/retorno";
 import { useServerPage } from "@/lib/ui/use-server-page";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { BankSlip } from "@/lib/domain/carteira-types";
 
 export default function BoletosPage() {
-  const { state, gerarBoletosMes, gerarRemessa, processarRetorno } =
-    useCarteira();
+  const {
+    state,
+    gerarBoletosMes,
+    gerarRemessa,
+    processarRetorno,
+    cancelarBoletosPorIds,
+  } = useCarteira();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<BankSlip | null>(null);
   const server = useServerPage({
@@ -186,6 +191,36 @@ export default function BoletosPage() {
           return false;
         }}
         exportName="boletos"
+        bulkActions={[
+          {
+            label: "Exportar seleção",
+            onClick: (ids) => {
+              const set = new Set(ids);
+              const rows = filtered.filter((b) => set.has(b.id));
+              downloadExcel(
+                "boletos-selecao",
+                ["Nosso nº", "Contrato", "Banco", "Vencimento", "Valor", "Status"],
+                rows.map((b) => [
+                  b.nossoNumero,
+                  b.contratoNumero,
+                  b.banco,
+                  b.vencimento,
+                  b.valor,
+                  b.status,
+                ])
+              );
+              notify(`${rows.length} boleto(s) exportados`);
+            },
+          },
+          {
+            label: "Cancelar seleção",
+            tone: "danger",
+            onClick: (ids) => {
+              const n = cancelarBoletosPorIds(ids);
+              notify(n ? `${n} boleto(s) cancelados` : "Nenhum cancelável");
+            },
+          },
+        ]}
         listColumns={[
           { key: "nn", label: "Nosso nº", filter: { type: "text" }, getValue: (b) => b.nossoNumero },
           { key: "contrato", label: "Contrato", filter: { type: "text" }, getValue: (b) => b.contratoNumero },

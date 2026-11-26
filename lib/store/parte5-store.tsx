@@ -53,6 +53,9 @@ type Parte5Api = {
     custoPrevisto?: number;
   }) => Demanda | null;
   moverDemanda: (id: string, status: DemandaStatus) => boolean;
+  /** C15 — atribuir responsável em lote. */
+  atribuirDemandas: (ids: string[], responsavel: string) => number;
+  concluirDemandas: (ids: string[]) => number;
   demandasDoCorretor: (corretorId?: string) => Demanda[];
   demandasDoCliente: (clienteId?: string) => Demanda[];
   setPortalCorretor: (corretorId: string, nome: string) => void;
@@ -135,6 +138,41 @@ export function Parte5StoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      atribuirDemandas: (ids, responsavel) => {
+        const set = new Set(ids);
+        const nome = responsavel.trim();
+        if (!nome) return 0;
+        let n = 0;
+        setState((s) => {
+          n = s.demandas.filter((d) => set.has(d.id)).length;
+          return {
+            ...s,
+            demandas: s.demandas.map((d) =>
+              set.has(d.id) ? { ...d, responsavel: nome } : d
+            ),
+          };
+        });
+        return n;
+      },
+      concluirDemandas: (ids) => {
+        const set = new Set(ids);
+        let n = 0;
+        setState((s) => {
+          n = s.demandas.filter(
+            (d) => set.has(d.id) && d.status !== "concluida"
+          ).length;
+          if (!n) return s;
+          return {
+            ...s,
+            demandas: s.demandas.map((d) =>
+              set.has(d.id) && d.status !== "concluida"
+                ? { ...d, status: "concluida" as const }
+                : d
+            ),
+          };
+        });
+        return n;
       },
       demandasDoCorretor: (corretorId) =>
         demandasDoCorretor(
