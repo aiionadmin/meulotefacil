@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ModuleHeader, DataTable, StatusPill } from "@/components/app/ModulePage";
@@ -8,11 +8,11 @@ import {
   DetailRow,
   DetailSheet,
   Field,
-  FilterBar,
   FormDialog,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessList } from "@/components/app/ProcessList";
 import { formatBRL } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
 import { custoPorGrupo, precoComBdi } from "@/lib/money/orcamento";
@@ -20,7 +20,6 @@ import type { Composicao } from "@/lib/domain/obras-types";
 
 export default function ComposicoesPage() {
   const { state, addComposicao } = useObras();
-  const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Composicao | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -33,14 +32,6 @@ export default function ComposicoesPage() {
     coeficiente: 1,
   });
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return state.composicoes;
-    return state.composicoes.filter((c) =>
-      [c.codigo, c.descricao, c.base].join(" ").toLowerCase().includes(term)
-    );
-  }, [state.composicoes, q]);
-
   const custoComp = (c: Composicao) =>
     c.itens.reduce((a, it) => {
       const ins = state.insumos.find((i) => i.id === it.insumoId);
@@ -51,42 +42,62 @@ export default function ComposicoesPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Composições"
-        description="Insumos com coeficiente, totais por grupo e BDI."
+        description="Insumos com coeficiente, totais por grupo e BDI — lista filtrável (C14)."
         actions={
           <Button size="sm" onClick={() => setOpen(true)}>
             Nova composição
           </Button>
         }
       />
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar composição…" />
-      <DataTable
+      <ProcessList
+        storageKey="composicoes"
+        exportName="composicoes"
+        rows={state.composicoes}
+        empty="Sem composições."
+        onRowClick={(c) => setSelected(c)}
         columns={[
-          { key: "codigo", label: "Código" },
-          { key: "desc", label: "Descrição" },
-          { key: "un", label: "Un." },
-          { key: "base", label: "Base" },
-          { key: "custo", label: "Custo unit." },
-          { key: "preco", label: "Preço c/ BDI" },
-        ]}
-        rows={filtered.map((c) => {
-          const custo = custoComp(c);
-          return {
-            codigo: (
-              <button
-                type="button"
-                className="font-medium hover:text-brand-orange"
-                onClick={() => setSelected(c)}
-              >
-                {c.codigo}
-              </button>
+          {
+            key: "codigo",
+            label: "Código",
+            filter: { type: "text" },
+            getValue: (c) => c.codigo,
+            render: (c) => (
+              <span className="font-medium text-brand-orange">{c.codigo}</span>
             ),
-            desc: c.descricao,
-            un: c.unidade,
-            base: c.base,
-            custo: formatBRL(custo),
-            preco: formatBRL(precoComBdi(custo, c.bdiPct)),
-          };
-        })}
+          },
+          {
+            key: "desc",
+            label: "Descrição",
+            filter: { type: "text" },
+            getValue: (c) => c.descricao,
+          },
+          {
+            key: "un",
+            label: "Un.",
+            filter: { type: "text" },
+            getValue: (c) => c.unidade,
+          },
+          {
+            key: "base",
+            label: "Base",
+            filter: { type: "text" },
+            getValue: (c) => c.base,
+          },
+          {
+            key: "custo",
+            label: "Custo unit.",
+            filter: { type: "range" },
+            getValue: (c) => custoComp(c),
+            render: (c) => formatBRL(custoComp(c)),
+          },
+          {
+            key: "preco",
+            label: "Preço c/ BDI",
+            filter: { type: "range" },
+            getValue: (c) => precoComBdi(custoComp(c), c.bdiPct),
+            render: (c) => formatBRL(precoComBdi(custoComp(c), c.bdiPct)),
+          },
+        ]}
       />
 
       <DetailSheet

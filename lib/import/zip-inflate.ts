@@ -19,8 +19,8 @@ async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
     const buf = await new Response(stream).arrayBuffer();
     return new Uint8Array(buf);
   }
-  // Node (testes)
-  const zlib = await import("node:zlib");
+  // Node (testes) — webpackIgnore evita empacotar node: no client
+  const zlib = await import(/* webpackIgnore: true */ "node:zlib");
   return zlib.inflateRawSync(data);
 }
 

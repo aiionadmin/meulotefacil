@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
 } from "@/components/app/ModulePage";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { ProcessList } from "@/components/app/ProcessList";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { PERMISSION_ROUTINES } from "@/lib/permissions/routines";
 import { notify } from "@/components/app/ModuleToolkit";
@@ -50,19 +50,40 @@ export default function PerfisPage() {
         ]}
       />
 
-      <DataTable
+      <ProcessList
+        storageKey="perfis"
+        exportName="perfis"
+        rows={state.profiles}
+        empty="Sem perfis."
+        onRowClick={(p) => setProfileId(p.id)}
         columns={[
-          { key: "codigo", label: "Código" },
-          { key: "nome", label: "Nome" },
-          { key: "descricao", label: "Descrição" },
-          { key: "usuarios", label: "Usuários" },
+          {
+            key: "codigo",
+            label: "Código",
+            filter: { type: "text" },
+            getValue: (p) => p.codigo,
+          },
+          {
+            key: "nome",
+            label: "Nome",
+            filter: { type: "text" },
+            getValue: (p) => p.nome,
+            render: (p) => <span className="font-medium">{p.nome}</span>,
+          },
+          {
+            key: "descricao",
+            label: "Descrição",
+            filter: { type: "text" },
+            getValue: (p) => p.descricao,
+          },
+          {
+            key: "usuarios",
+            label: "Usuários",
+            filter: { type: "range" },
+            getValue: (p) =>
+              state.users.filter((u) => u.profileId === p.id).length,
+          },
         ]}
-        rows={state.profiles.map((p) => ({
-          codigo: p.codigo,
-          nome: <span className="font-medium">{p.nome}</span>,
-          descricao: p.descricao,
-          usuarios: state.users.filter((u) => u.profileId === p.id).length,
-        }))}
       />
 
       <div className="space-y-3 rounded-lg border border-ink/10 bg-card p-4">

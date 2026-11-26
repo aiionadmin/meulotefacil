@@ -22,6 +22,7 @@ import { useClientCard } from "@/lib/client/client-card-context";
 import type { Installment } from "@/lib/domain/carteira-types";
 import { resolveInstallmentStatus } from "@/lib/money/installment-status";
 import { aReceberContratos } from "@/lib/indicators/receivables";
+import { useEmpresa } from "@/lib/empresa/context";
 import { statusLabel } from "@/lib/status/labels";
 import { paginate } from "@/lib/ui/pagination";
 import { downloadCsv } from "@/lib/export/list-export";
@@ -56,6 +57,7 @@ function CarteiraInner() {
     saldoDevedor,
   } = useCarteira();
   const { openClient } = useClientCard();
+  const { filterByDevelopmentEmpresa } = useEmpresa();
   const search = useSearchParams();
   const contratoQ = search.get("contrato") ?? "";
   const [q, setQ] = useState("");
@@ -74,7 +76,14 @@ function CarteiraInner() {
   }, [refreshEncargos]);
 
   const filtered = useMemo(() => {
-    let list = state.installments;
+    const scoped = filterByDevelopmentEmpresa(
+      state.installments.map((p) => {
+        const c = state.contracts.find((x) => x.id === p.contractId);
+        return { ...p, developmentId: c?.developmentId };
+      }),
+      state.developments
+    ) as (Installment & { developmentId?: string })[];
+    let list: Installment[] = scoped;
     if (contratoQ) list = list.filter((p) => p.contractId === contratoQ);
     const term = q.trim().toLowerCase();
     if (term) {
@@ -86,7 +95,14 @@ function CarteiraInner() {
       );
     }
     return list;
-  }, [state.installments, q, contratoQ]);
+  }, [
+    state.installments,
+    state.contracts,
+    state.developments,
+    q,
+    contratoQ,
+    filterByDevelopmentEmpresa,
+  ]);
 
   // B18 — se filtro de contrato e volume alto, usa API paginada com encargos só da página
   useEffect(() => {
@@ -161,8 +177,8 @@ function CarteiraInner() {
     });
   }, [filtered, page, serverPage]);
 
-  const aberto = aReceberContratos(state.installments);
-  const vencidas = state.installments.filter((p) => {
+  const aberto = aReceberContratos(filtered);
+  const vencidas = filtered.filter((p) => {
     const v = resolveInstallmentStatus({
       status: p.status,
       valor: p.valor,
