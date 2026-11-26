@@ -10,13 +10,23 @@ import {
   StatusPill,
   ModuleSection,
 } from "@/components/app/ModulePage";
-import { FilterBar, fieldControlClass } from "@/components/app/ModuleToolkit";
+import {
+  FilterBar,
+  fieldControlClass,
+  notify,
+} from "@/components/app/ModuleToolkit";
+import { canApprove } from "@/lib/alcadas/check";
 import { formatBRL } from "@/lib/masks/br";
+import { statusLabel } from "@/lib/status/labels";
 import { useObras } from "@/lib/store/obras-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 import { custoPorGrupo } from "@/lib/money/orcamento";
 
 export default function GestaoObrasPage() {
-  const { state, nodesDaObra } = useObras();
+  const { state, nodesDaObra, setRelatorioGerencialStatus } = useObras();
+  const { currentUser, state: f1 } = useFase1();
+  const perfilNome =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const [q, setQ] = useState("");
   const [obraId, setObraId] = useState(state.obras[0]?.id ?? "");
 
@@ -141,6 +151,74 @@ export default function GestaoObrasPage() {
                 Abra a obra e clique em Gerar Curva S.
               </p>
             )}
+          </ModuleSection>
+
+          <ModuleSection title="Relatório gerencial (D18)">
+            <DataTable
+              exportName="relatorios-gerenciais"
+              columns={[
+                { key: "num", label: "Nº" },
+                { key: "tit", label: "Título" },
+                { key: "per", label: "Período" },
+                { key: "st", label: "Status" },
+                { key: "acao", label: "" },
+              ]}
+              rows={state.relatoriosGerenciais
+                .filter((r) => r.obraId === obra.id)
+                .map((r) => ({
+                  num: r.numero,
+                  tit: r.titulo,
+                  per: r.periodo,
+                  st: (
+                    <StatusPill
+                      tone={
+                        r.status === "aprovado"
+                          ? "ok"
+                          : r.status === "recusado"
+                            ? "danger"
+                            : "warn"
+                      }
+                    >
+                      {statusLabel(r.status)}
+                    </StatusPill>
+                  ),
+                  acao:
+                    r.status === "em_aprovacao" ? (
+                      <div className="flex flex-wrap gap-1">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const gate = canApprove({
+                              rules: f1.approvalRules,
+                              tipo: "Relatório Gerencial",
+                              perfilNome,
+                            });
+                            if (!gate.ok) {
+                              notify("Alçada insuficiente", gate.reason);
+                              return;
+                            }
+                            setRelatorioGerencialStatus(r.id, "aprovado");
+                            notify("Relatório aprovado", r.numero);
+                          }}
+                        >
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setRelatorioGerencialStatus(r.id, "recusado");
+                            notify("Relatório recusado", r.numero);
+                          }}
+                        >
+                          Recusar
+                        </Button>
+                      </div>
+                    ) : (
+                      "—"
+                    ),
+                }))}
+            />
           </ModuleSection>
         </>
       ) : (

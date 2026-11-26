@@ -14,6 +14,7 @@ import type {
   Obra,
   ObrasCatalogState,
   OrcamentoNode,
+  RelatorioGerencial,
   Rdo,
   RdoStatus,
 } from "@/lib/domain/obras-types";
@@ -69,6 +70,10 @@ type ObrasApi = {
     id: string,
     status: RdoStatus,
     motivo?: string
+  ) => boolean;
+  setRelatorioGerencialStatus: (
+    id: string,
+    status: RelatorioGerencial["status"]
   ) => boolean;
   gerarCurvaS: (obraId: string) => void;
   nodesDaObra: (obraId: string) => OrcamentoNode[];
@@ -419,6 +424,17 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
             ),
           };
         });
+        return true;
+      },
+      setRelatorioGerencialStatus: (id, status) => {
+        const rg = state.relatoriosGerenciais.find((r) => r.id === id);
+        if (!rg) return false;
+        setState((s) => ({
+          ...s,
+          relatoriosGerenciais: s.relatoriosGerenciais.map((r) =>
+            r.id === id ? { ...r, status } : r
+          ),
+        }));
         return true;
       },
       gerarCurvaS: (obraId) => {
