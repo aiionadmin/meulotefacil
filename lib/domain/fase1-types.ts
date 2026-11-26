@@ -50,6 +50,14 @@ export type AppUser = {
   chave: boolean;
   profileId: string;
   organizationIds: string[];
+  /** J02/C01 — se true, vê todas as empresas do seletor. */
+  todasEmpresas?: boolean;
+  /** J02 — se true, vê todas as obras/empreendimentos. */
+  verTodasObras?: boolean;
+  /** J02 — empreendimentos visíveis quando verTodasObras=false. */
+  developmentIds?: string[];
+  /** J02 — obras visíveis quando verTodasObras=false. */
+  obraIds?: string[];
 };
 
 export type Person = {

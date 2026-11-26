@@ -233,6 +233,7 @@ export function seedFinanceiro(): FinanceiroState {
         saldo: 85000,
         ativa: true,
         boleto: true,
+        empresaId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
       },
       {
         id: "cta-2",
@@ -245,6 +246,20 @@ export function seedFinanceiro(): FinanceiroState {
         saldo: 2500,
         ativa: true,
         boleto: false,
+        empresaId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      },
+      {
+        id: "cta-3",
+        nome: "Conta Regularizações",
+        banco: "Bradesco",
+        tipo: "corrente",
+        proprietario: "empresa",
+        dataInicial: "2026-01-01",
+        valorInicial: 12000,
+        saldo: 12000,
+        ativa: true,
+        boleto: false,
+        empresaId: "org-demo-2",
       },
     ],
     lancamentos: [

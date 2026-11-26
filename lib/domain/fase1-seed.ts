@@ -41,7 +41,9 @@ export function seedFase1(): Fase1State {
         status: "ativo",
         chave: true,
         profileId: "pf-admin",
-        organizationIds: [orgId],
+        organizationIds: [orgId, "org-demo-2"],
+        todasEmpresas: true,
+        verTodasObras: true,
       },
       {
         id: "u-fin",
@@ -51,6 +53,8 @@ export function seedFase1(): Fase1State {
         chave: false,
         profileId: "pf-fin",
         organizationIds: [orgId],
+        todasEmpresas: false,
+        verTodasObras: true,
       },
       {
         id: "u-com",
@@ -60,6 +64,10 @@ export function seedFase1(): Fase1State {
         chave: false,
         profileId: "pf-com",
         organizationIds: [orgId],
+        todasEmpresas: false,
+        verTodasObras: false,
+        developmentIds: ["dev-horizonte"],
+        obraIds: [],
       },
     ],
     people: [

@@ -22,7 +22,7 @@ export default function ParametrosFinanceiroPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Financeiro"
-        description="G20 — meses de provisionamento, documento obrigatório e abertura de etapas."
+        description="G20/C02 — parâmetros por empresa (seletor da barra); provisionamento e documento obrigatório."
         actions={
           <Button
             size="sm"

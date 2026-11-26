@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,19 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { useEmpresa } from "@/lib/empresa/context";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { parseOfxBytes, type OfxTxn } from "@/lib/import/ofx-parse";
 
 export default function ContasPage() {
   const { state, addConta, conciliarPagamento } = useFinanceiro();
+  const { empresas, selectedId, filterByEmpresa } = useEmpresa();
+  const contas = useMemo(
+    () => filterByEmpresa(state.contas),
+    [filterByEmpresa, state.contas]
+  );
   const [ofxTxns, setOfxTxns] = useState<OfxTxn[]>([]);
   const [ofxMeta, setOfxMeta] = useState("");
   const [open, setOpen] = useState(false);
@@ -33,13 +40,15 @@ export default function ContasPage() {
     dataInicial: "2026-01-01",
     valorInicial: 0,
     boleto: false,
+    empresaId:
+      selectedId === "todas" ? empresas[0]?.id ?? "" : selectedId,
   });
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Contas bancárias"
-        description="Saldo atual, tipo e proprietário (empresa ou cliente)."
+        description="C02 — contas por empresa; saldo, tipo e proprietário."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -55,18 +64,16 @@ export default function ContasPage() {
         items={[
           {
             label: "Saldo total",
-            value: formatBRL(
-              state.contas.reduce((a, c) => a + c.saldo, 0)
-            ),
+            value: formatBRL(contas.reduce((a, c) => a + c.saldo, 0)),
           },
-          { label: "Contas", value: state.contas.length },
+          { label: "Contas", value: contas.length },
           {
             label: "Ativas",
-            value: state.contas.filter((c) => c.ativa).length,
+            value: contas.filter((c) => c.ativa).length,
           },
           {
             label: "Com boleto",
-            value: state.contas.filter((c) => c.boleto).length,
+            value: contas.filter((c) => c.boleto).length,
           },
         ]}
       />
@@ -75,13 +82,17 @@ export default function ContasPage() {
           columns={[
             { key: "banco", label: "Banco / Tipo" },
             { key: "nome", label: "Nome" },
+            { key: "emp", label: "Empresa" },
             { key: "prop", label: "Proprietário" },
             { key: "saldo", label: "Valor atual" },
             { key: "ini", label: "Data inicial" },
           ]}
-          rows={state.contas.map((c) => ({
+          rows={contas.map((c) => ({
             banco: `${c.banco} · ${c.tipo}`,
             nome: c.nome,
+            emp:
+              empresas.find((e) => e.id === c.empresaId)?.nome ??
+              (c.empresaId ? c.empresaId.slice(0, 8) : "—"),
             prop: c.proprietario,
             saldo: formatBRL(c.saldo),
             ini: formatDateBR(c.dataInicial),
@@ -180,11 +191,25 @@ export default function ContasPage() {
             dataInicial: form.dataInicial,
             valorInicial: form.valorInicial,
             boleto: form.boleto,
+            empresaId:
+              form.empresaId ||
+              (selectedId === "todas" ? empresas[0]?.id : selectedId),
           });
           notify("Conta criada");
           setOpen(false);
         }}
       >
+        <Field label="Empresa *">
+          <SearchSelect
+            value={form.empresaId}
+            onChange={(empresaId) => setForm({ ...form, empresaId })}
+            placeholder="Buscar empresa…"
+            options={empresas.map((e) => ({
+              value: e.id,
+              label: e.nome,
+            }))}
+          />
+        </Field>
         <Field label="Nome *">
           <Input
             value={form.nome}
