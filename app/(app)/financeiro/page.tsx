@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,7 @@ import {
   ModuleHeader,
   KpiGrid,
   StatusPill,
-  ModuleSection,
 } from "@/components/app/ModulePage";
-import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
   DetailRow,
   DetailSheet,
@@ -20,12 +18,14 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type {
   CondicaoPagamento,
   FormaPagamento,
   Pagamento,
+  PagamentoStatus,
 } from "@/lib/domain/financeiro-types";
 
 type Situacao = "todos" | "em_aberto" | "vencidos" | "pagos";
@@ -38,7 +38,27 @@ export default function PagamentosPage() {
     baixarPagamento,
     estornarPagamento,
     conciliarPagamento,
+    setPagamentoStatus,
   } = useFinanceiro();
+
+  const STATUS_COLS = [
+    { id: "em_aberto", label: "Em aberto" },
+    { id: "vencido", label: "Vencido" },
+    { id: "parcial", label: "Parcial" },
+    { id: "pago", label: "Pago" },
+  ];
+
+  const toCard = useCallback(
+    (p: Pagamento) => ({
+      id: p.id,
+      columnId: p.status,
+      title: p.favorecido,
+      subtitle: p.descricao,
+      badge: formatBRL(p.valor),
+      meta: formatDateBR(p.vencimento),
+    }),
+    []
+  );
   const [q, setQ] = useState("");
   const [sit, setSit] = useState<Situacao>("todos");
   const [selected, setSelected] = useState<Pagamento | null>(null);
@@ -111,7 +131,7 @@ export default function PagamentosPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Pagamentos"
-        description="Parte 4 — lançamento gera parcelas a pagar; baixa parcial e estorno."
+        description="Kanban | Lista (C19) — lançamento, baixa parcial e estorno."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -166,61 +186,81 @@ export default function PagamentosPage() {
 
       <FilterBar value={q} onChange={setQ} placeholder="Buscar pagamento…" />
 
-      <ModuleSection title="Lista">
-        <PaginatedTable
-          columns={[
-            { key: "venc", label: "Vencimento" },
-            { key: "status", label: "Status" },
-            { key: "valor", label: "Valor" },
-            { key: "fav", label: "Favorecido" },
-            { key: "desc", label: "Descrição / Categoria" },
-            { key: "cond", label: "Condição / Conta" },
-            { key: "centro", label: "Centro" },
-            { key: "pago", label: "Pago" },
-          ]}
-          rows={filtered.map((p) => {
-            const conta = state.contas.find((c) => c.id === p.contaId);
-            return {
-              venc: (
-                <button
-                  type="button"
-                  className="font-medium hover:text-brand-orange"
-                  onClick={() => setSelected(p)}
-                >
-                  {formatDateBR(p.vencimento)}
-                </button>
-              ),
-              status: (
-                <StatusPill
-                  tone={
-                    p.status === "pago"
-                      ? "ok"
-                      : p.status === "vencido"
-                        ? "danger"
-                        : "info"
-                  }
-                >
-                  {p.status}
-                  {p.conciliado ? " · conc." : ""}
-                </StatusPill>
-              ),
-              valor: formatBRL(p.valor),
-              fav: p.favorecido,
-              desc: (
-                <span>
-                  {p.descricao}
-                  <span className="block text-xs text-muted-foreground">
-                    {categoriaNome(p.categoriaId)} · {p.parcela}
-                  </span>
-                </span>
-              ),
-              cond: `${p.condicao.replace(/_/g, " ")} · ${conta?.nome ?? "—"}`,
-              centro: p.centroLabel,
-              pago: p.pagoEm ? formatDateBR(p.pagoEm) : "—",
-            };
-          })}
-        />
-      </ModuleSection>
+      <ProcessBoard
+        storageKey="pagamentos"
+        columns={STATUS_COLS}
+        rows={filtered}
+        toCard={toCard}
+        columnTotals={(_, items) => items.reduce((a, p) => a + p.valor, 0)}
+        onOpen={(id) =>
+          setSelected(state.pagamentos.find((p) => p.id === id) ?? null)
+        }
+        onMove={(id, to) => {
+          const ok = setPagamentoStatus(id, to as PagamentoStatus);
+          if (!ok) notify("Movimento não permitido");
+          return ok;
+        }}
+        exportName="pagamentos"
+        listColumns={[
+          {
+            key: "venc",
+            label: "Vencimento",
+            filter: { type: "period" },
+            getValue: (p) => p.vencimento,
+            render: (p) => formatDateBR(p.vencimento),
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: STATUS_COLS.map((c) => ({
+                value: c.id,
+                label: c.label,
+              })),
+            },
+            getValue: (p) => p.status,
+            render: (p) => (
+              <StatusPill
+                tone={
+                  p.status === "pago"
+                    ? "ok"
+                    : p.status === "vencido"
+                      ? "danger"
+                      : "info"
+                }
+              >
+                {p.status}
+              </StatusPill>
+            ),
+          },
+          {
+            key: "valor",
+            label: "Valor",
+            filter: { type: "range" },
+            getValue: (p) => p.valor,
+            render: (p) => formatBRL(p.valor),
+          },
+          {
+            key: "fav",
+            label: "Favorecido",
+            filter: { type: "text" },
+            getValue: (p) => p.favorecido,
+          },
+          {
+            key: "desc",
+            label: "Descrição",
+            filter: { type: "text" },
+            getValue: (p) => p.descricao,
+          },
+          {
+            key: "centro",
+            label: "Centro",
+            filter: { type: "text" },
+            getValue: (p) => p.centroLabel,
+          },
+        ]}
+      />
 
       <p className="text-xs text-muted-foreground">
         Links:{" "}

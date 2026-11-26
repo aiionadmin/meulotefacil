@@ -18,7 +18,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
-import { parseOfxText, type OfxTxn } from "@/lib/import/ofx-parse";
+import { parseOfxBytes, type OfxTxn } from "@/lib/import/ofx-parse";
 
 export default function ContasPage() {
   const { state, addConta, conciliarPagamento } = useFinanceiro();
@@ -97,8 +97,8 @@ export default function ContasPage() {
             onChange={async (e) => {
               const f = e.target.files?.[0];
               if (!f) return;
-              const text = await f.text();
-              const parsed = parseOfxText(text);
+              const buf = await f.arrayBuffer();
+              const parsed = parseOfxBytes(buf);
               if (!parsed.ok) {
                 notify("OFX inválido", parsed.erro ?? "");
                 setOfxTxns([]);
@@ -106,13 +106,13 @@ export default function ContasPage() {
               }
               setOfxTxns(parsed.transacoes);
               setOfxMeta(
-                `Banco ${parsed.banco || "—"} · Conta ${parsed.conta || "—"} · ${parsed.transacoes.length} lançamentos`
+                `Banco ${parsed.banco || "—"} · Conta ${parsed.conta || "—"} · ${parsed.transacoes.length} lançamentos · ${parsed.encoding ?? "utf-8"}`
               );
               notify("OFX lido", `${parsed.transacoes.length} transações`);
             }}
           />
           <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
-            Enviar OFX
+            Enviar OFX / QFX
           </span>
         </label>
         {ofxMeta ? (

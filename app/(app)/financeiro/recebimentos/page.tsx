@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { FormaPagamento, Recebimento } from "@/lib/domain/financeiro-types";
@@ -30,7 +31,27 @@ export default function RecebimentosPage() {
     addFaturamento,
     baixarRecebimento,
     estornarRecebimento,
+    setRecebimentoStatus,
   } = useFinanceiro();
+
+  const STATUS_COLS = [
+    { id: "em_aberto", label: "Em aberto" },
+    { id: "vencido", label: "Vencido" },
+    { id: "parcial", label: "Parcial" },
+    { id: "recebido", label: "Recebido" },
+  ];
+
+  const toCard = useCallback(
+    (r: Recebimento) => ({
+      id: r.id,
+      columnId: r.status,
+      title: r.cliente,
+      subtitle: r.descricao,
+      badge: formatBRL(r.valor),
+      meta: r.origem === "contrato" ? `Ctr ${r.contratoRef ?? ""}` : "Fat",
+    }),
+    []
+  );
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Recebimento | null>(null);
   const [open, setOpen] = useState(false);
@@ -67,7 +88,7 @@ export default function RecebimentosPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Recebimentos"
-        description="Faturamento gera recebimentos; parcelas de contrato (carteira) são somente leitura."
+        description="Kanban | Lista (C19) — faturamento e parcelas de contrato (somente leitura)."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -109,28 +130,49 @@ export default function RecebimentosPage() {
 
       <FilterBar value={q} onChange={setQ} placeholder="Buscar…" />
 
-      <ModuleSection title="Recebimentos">
-        <PaginatedTable
-          columns={[
-            { key: "venc", label: "Vencimento" },
-            { key: "status", label: "Status" },
-            { key: "valor", label: "Valor" },
-            { key: "cli", label: "Cliente" },
-            { key: "desc", label: "Descrição" },
-            { key: "origem", label: "Origem" },
-            { key: "centro", label: "Centro" },
-          ]}
-          rows={filtered.map((r) => ({
-            venc: (
-              <button
-                type="button"
-                className="font-medium hover:text-brand-orange"
-                onClick={() => setSelected(r)}
-              >
-                {formatDateBR(r.vencimento)}
-              </button>
-            ),
-            status: (
+      <ProcessBoard
+        storageKey="recebimentos"
+        columns={STATUS_COLS}
+        rows={filtered}
+        toCard={toCard}
+        columnTotals={(_, items) => items.reduce((a, r) => a + r.valor, 0)}
+        onOpen={(id) =>
+          setSelected(state.recebimentos.find((r) => r.id === id) ?? null)
+        }
+        onMove={(id, to) => {
+          const row = state.recebimentos.find((r) => r.id === id);
+          if (row?.origem === "contrato") {
+            notify("Parcela de contrato é somente leitura");
+            return false;
+          }
+          const ok = setRecebimentoStatus(
+            id,
+            to as Recebimento["status"]
+          );
+          if (!ok) notify("Movimento não permitido");
+          return ok;
+        }}
+        exportName="recebimentos"
+        listColumns={[
+          {
+            key: "venc",
+            label: "Vencimento",
+            filter: { type: "period" },
+            getValue: (r) => r.vencimento,
+            render: (r) => formatDateBR(r.vencimento),
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: STATUS_COLS.map((c) => ({
+                value: c.id,
+                label: c.label,
+              })),
+            },
+            getValue: (r) => r.status,
+            render: (r) => (
               <StatusPill
                 tone={
                   r.status === "recebido"
@@ -141,20 +183,30 @@ export default function RecebimentosPage() {
                 }
               >
                 {r.status}
-                {r.conciliado ? " · conc." : ""}
               </StatusPill>
             ),
-            valor: formatBRL(r.valor),
-            cli: r.cliente,
-            desc: r.descricao,
-            origem:
-              r.origem === "contrato"
-                ? `Contrato ${r.contratoRef ?? ""}`
-                : "Faturamento",
-            centro: r.centroLabel,
-          }))}
-        />
-      </ModuleSection>
+          },
+          {
+            key: "valor",
+            label: "Valor",
+            filter: { type: "range" },
+            getValue: (r) => r.valor,
+            render: (r) => formatBRL(r.valor),
+          },
+          {
+            key: "cli",
+            label: "Cliente",
+            filter: { type: "text" },
+            getValue: (r) => r.cliente,
+          },
+          {
+            key: "origem",
+            label: "Origem",
+            filter: { type: "text" },
+            getValue: (r) => r.origem,
+          },
+        ]}
+      />
 
       <ModuleSection title="Faturamentos">
         <PaginatedTable

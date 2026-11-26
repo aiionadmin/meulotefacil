@@ -18,6 +18,7 @@ import {
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useParte5 } from "@/lib/store/parte5-store";
 import { formatBRL } from "@/lib/masks/br";
 import { formatDateBR } from "@/lib/dates/format";
 import { statusLabel } from "@/lib/status/labels";
@@ -46,6 +47,7 @@ export function ClientCardSheet() {
   const { state: fase1 } = useFase1();
   const { state: fluxo } = useFluxo();
   const { state: carteira, saldoDevedor } = useCarteira();
+  const { state: parte5 } = useParte5();
 
   const data = useMemo(() => {
     if (!open) return null;
@@ -122,6 +124,13 @@ export function ClientCardSheet() {
       (m) => lead && m.cardId === lead.id
     );
 
+    const demandas = parte5.demandas.filter(
+      (d) =>
+        (person && d.clienteId === person.id) ||
+        (d.clienteNome && norm(d.clienteNome) === nomeN) ||
+        (d.clienteNome && person && norm(d.clienteNome) === norm(person.nome))
+    );
+
     const historico: { quando: string; texto: string }[] = [];
     if (lead) {
       historico.push({
@@ -171,6 +180,12 @@ export function ClientCardSheet() {
         texto: `Jornada ${m.de} → ${m.para}${m.motivo ? ` · ${m.motivo}` : ""}`,
       });
     }
+    for (const d of demandas) {
+      historico.push({
+        quando: d.criadoEm,
+        texto: `Demanda ${d.numero} · ${statusLabel(d.status)} · ${d.descricao}`,
+      });
+    }
     historico.sort((a, b) => (a.quando < b.quando ? 1 : -1));
 
     return {
@@ -185,9 +200,10 @@ export function ClientCardSheet() {
       regularizacao,
       documentos,
       contatos,
+      demandas,
       historico,
     };
-  }, [open, fase1, fluxo, carteira]);
+  }, [open, fase1, fluxo, carteira, parte5]);
 
   if (!open || !data) return null;
 
@@ -281,6 +297,27 @@ export function ClientCardSheet() {
                     : "Em dia"
                 }
               />
+              <DetailRow
+                label="Demandas"
+                value={
+                  data.demandas.length
+                    ? `${data.demandas.length} · ${statusLabel(data.demandas[0].status)}`
+                    : "Nenhuma"
+                }
+              />
+              {data.demandas.length > 0 ? (
+                <div className="space-y-1 rounded-md border border-border px-3 py-2">
+                  {data.demandas.slice(0, 5).map((d) => (
+                    <p key={d.id} className="text-xs">
+                      {d.numero} · {d.descricao} · {statusLabel(d.prioridade)} ·{" "}
+                      {statusLabel(d.status)}
+                    </p>
+                  ))}
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href="/demandas">Abrir demandas</Link>
+                  </Button>
+                </div>
+              ) : null}
               {data.lead ? (
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Button size="sm" variant="outline" asChild>

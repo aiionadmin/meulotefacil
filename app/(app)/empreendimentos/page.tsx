@@ -21,6 +21,12 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
+import { downloadTextTemplate } from "@/lib/export/list-export";
+import {
+  modeloLotesCsv,
+  parseLotesCsv,
+  type LoteImportPreview,
+} from "@/lib/import/lotes-csv";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { statusLabel } from "@/lib/status/labels";
@@ -54,6 +60,7 @@ export default function EmpreendimentosPage() {
     state,
     addDevelopment,
     massGenerateLots,
+    importLots,
     changeLotStatus,
     updateLot,
   } = useCarteira();
@@ -62,6 +69,13 @@ export default function EmpreendimentosPage() {
   const [openEmp, setOpenEmp] = useState(false);
   const [openMass, setOpenMass] = useState(false);
   const [openStatus, setOpenStatus] = useState(false);
+  const [openImport, setOpenImport] = useState(false);
+  const [importDevId, setImportDevId] = useState(
+    state.developments[0]?.id ?? ""
+  );
+  const [importPreview, setImportPreview] = useState<LoteImportPreview | null>(
+    null
+  );
   const [selected, setSelected] = useState<Lot | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [empForm, setEmpForm] = useState({
@@ -140,6 +154,16 @@ export default function EmpreendimentosPage() {
             </Button>
             <Button size="sm" variant="outline" onClick={() => setOpenMass(true)}>
               Gerar lotes
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setImportPreview(null);
+                setOpenImport(true);
+              }}
+            >
+              Importar lotes
             </Button>
             <Button size="sm" onClick={() => setOpenEmp(true)}>
               Novo empreendimento
@@ -545,6 +569,126 @@ export default function EmpreendimentosPage() {
             }
           />
         </Field>
+      </FormDialog>
+
+      <FormDialog
+        open={openImport}
+        onOpenChange={setOpenImport}
+        title="Importar quadras e lotes (C04)"
+        onSubmit={() => {
+          if (!importPreview || !importDevId) {
+            notify("Carregue o arquivo e selecione o empreendimento");
+            return;
+          }
+          const valid = importPreview.rows.filter((r) => r.erros.length === 0);
+          if (!valid.length) {
+            notify("Nenhuma linha válida");
+            return;
+          }
+          const res = importLots(
+            importDevId,
+            valid.map((r) => ({
+              quadra: r.quadra,
+              lote: r.lote,
+              area: r.area,
+              precoVista: r.precoVista,
+              situacao: r.situacao,
+              frente: r.frente,
+              fundo: r.fundo,
+              direita: r.direita,
+              esquerda: r.esquerda,
+              matricula: r.matricula,
+            }))
+          );
+          notify(
+            "Importação concluída",
+            `${res.created} criados · ${res.updated} atualizados · ${importPreview.comErro} com erro`
+          );
+          setOpenImport(false);
+          setImportPreview(null);
+        }}
+      >
+        <Field label="Empreendimento">
+          <select
+            className={fieldControlClass}
+            value={importDevId}
+            onChange={(e) => setImportDevId(e.target.value)}
+          >
+            {state.developments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nome}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              downloadTextTemplate("modelo-lotes.csv", modeloLotesCsv())
+            }
+          >
+            Baixar modelo CSV
+          </Button>
+          <label className="inline-flex cursor-pointer">
+            <input
+              type="file"
+              accept=".csv,.txt,text/csv"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const text = await f.text();
+                const preview = parseLotesCsv(text);
+                setImportPreview(preview);
+                notify(
+                  preview.ok ? "Conferência OK" : "Há erros na conferência",
+                  `${preview.criaveis} ok · ${preview.comErro} com erro`
+                );
+              }}
+            />
+            <span className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent">
+              Enviar CSV
+            </span>
+          </label>
+        </div>
+        {importPreview ? (
+          <div className="max-h-48 overflow-auto rounded-md border border-border text-xs">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/40 text-left">
+                  <th className="p-1">Linha</th>
+                  <th className="p-1">Quadra/Lote</th>
+                  <th className="p-1">Área</th>
+                  <th className="p-1">Situação</th>
+                  <th className="p-1">Erros</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importPreview.rows.map((r) => (
+                  <tr key={r.line} className="border-b border-border/60">
+                    <td className="p-1">{r.line}</td>
+                    <td className="p-1">
+                      {r.quadra}/{r.lote}
+                    </td>
+                    <td className="p-1">{r.area}</td>
+                    <td className="p-1">{r.situacao}</td>
+                    <td className="p-1 text-rose-700">
+                      {r.erros.join("; ") || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Nada é gravado antes da confirmação. Use o modelo CSV (Excel
+            compatível).
+          </p>
+        )}
       </FormDialog>
     </div>
   );

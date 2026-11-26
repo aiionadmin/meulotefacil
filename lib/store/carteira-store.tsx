@@ -55,6 +55,21 @@ type CarteiraApi = {
     area: number;
     valor: number;
   }) => number;
+  importLots: (
+    developmentId: string,
+    rows: {
+      quadra: string;
+      lote: string;
+      area: number;
+      precoVista: number;
+      situacao: LotStatus;
+      frente?: string;
+      fundo?: string;
+      direita?: string;
+      esquerda?: string;
+      matricula?: string;
+    }[]
+  ) => { created: number; updated: number };
   updateLot: (id: string, patch: Partial<Lot>) => void;
   changeLotStatus: (
     ids: string[],
@@ -217,6 +232,79 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return created.length;
+      },
+      importLots: (developmentId, rows) => {
+        const emp = state.developments.find((d) => d.id === developmentId);
+        if (!emp || !rows.length) return { created: 0, updated: 0 };
+        let created = 0;
+        let updated = 0;
+        setState((s) => {
+          const lots = [...s.lots];
+          for (const r of rows) {
+            const idx = lots.findIndex(
+              (l) =>
+                l.developmentId === developmentId &&
+                l.quadra === r.quadra &&
+                l.lote === r.lote
+            );
+            const valorM2 =
+              r.area > 0
+                ? Math.round((r.precoVista / r.area) * 100) / 100
+                : 0;
+            if (idx >= 0) {
+              lots[idx] = {
+                ...lots[idx],
+                area: r.area,
+                valor: r.precoVista,
+                valorM2,
+                status: r.situacao,
+                frente: r.frente,
+                fundo: r.fundo,
+                direita: r.direita,
+                esquerda: r.esquerda,
+                matricula: r.matricula,
+              };
+              updated += 1;
+            } else {
+              lots.unshift({
+                id: uid("lot"),
+                developmentId,
+                empNome: emp.nome,
+                quadra: r.quadra,
+                lote: r.lote,
+                area: r.area,
+                padrao: "Padrão",
+                custo: Math.round(r.precoVista * 0.22),
+                valor: r.precoVista,
+                valorM2,
+                status: r.situacao,
+                bloqueiaVenda:
+                  r.situacao !== "disponivel" && r.situacao !== "reservado",
+                bloqueiaFinanceiro: false,
+                frente: r.frente,
+                fundo: r.fundo,
+                direita: r.direita,
+                esquerda: r.esquerda,
+                matricula: r.matricula,
+              });
+              created += 1;
+            }
+          }
+          return {
+            ...s,
+            lots,
+            developments: s.developments.map((d) =>
+              d.id === developmentId
+                ? {
+                    ...d,
+                    qtdLotes: lots.filter((l) => l.developmentId === d.id)
+                      .length,
+                  }
+                : d
+            ),
+          };
+        });
+        return { created, updated };
       },
       updateLot: (id, patch) => {
         setState((s) => ({
