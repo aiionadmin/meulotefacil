@@ -20,6 +20,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatDateBR } from "@/lib/masks/br";
+import { useServerPage } from "@/lib/ui/use-server-page";
 import { useParte5 } from "@/lib/store/parte5-store";
 import type {
   DemandaPrioridade,
@@ -44,6 +45,12 @@ export default function DemandasPage() {
   const [q, setQ] = useState("");
   const [view, setView] = useState<"lista" | "quadro">("quadro");
   const [open, setOpen] = useState(false);
+  const server = useServerPage({
+    url: "/api/list/demandas",
+    page: 1,
+    pageSize: 25,
+    q,
+  });
   const [form, setForm] = useState({
     tipoId: "",
     empreendimentoId: "",
@@ -114,7 +121,14 @@ export default function DemandasPage() {
           { label: "Abertas", value: state.demandas.filter((d) => d.status === "aberta").length },
           { label: "Em execução", value: state.demandas.filter((d) => d.status === "em_execucao").length },
           { label: "Atrasadas", value: atrasadas },
-          { label: "Tipos", value: state.demandaTipos.length },
+          {
+            label: "API B17",
+            value: server.loading
+              ? "…"
+              : server.data
+                ? `${server.data.total} · ${Math.round(server.data.elapsedMs ?? 0)}ms`
+                : server.error ?? "—",
+          },
         ]}
       />
 
@@ -148,6 +162,7 @@ export default function DemandasPage() {
       ) : (
         <ModuleSection title="Lista">
           <PaginatedTable
+            exportName="demandas"
             columns={[
               { key: "num", label: "Nº" },
               { key: "tipo", label: "Tipo" },

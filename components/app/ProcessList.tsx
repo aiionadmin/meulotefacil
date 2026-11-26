@@ -9,6 +9,7 @@ import { fieldControlClass, notify } from "@/components/app/ModuleToolkit";
 import {
   downloadCsv,
   downloadExcel,
+  downloadListPdf,
   printList,
 } from "@/lib/export/list-export";
 import { paginate } from "@/lib/ui/pagination";
@@ -325,6 +326,20 @@ export function ProcessList<T extends { id: string }>({
             }}
           >
             Excel
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadListPdf(
+                exportName,
+                visibleCols.map((c) => c.label),
+                exportRows()
+              );
+              notify("PDF gerado");
+            }}
+          >
+            PDF
           </Button>
           <Button
             size="sm"

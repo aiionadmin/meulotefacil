@@ -13,6 +13,11 @@ import { notify } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { downloadTextTemplate } from "@/lib/export/list-export";
+import {
+  buildContabilidadeCsv,
+  buildDimobText,
+  buildSpedContribuicoes,
+} from "@/lib/export/fiscal-files";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { LOTEWIN_PANEL_2026_11_24 } from "@/lib/domain/operacoes-seed";
@@ -166,16 +171,16 @@ export default function FiscalPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const lines = [
-                      "DIMOB|ANO=2026|EMPRESA=MEU LOTE FACIL",
-                      `EMPREENDIMENTOS|${cart.developments.length}|META=${LOTEWIN_PANEL_2026_11_24.empreendimentos}`,
-                      `CONTRATOS|${cart.contracts.length}|META=${LOTEWIN_PANEL_2026_11_24.contratos}`,
-                      ...cart.contracts.map(
-                        (c) =>
-                          `R01|${c.numero}|${c.compradorNome}|${c.empNome}|${c.preco.toFixed(2)}`
-                      ),
-                    ];
-                    downloadTextTemplate("dimob-2026.txt", lines.join("\n"));
+                    const text = buildDimobText({
+                      ano: 2026,
+                      empresa: "MEU LOTE FACIL",
+                      empreendimentos: cart.developments.length,
+                      metaEmpreendimentos:
+                        LOTEWIN_PANEL_2026_11_24.empreendimentos,
+                      contracts: cart.contracts,
+                      metaContratos: LOTEWIN_PANEL_2026_11_24.contratos,
+                    });
+                    downloadTextTemplate("dimob-2026.txt", text);
                     notify("DIMOB gerado", "dimob-2026.txt");
                   }}
                 >
@@ -191,16 +196,12 @@ export default function FiscalPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const lines = [
-                      "|0000|SPED|CONTRIBUICOES|MEU LOTE FACIL|",
-                      `|0140|${cart.developments.length}|`,
-                      ...cart.contracts.slice(0, 50).map(
-                        (c) =>
-                          `|C100|${c.numero}|${c.dataContrato}|${c.preco.toFixed(2)}|`
-                      ),
-                      "|9999|",
-                    ];
-                    downloadTextTemplate("sped-contribuicoes.txt", lines.join("\n"));
+                    const text = buildSpedContribuicoes({
+                      empresa: "MEU LOTE FACIL",
+                      empreendimentos: cart.developments.length,
+                      contracts: cart.contracts,
+                    });
+                    downloadTextTemplate("sped-contribuicoes.txt", text);
                     notify("SPED gerado", "sped-contribuicoes.txt");
                   }}
                 >
@@ -216,17 +217,9 @@ export default function FiscalPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const headers = "data;conta;historico;debito;credito";
-                    const rows = cart.installments
-                      .filter((i) => i.status === "paga")
-                      .slice(0, 200)
-                      .map(
-                        (i) =>
-                          `${i.pagoEm ?? ""};1.1.01;Recibo ${i.contratoNumero} parc.${i.n};0;${i.valor}`
-                      );
                     downloadTextTemplate(
                       "contabilidade.csv",
-                      [headers, ...rows].join("\n")
+                      buildContabilidadeCsv(cart.installments)
                     );
                     notify("Arquivo contábil gerado", "contabilidade.csv");
                   }}
