@@ -1,4 +1,4 @@
-/** Paginação em memória (B17) — listas client-side até o backend paginar. */
+/** Paginação (B17). Client: ProcessList/PaginatedTable. Server: /api/list/* + /api/carteira/parcelas. */
 
 export function paginate<T>(
   items: T[],

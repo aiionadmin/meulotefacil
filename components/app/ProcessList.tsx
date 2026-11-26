@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,7 +11,10 @@ import {
   downloadExcel,
   printList,
 } from "@/lib/export/list-export";
+import { paginate } from "@/lib/ui/pagination";
 import { cn } from "@/lib/utils";
+
+const PAGE_SIZES = [10, 25, 50, 100] as const;
 
 export type ProcessColumnFilter =
   | { type: "text" }
@@ -78,6 +81,8 @@ export function ProcessList<T extends { id: string }>({
   const [saved, setSaved] = useState<SavedFilter[]>(
     () => savedByKey.get(storageKey) ?? []
   );
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const visibleCols = columns.filter((c) => visible[c.key] !== false);
 
@@ -142,6 +147,19 @@ export function ProcessList<T extends { id: string }>({
     return list;
   }, [rows, filters, columns, sortKey, sortDir]);
 
+  const paged = useMemo(
+    () => paginate(filtered, page, pageSize),
+    [filtered, page, pageSize]
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, sortKey, sortDir, rows, pageSize]);
+
+  useEffect(() => {
+    if (paged.page !== page) setPage(paged.page);
+  }, [paged.page, page]);
+
   const clearFilters = () => {
     setFilters({});
     notify("Filtros limpos");
@@ -157,7 +175,7 @@ export function ProcessList<T extends { id: string }>({
   };
 
   const allSelected =
-    filtered.length > 0 && filtered.every((r) => selected.has(r.id));
+    paged.items.length > 0 && paged.items.every((r) => selected.has(r.id));
 
   const exportRows = () =>
     filtered.map((r) => visibleCols.map((c) => c.getValue(r) ?? ""));
@@ -346,6 +364,7 @@ export function ProcessList<T extends { id: string }>({
 
       <DataTable
         empty={empty}
+        paginate={false}
         columns={[
           {
             key: "_sel",
@@ -361,7 +380,7 @@ export function ProcessList<T extends { id: string }>({
             className: c.className,
           })),
         ]}
-        rows={filtered.map((row) => {
+        rows={paged.items.map((row) => {
           const rec: Record<string, React.ReactNode> = {
             _sel: (
               <Checkbox
@@ -398,25 +417,57 @@ export function ProcessList<T extends { id: string }>({
         onRowClick={
           onRowClick
             ? (index) => {
-                const row = filtered[index];
+                const row = paged.items[index];
                 if (row) onRowClick(row);
               }
             : undefined
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <Checkbox
-          checked={allSelected}
-          onCheckedChange={(v) => {
-            if (v) setSelected(new Set(filtered.map((r) => r.id)));
-            else setSelected(new Set());
-          }}
-        />
-        <span>Selecionar filtrados · {filtered.length} registro(s)</span>
-        <span className="text-muted-foreground/70">
-          Clique no valor da coluna para ordenar
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2">
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={(v) => {
+              if (v) setSelected(new Set(paged.items.map((r) => r.id)));
+              else setSelected(new Set());
+            }}
+          />
+          <span>
+            Página {paged.page}/{paged.totalPages} · {paged.total} filtrado(s)
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            className={cn(fieldControlClass, "h-8 w-20 py-0")}
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+          >
+            {PAGE_SIZES.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={paged.page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Anterior
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={paged.page >= paged.totalPages}
+            onClick={() =>
+              setPage((p) => Math.min(paged.totalPages, p + 1))
+            }
+          >
+            Próxima
+          </Button>
+        </div>
       </div>
     </div>
   );
