@@ -18,6 +18,7 @@ import {
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { downloadPropostaPdf } from "@/lib/export/proposta-report";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Proposal } from "@/lib/domain/fluxo-types";
@@ -167,8 +168,19 @@ export default function VendasPage() {
             },
             getValue: (p) => p.status,
             render: (p) => (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <StatusPill tone="info">{p.status}</StatusPill>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadPropostaPdf(p);
+                    notify("PDF da proposta", p.cliente);
+                  }}
+                >
+                  PDF
+                </Button>
                 {p.status === "aberta" || p.status === "reservada" ? (
                   <Button
                     size="sm"
