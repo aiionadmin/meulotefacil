@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -11,7 +11,6 @@ import {
   ModuleSection,
   StatusPill,
 } from "@/components/app/ModulePage";
-import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
   Field,
   FilterBar,
@@ -19,16 +18,16 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import {
+  buildRdoText,
+  downloadRdoPdfProxy,
+} from "@/lib/export/rdo-report";
+import { downloadTextTemplate } from "@/lib/export/list-export";
 import { formatDateBR } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
-import type { Rdo } from "@/lib/domain/obras-types";
+import type { Rdo, RdoStatus } from "@/lib/domain/obras-types";
 import { cn } from "@/lib/utils";
-
-function weekday(iso: string) {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", {
-    weekday: "short",
-  });
-}
 
 /** Calendário do mês corrente — destaca dias úteis sem RDO (D21). */
 function ModuleSectionCalendario({
@@ -113,6 +112,13 @@ function RdoInner() {
     fisicoAcumulado: 50,
   });
 
+  const STATUS_COLS = [
+    { id: "rascunho", label: "Rascunho" },
+    { id: "enviado", label: "Enviado" },
+    { id: "aprovado", label: "Aprovado" },
+    { id: "devolvido", label: "Devolvido" },
+  ];
+
   const filtered = useMemo(() => {
     let list = state.rdos;
     if (obraFilter !== "todos") {
@@ -132,13 +138,39 @@ function RdoInner() {
     return list;
   }, [state.rdos, state.obras, q, obraFilter]);
 
+  const toCard = useCallback(
+    (r: Rdo) => {
+      const obra = state.obras.find((o) => o.id === r.obraId);
+      return {
+        id: r.id,
+        columnId: r.status,
+        title: `RDO ${r.numero}`,
+        subtitle: obra?.nome ?? r.obraId,
+        badge: formatDateBR(r.data),
+        meta: r.responsavel,
+      };
+    },
+    [state.obras]
+  );
+
   const itensObra = nodesDaObra(form.obraId).filter((n) => n.kind === "item");
+
+  function exportRdo(r: Rdo) {
+    const obra = state.obras.find((o) => o.id === r.obraId);
+    const nome = obra?.nome ?? r.obraId;
+    downloadTextTemplate(
+      `rdo-${r.numero}-${r.data}.txt`,
+      buildRdoText(r, nome)
+    );
+    downloadRdoPdfProxy(r, nome);
+    notify("RDO exportado", `nº ${r.numero} · TXT + PDF (impressão)`);
+  }
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="RDO — Relatório diário de obras"
-        description="Um RDO por obra e por dia. Aprovar atualiza a evolução física dos itens."
+        description="Kanban | Lista (C20) · PDF/TXT (D21). Aprovar atualiza a evolução física."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -194,27 +226,78 @@ function RdoInner() {
         </select>
       </FilterBar>
 
-      <PaginatedTable
-        columns={[
-          { key: "n", label: "Nº" },
-          { key: "data", label: "Data" },
-          { key: "dia", label: "Dia" },
-          { key: "obra", label: "Obra" },
-          { key: "resp", label: "Responsável" },
-          { key: "ef", label: "Efetivo" },
-          { key: "status", label: "Status" },
-          { key: "acoes", label: "" },
-        ]}
-        rows={filtered.map((r) => {
-          const obra = state.obras.find((o) => o.id === r.obraId);
-          return {
-            n: r.numero,
-            data: formatDateBR(r.data),
-            dia: weekday(r.data),
-            obra: obra?.nome ?? "—",
-            resp: r.responsavel,
-            ef: r.efetivoTotal,
-            status: (
+      <ProcessBoard
+        storageKey="rdo"
+        columns={STATUS_COLS}
+        rows={filtered}
+        toCard={toCard}
+        onMove={(id, to) => {
+          const r = state.rdos.find((x) => x.id === id);
+          if (!r) return false;
+          const next = to as RdoStatus;
+          if (r.status === "rascunho" && next === "enviado") {
+            updateRdoStatus(id, "enviado");
+            notify("RDO enviado");
+            return true;
+          }
+          if (r.status === "enviado" && next === "aprovado") {
+            updateRdoStatus(id, "aprovado");
+            notify("RDO aprovado · físico atualizado");
+            return true;
+          }
+          if (r.status === "enviado" && next === "devolvido") {
+            const motivo = window.prompt("Motivo da devolução *");
+            if (!motivo?.trim()) {
+              notify("Motivo obrigatório");
+              return false;
+            }
+            updateRdoStatus(id, "devolvido", motivo.trim());
+            notify("RDO devolvido");
+            return true;
+          }
+          notify("Transição não permitida");
+          return false;
+        }}
+        exportName="rdos"
+        listColumns={[
+          {
+            key: "n",
+            label: "Nº",
+            filter: { type: "text" },
+            getValue: (r) => String(r.numero),
+          },
+          {
+            key: "data",
+            label: "Data",
+            filter: { type: "period" },
+            getValue: (r) => r.data,
+            render: (r) => formatDateBR(r.data),
+          },
+          {
+            key: "obra",
+            label: "Obra",
+            filter: { type: "text" },
+            getValue: (r) =>
+              state.obras.find((o) => o.id === r.obraId)?.nome ?? "",
+          },
+          {
+            key: "resp",
+            label: "Responsável",
+            filter: { type: "text" },
+            getValue: (r) => r.responsavel,
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: STATUS_COLS.map((c) => ({
+                value: c.id,
+                label: c.label,
+              })),
+            },
+            getValue: (r) => r.status,
+            render: (r) => (
               <StatusPill
                 tone={
                   r.status === "aprovado"
@@ -227,52 +310,22 @@ function RdoInner() {
                 {r.status}
               </StatusPill>
             ),
-            acoes: (
-              <div className="flex flex-wrap gap-1">
-                {r.status === "rascunho" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      updateRdoStatus(r.id, "enviado");
-                      notify("RDO enviado");
-                    }}
-                  >
-                    Enviar
-                  </Button>
-                ) : null}
-                {r.status === "enviado" ? (
-                  <>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        updateRdoStatus(r.id, "aprovado");
-                        notify("RDO aprovado · físico atualizado");
-                      }}
-                    >
-                      Aprovar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        const motivo = window.prompt("Motivo da devolução *");
-                        if (!motivo?.trim()) {
-                          notify("Motivo obrigatório");
-                          return;
-                        }
-                        updateRdoStatus(r.id, "devolvido", motivo.trim());
-                        notify("RDO devolvido");
-                      }}
-                    >
-                      Devolver
-                    </Button>
-                  </>
-                ) : null}
-              </div>
+          },
+          {
+            key: "pdf",
+            label: "PDF",
+            getValue: () => "",
+            render: (r) => (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportRdo(r)}
+              >
+                PDF/TXT
+              </Button>
             ),
-          };
-        })}
+          },
+        ]}
       />
 
       <FormDialog
