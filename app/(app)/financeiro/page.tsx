@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ModuleHeader,
   KpiGrid,
-  DataTable,
   StatusPill,
   ModuleSection,
 } from "@/components/app/ModulePage";
+import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
   DetailRow,
   DetailSheet,
@@ -20,83 +21,107 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
-import { statusLabel } from "@/lib/status/labels";
-import { useOperacoes } from "@/lib/store/operacoes-store";
-import type { Payable, Receivable } from "@/lib/domain/operacoes-types";
+import { useFinanceiro } from "@/lib/store/financeiro-store";
+import type {
+  CondicaoPagamento,
+  FormaPagamento,
+  Pagamento,
+} from "@/lib/domain/financeiro-types";
 
-export default function FinanceiroPage() {
+type Situacao = "todos" | "em_aberto" | "vencidos" | "pagos";
+
+export default function PagamentosPage() {
   const {
     state,
-    baixarPagar,
-    baixarReceber,
-    addPayable,
-    transferir,
-    aprovarPreEntry,
-    recusarPreEntry,
-  } = useOperacoes();
+    categoriaNome,
+    addLancamento,
+    baixarPagamento,
+    estornarPagamento,
+    conciliarPagamento,
+  } = useFinanceiro();
   const [q, setQ] = useState("");
-  const [selectedP, setSelectedP] = useState<Payable | null>(null);
-  const [selectedR, setSelectedR] = useState<Receivable | null>(null);
-  const [openPay, setOpenPay] = useState(false);
-  const [openTr, setOpenTr] = useState(false);
-  const [payForm, setPayForm] = useState({
-    favorecido: "",
+  const [sit, setSit] = useState<Situacao>("todos");
+  const [selected, setSelected] = useState<Pagamento | null>(null);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
     descricao: "",
-    categoria: "Obra · material",
-    centroCusto: "Residencial Horizonte",
+    favorecido: "",
+    categoriaId: "",
+    competencia: new Date().toISOString().slice(0, 7) + "-01",
     vencimento: new Date().toISOString().slice(0, 10),
+    pagador: "Meu Lote Fácil",
+    contaId: "",
     valor: 1000,
-    contaId: state.accounts[0]?.id ?? "",
+    forma: "pix" as FormaPagamento,
+    condicao: "a_vista" as CondicaoPagamento,
+    parcelas: 2,
+    centroTipo: "obra" as "obra" | "empresa",
+    centroLabel: "Infraestrutura Residencial Horizonte",
+    rateioEmpresaPct: 40,
+    rateioObraPct: 60,
+    usarRateio: false,
   });
-  const [trForm, setTrForm] = useState({
-    deContaId: state.accounts[0]?.id ?? "",
-    paraContaId: state.accounts[1]?.id ?? "",
-    valor: 1000,
-    descricao: "Transferência",
-  });
 
-  const pagar = useMemo(() => {
+  const filtered = useMemo(() => {
+    let list = state.pagamentos;
+    if (sit === "em_aberto") {
+      list = list.filter((p) => p.status === "em_aberto" || p.status === "parcial");
+    } else if (sit === "vencidos") {
+      list = list.filter((p) => p.status === "vencido");
+    } else if (sit === "pagos") {
+      list = list.filter((p) => p.status === "pago");
+    }
     const term = q.trim().toLowerCase();
-    if (!term) return state.payables;
-    return state.payables.filter((p) =>
-      [p.favorecido, p.categoria, p.status, p.centroCusto, p.descricao]
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
-    );
-  }, [state.payables, q]);
+    if (term) {
+      list = list.filter((p) =>
+        [
+          p.favorecido,
+          p.descricao,
+          p.centroLabel,
+          categoriaNome(p.categoriaId),
+          p.status,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(term)
+      );
+    }
+    return list;
+  }, [state.pagamentos, sit, q, categoriaNome]);
 
-  const receber = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return state.receivables;
-    return state.receivables.filter((p) =>
-      [p.cliente, p.descricao, p.status, p.origem]
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
-    );
-  }, [state.receivables, q]);
+  const totais = useMemo(() => {
+    const pago = filtered
+      .filter((p) => p.status === "pago")
+      .reduce((a, p) => a + p.valorPago, 0);
+    const aberto = filtered
+      .filter((p) => p.status !== "pago")
+      .reduce((a, p) => a + (p.valor - p.valorPago), 0);
+    return {
+      pago,
+      aberto,
+      total: filtered.reduce((a, p) => a + p.valor, 0),
+    };
+  }, [filtered]);
 
-  const abertoPagar = state.payables
-    .filter((p) => p.status !== "pago")
-    .reduce((a, p) => a + p.valor, 0);
-  const abertoReceber = state.receivables
-    .filter((p) => p.status !== "recebido")
-    .reduce((a, p) => a + p.valor, 0);
-  const saldoContas = state.accounts.reduce((a, c) => a + c.saldo, 0);
+  const live = selected
+    ? state.pagamentos.find((p) => p.id === selected.id) ?? selected
+    : null;
 
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Financeiro"
-        description="a pagar, a receber, contas, transferências e pré-lançamentos."
+        title="Pagamentos"
+        description="Parte 4 — lançamento gera parcelas a pagar; baixa parcial e estorno."
         actions={
           <>
-            <Button size="sm" variant="outline" onClick={() => setOpenTr(true)}>
-              Transferir
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/financeiro/recebimentos">Recebimentos</Link>
             </Button>
-            <Button size="sm" onClick={() => setOpenPay(true)}>
-              Novo a pagar
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/financeiro/contas">Contas</Link>
+            </Button>
+            <Button size="sm" onClick={() => setOpen(true)}>
+              Novo lançamento
             </Button>
           </>
         }
@@ -104,340 +129,425 @@ export default function FinanceiroPage() {
 
       <KpiGrid
         items={[
-          { label: "Saldo contas", value: formatBRL(saldoContas) },
-          { label: "A pagar", value: formatBRL(abertoPagar) },
-          { label: "A receber financeiro", value: formatBRL(abertoReceber) },
+          { label: "Em aberto", value: formatBRL(totais.aberto) },
+          { label: "Pago", value: formatBRL(totais.pago) },
+          { label: "Total lista", value: formatBRL(totais.total) },
           {
             label: "Pré-lançamentos",
-            value: state.preEntries.filter((p) => p.status === "pendente").length,
+            value: state.preLancamentos.filter((p) => p.status === "pendente")
+              .length,
           },
         ]}
       />
 
-      <ModuleSection title="Contas bancárias">
-        <DataTable
-          columns={[
-            { key: "nome", label: "Conta" },
-            { key: "banco", label: "Banco" },
-            { key: "tipo", label: "Tipo" },
-            { key: "saldo", label: "Saldo" },
-            { key: "boleto", label: "Boleto" },
-          ]}
-          rows={state.accounts.map((a) => ({
-            nome: a.nome,
-            banco: a.banco,
-            tipo: a.tipo,
-            saldo: formatBRL(a.saldo),
-            boleto: a.boleto ? "sim" : "não",
-          }))}
-        />
-      </ModuleSection>
+      <div className="flex flex-wrap gap-1.5">
+        {(
+          [
+            ["todos", "Todos"],
+            ["em_aberto", "Em aberto"],
+            ["vencidos", "Vencidos"],
+            ["pagos", "Pagos"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setSit(id)}
+            className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+              sit === id
+                ? "bg-brand-green text-white"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar favorecido, cliente, categoria…" />
+      <FilterBar value={q} onChange={setQ} placeholder="Buscar pagamento…" />
 
-      <ModuleSection title="Contas a pagar">
-        <DataTable
+      <ModuleSection title="Lista">
+        <PaginatedTable
           columns={[
+            { key: "venc", label: "Vencimento" },
+            { key: "status", label: "Status" },
+            { key: "valor", label: "Valor" },
             { key: "fav", label: "Favorecido" },
-            { key: "desc", label: "Descrição" },
-            { key: "venc", label: "Vencimento" },
-            { key: "valor", label: "Valor" },
-            { key: "status", label: "Status" },
-          ]}
-          rows={pagar.map((p) => ({
-            fav: (
-              <button
-                type="button"
-                className="font-medium hover:text-brand-orange"
-                onClick={() => setSelectedP(p)}
-              >
-                {p.favorecido}
-              </button>
-            ),
-            desc: p.descricao,
-            venc: formatDateBR(p.vencimento),
-            valor: formatBRL(p.valor),
-            status: (
-              <StatusPill
-                tone={
-                  p.status === "pago"
-                    ? "ok"
-                    : p.status === "vencido"
-                      ? "danger"
-                      : "warn"
-                }
-              >
-                {statusLabel(p.status)}
-              </StatusPill>
-            ),
-          }))}
-        />
-      </ModuleSection>
-
-      <ModuleSection title="Contas a receber">
-        <DataTable
-          columns={[
-            { key: "cli", label: "Cliente" },
-            { key: "origem", label: "Origem" },
-            { key: "venc", label: "Vencimento" },
-            { key: "valor", label: "Valor" },
-            { key: "status", label: "Status" },
-          ]}
-          rows={receber.map((r) => ({
-            cli: (
-              <button
-                type="button"
-                className="font-medium hover:text-brand-orange"
-                onClick={() => setSelectedR(r)}
-              >
-                {r.cliente}
-              </button>
-            ),
-            origem: r.origem === "contrato" ? `Contrato ${r.contratoRef}` : "Faturamento",
-            venc: formatDateBR(r.vencimento),
-            valor: formatBRL(r.valor),
-            status: (
-              <StatusPill
-                tone={
-                  r.status === "recebido"
-                    ? "ok"
-                    : r.status === "vencido"
-                      ? "danger"
-                      : "warn"
-                }
-              >
-                {statusLabel(r.status)}
-              </StatusPill>
-            ),
-          }))}
-        />
-      </ModuleSection>
-
-      <ModuleSection title="Pré-lançamentos">
-        <DataTable
-          columns={[
-            { key: "desc", label: "Descrição" },
-            { key: "valor", label: "Valor" },
+            { key: "desc", label: "Descrição / Categoria" },
+            { key: "cond", label: "Condição / Conta" },
             { key: "centro", label: "Centro" },
-            { key: "status", label: "Status" },
-            { key: "acao", label: "" },
+            { key: "pago", label: "Pago" },
           ]}
-          rows={state.preEntries.map((p) => ({
-            desc: p.descricao,
-            valor: formatBRL(p.valor),
-            centro: p.centroCusto,
-            status: <StatusPill tone="info">{p.status}</StatusPill>,
-            acao:
-              p.status === "pendente" ? (
-                <div className="flex gap-1">
+          rows={filtered.map((p) => {
+            const conta = state.contas.find((c) => c.id === p.contaId);
+            return {
+              venc: (
+                <button
+                  type="button"
+                  className="font-medium hover:text-brand-orange"
+                  onClick={() => setSelected(p)}
+                >
+                  {formatDateBR(p.vencimento)}
+                </button>
+              ),
+              status: (
+                <StatusPill
+                  tone={
+                    p.status === "pago"
+                      ? "ok"
+                      : p.status === "vencido"
+                        ? "danger"
+                        : "info"
+                  }
+                >
+                  {p.status}
+                  {p.conciliado ? " · conc." : ""}
+                </StatusPill>
+              ),
+              valor: formatBRL(p.valor),
+              fav: p.favorecido,
+              desc: (
+                <span>
+                  {p.descricao}
+                  <span className="block text-xs text-muted-foreground">
+                    {categoriaNome(p.categoriaId)} · {p.parcela}
+                  </span>
+                </span>
+              ),
+              cond: `${p.condicao.replace(/_/g, " ")} · ${conta?.nome ?? "—"}`,
+              centro: p.centroLabel,
+              pago: p.pagoEm ? formatDateBR(p.pagoEm) : "—",
+            };
+          })}
+        />
+      </ModuleSection>
+
+      <p className="text-xs text-muted-foreground">
+        Links:{" "}
+        <Link className="underline" href="/financeiro/pre-lancamentos">
+          Pré-lançamentos
+        </Link>
+        {" · "}
+        <Link className="underline" href="/financeiro/transferencias">
+          Transferências
+        </Link>
+        {" · "}
+        <Link className="underline" href="/financeiro/fluxo">
+          Fluxo de caixa
+        </Link>
+        {" · "}
+        <Link className="underline" href="/financeiro/resultados">
+          Resultados
+        </Link>
+        {" · "}
+        <Link className="underline" href="/financeiro/notas">
+          Notas
+        </Link>
+        {" · "}
+        <Link className="underline" href="/financeiro/plano-contas">
+          Plano / Categorias
+        </Link>
+      </p>
+
+      <DetailSheet
+        open={!!live}
+        onOpenChange={(o) => !o && setSelected(null)}
+        title={live ? `${live.favorecido} · ${live.parcela}` : ""}
+      >
+        {live ? (
+          <div className="space-y-3">
+            <DetailRow label="Valor" value={formatBRL(live.valor)} />
+            <DetailRow label="Pago" value={formatBRL(live.valorPago)} />
+            <DetailRow label="Status" value={live.status} />
+            <DetailRow
+              label="Vencimento"
+              value={formatDateBR(live.vencimento)}
+            />
+            <DetailRow label="Centro" value={live.centroLabel} />
+            <DetailRow
+              label="Categoria"
+              value={categoriaNome(live.categoriaId)}
+            />
+            {live.historico.length ? (
+              <div>
+                <div className="text-sm font-medium">Histórico</div>
+                <ul className="text-xs text-muted-foreground">
+                  {live.historico.map((h, i) => (
+                    <li key={i}>
+                      {formatDateBR(h.data)} · {formatBRL(h.valor)} · {h.forma}{" "}
+                      · {h.quem}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-2 pt-2">
+              {live.status !== "pago" ? (
+                <>
                   <Button
                     size="sm"
                     onClick={() => {
-                      aprovarPreEntry(p.id);
-                      notify("Pré-lançamento aprovado → a pagar");
+                      const resto = live.valor - live.valorPago;
+                      baixarPagamento(live.id, resto);
+                      notify("Pago integral");
                     }}
                   >
-                    Aprovar
+                    Pagar
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      recusarPreEntry(p.id);
-                      notify("Recusado");
+                      const parcial = Math.round(live.valor * 0.5 * 100) / 100;
+                      baixarPagamento(live.id, parcial);
+                      notify(`Baixa parcial ${formatBRL(parcial)}`);
                     }}
                   >
-                    Recusar
+                    Baixa 50%
                   </Button>
-                </div>
+                </>
               ) : (
-                "—"
-              ),
-          }))}
-        />
-      </ModuleSection>
-
-      <ModuleSection title="Transferências">
-        <DataTable
-          columns={[
-            { key: "data", label: "Data" },
-            { key: "de", label: "De" },
-            { key: "para", label: "Para" },
-            { key: "valor", label: "Valor" },
-            { key: "desc", label: "Descrição" },
-          ]}
-          rows={state.transfers.map((t) => ({
-            data: formatDateBR(t.data),
-            de: state.accounts.find((a) => a.id === t.deContaId)?.nome ?? t.deContaId,
-            para:
-              state.accounts.find((a) => a.id === t.paraContaId)?.nome ??
-              t.paraContaId,
-            valor: formatBRL(t.valor),
-            desc: t.descricao,
-          }))}
-        />
-      </ModuleSection>
-
-      <DetailSheet
-        open={!!selectedP}
-        onOpenChange={(o) => !o && setSelectedP(null)}
-        title={selectedP?.favorecido ?? ""}
-      >
-        {selectedP ? (
-          <div className="space-y-2">
-            <DetailRow label="Descrição" value={selectedP.descricao} />
-            <DetailRow label="Categoria" value={selectedP.categoria} />
-            <DetailRow label="Centro" value={selectedP.centroCusto} />
-            <DetailRow label="Valor" value={formatBRL(selectedP.valor)} />
-            {selectedP.status !== "pago" ? (
-              <Button
-                size="sm"
-                className="mt-3"
-                onClick={() => {
-                  baixarPagar(selectedP.id);
-                  notify("Pago");
-                  setSelectedP(null);
-                }}
-              >
-                Pagar
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </DetailSheet>
-
-      <DetailSheet
-        open={!!selectedR}
-        onOpenChange={(o) => !o && setSelectedR(null)}
-        title={selectedR?.cliente ?? ""}
-      >
-        {selectedR ? (
-          <div className="space-y-2">
-            <DetailRow label="Descrição" value={selectedR.descricao} />
-            <DetailRow label="Origem" value={selectedR.origem} />
-            <DetailRow label="Valor" value={formatBRL(selectedR.valor)} />
-            {selectedR.status !== "recebido" ? (
-              <Button
-                size="sm"
-                className="mt-3"
-                onClick={() => {
-                  baixarReceber(selectedR.id);
-                  notify("Recebido");
-                  setSelectedR(null);
-                }}
-              >
-                Receber
-              </Button>
-            ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    estornarPagamento(live.id);
+                    notify("Estornado");
+                  }}
+                >
+                  Estornar
+                </Button>
+              )}
+              {!live.conciliado && live.status === "pago" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    conciliarPagamento(live.id);
+                    notify("Conciliado");
+                  }}
+                >
+                  Conciliar
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </DetailSheet>
 
       <FormDialog
-        open={openPay}
-        onOpenChange={setOpenPay}
-        title="Novo lançamento a pagar"
+        open={open}
+        onOpenChange={setOpen}
+        title="Novo lançamento"
         onSubmit={() => {
-          if (!payForm.favorecido) {
-            notify("Informe o favorecido");
+          const contaId = form.contaId || state.contas[0]?.id;
+          const categoriaId =
+            form.categoriaId ||
+            state.categorias.find((c) => c.nome === "Materiais")?.id ||
+            state.categorias[0]?.id;
+          if (!form.descricao || !form.favorecido || !contaId || !categoriaId) {
+            notify("Preencha os campos obrigatórios");
             return;
           }
-          addPayable(payForm);
-          notify("Lançamento criado");
-          setOpenPay(false);
+          const centros = form.usarRateio
+            ? [
+                {
+                  tipo: "obra" as const,
+                  obraId: "obr-1",
+                  label: "Infraestrutura Residencial Horizonte",
+                  pct: form.rateioObraPct,
+                  valor:
+                    Math.round(form.valor * (form.rateioObraPct / 100) * 100) /
+                    100,
+                },
+                {
+                  tipo: "empresa" as const,
+                  label: "Meu Lote Fácil",
+                  pct: form.rateioEmpresaPct,
+                  valor:
+                    Math.round(
+                      form.valor * (form.rateioEmpresaPct / 100) * 100
+                    ) / 100,
+                },
+              ]
+            : [
+                {
+                  tipo: form.centroTipo,
+                  obraId: form.centroTipo === "obra" ? "obr-1" : undefined,
+                  label: form.centroLabel,
+                  valor: form.valor,
+                },
+              ];
+          const r = addLancamento({
+            descricao: form.descricao,
+            favorecido: form.favorecido,
+            categoriaId,
+            competencia: form.competencia,
+            vencimento: form.vencimento,
+            pagador: form.pagador,
+            contaId,
+            valor: form.valor,
+            forma: form.forma,
+            condicao: form.condicao,
+            parcelas: form.parcelas,
+            centros,
+          });
+          if (!r.ok) {
+            notify("Não foi possível criar (centro/categoria)");
+            return;
+          }
+          notify(
+            `Lançamento · ${r.pagamentos?.length ?? 0} pagamento(s)`
+          );
+          setOpen(false);
         }}
       >
+        <Field label="Descrição *">
+          <Input
+            value={form.descricao}
+            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+          />
+        </Field>
         <Field label="Favorecido *">
           <Input
-            value={payForm.favorecido}
-            onChange={(e) =>
-              setPayForm({ ...payForm, favorecido: e.target.value })
-            }
+            value={form.favorecido}
+            onChange={(e) => setForm({ ...form, favorecido: e.target.value })}
           />
         </Field>
-        <Field label="Descrição">
-          <Input
-            value={payForm.descricao}
-            onChange={(e) =>
-              setPayForm({ ...payForm, descricao: e.target.value })
-            }
-          />
-        </Field>
-        <Field label="Valor">
-          <Input
-            type="number"
-            value={payForm.valor}
-            onChange={(e) =>
-              setPayForm({ ...payForm, valor: Number(e.target.value) || 0 })
-            }
-          />
-        </Field>
-        <Field label="Conta">
+        <Field label="Categoria *">
           <select
             className={fieldControlClass}
-            value={payForm.contaId}
+            value={form.categoriaId}
             onChange={(e) =>
-              setPayForm({ ...payForm, contaId: e.target.value })
+              setForm({ ...form, categoriaId: e.target.value })
             }
           >
-            {state.accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nome}
-              </option>
-            ))}
+            <option value="">Selecione…</option>
+            {state.categorias
+              .filter((c) => c.ativo)
+              .slice(0, 40)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
           </select>
         </Field>
-      </FormDialog>
-
-      <FormDialog
-        open={openTr}
-        onOpenChange={setOpenTr}
-        title="Transferência entre contas"
-        onSubmit={() => {
-          const ok = transferir(trForm);
-          notify(ok ? "Transferência feita" : "Saldo insuficiente ou contas iguais");
-          if (ok) setOpenTr(false);
-        }}
-      >
-        <Field label="De">
-          <select
-            className={fieldControlClass}
-            value={trForm.deContaId}
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Competência *">
+            <Input
+              type="date"
+              value={form.competencia}
+              onChange={(e) =>
+                setForm({ ...form, competencia: e.target.value })
+              }
+            />
+          </Field>
+          <Field label="Vencimento *">
+            <Input
+              type="date"
+              value={form.vencimento}
+              onChange={(e) =>
+                setForm({ ...form, vencimento: e.target.value })
+              }
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Valor *">
+            <Input
+              type="number"
+              value={form.valor}
+              onChange={(e) =>
+                setForm({ ...form, valor: Number(e.target.value) || 0 })
+              }
+            />
+          </Field>
+          <Field label="Conta *">
+            <select
+              className={fieldControlClass}
+              value={form.contaId || state.contas[0]?.id}
+              onChange={(e) => setForm({ ...form, contaId: e.target.value })}
+            >
+              {state.contas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Forma">
+            <select
+              className={fieldControlClass}
+              value={form.forma}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  forma: e.target.value as FormaPagamento,
+                })
+              }
+            >
+              <option value="pix">Pix</option>
+              <option value="boleto">Boleto</option>
+              <option value="transferencia">Transferência</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="cartao">Cartão</option>
+              <option value="permuta">Permuta</option>
+            </select>
+          </Field>
+          <Field label="Condição">
+            <select
+              className={fieldControlClass}
+              value={form.condicao}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  condicao: e.target.value as CondicaoPagamento,
+                })
+              }
+            >
+              <option value="a_vista">À vista</option>
+              <option value="parcelado">Parcelado</option>
+              <option value="recorrente">Recorrente</option>
+            </select>
+          </Field>
+        </div>
+        {form.condicao === "parcelado" ? (
+          <Field label="Parcelas">
+            <Input
+              type="number"
+              value={form.parcelas}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  parcelas: Math.max(2, Number(e.target.value) || 2),
+                })
+              }
+            />
+          </Field>
+        ) : null}
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.usarRateio}
             onChange={(e) =>
-              setTrForm({ ...trForm, deContaId: e.target.value })
-            }
-          >
-            {state.accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nome} ({formatBRL(a.saldo)})
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Para">
-          <select
-            className={fieldControlClass}
-            value={trForm.paraContaId}
-            onChange={(e) =>
-              setTrForm({ ...trForm, paraContaId: e.target.value })
-            }
-          >
-            {state.accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nome}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Valor">
-          <Input
-            type="number"
-            value={trForm.valor}
-            onChange={(e) =>
-              setTrForm({ ...trForm, valor: Number(e.target.value) || 0 })
+              setForm({ ...form, usarRateio: e.target.checked })
             }
           />
-        </Field>
+          Rateio em duas obras/centros (60% obra / 40% empresa)
+        </label>
+        {!form.usarRateio ? (
+          <Field label="Centro de custo *">
+            <Input
+              value={form.centroLabel}
+              onChange={(e) =>
+                setForm({ ...form, centroLabel: e.target.value })
+              }
+            />
+          </Field>
+        ) : null}
       </FormDialog>
     </div>
   );
