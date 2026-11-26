@@ -1,6 +1,10 @@
 import type { CarteiraState } from "./carteira-types";
+import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
 
 export const CARTEIRA_STORAGE_KEY = "mlf-carteira-store-v1";
+
+/** Segunda empresa do seletor C01 (lib/empresa/context). */
+const ORG_DEMO_2 = "org-demo-2";
 
 export function seedCarteira(): CarteiraState {
   const d1 = "dev-horizonte";
@@ -278,6 +282,7 @@ export function seedCarteira(): CarteiraState {
         taxaMoraMes: 0.01,
         taxaMulta: 0.02,
         diaMulta: 0,
+        empresaId: DEMO_ORG_ID,
       },
       {
         id: d2,
@@ -295,6 +300,7 @@ export function seedCarteira(): CarteiraState {
         taxaMoraMes: 0.01,
         taxaMulta: 0.02,
         diaMulta: 0,
+        empresaId: ORG_DEMO_2,
       },
     ],
     lots,

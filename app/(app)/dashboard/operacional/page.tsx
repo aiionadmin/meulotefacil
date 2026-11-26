@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
   aReceberFinanceiroTitulos,
   emAtrasoFinanceiroTitulos,
 } from "@/lib/indicators/receivables";
+import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
@@ -36,19 +38,48 @@ export default function DashboardOperacionalPage() {
   const { state: fin } = useFinanceiro();
   const { state: p5 } = useParte5();
   const { state: fluxo } = useFluxo();
+  const { selectedId, filterByEmpresa, filterByDevelopmentEmpresa } =
+    useEmpresa();
 
-  const lotesPorStatus = cart.lots.reduce<Record<string, number>>((acc, l) => {
+  const developments = useMemo(
+    () => filterByEmpresa(cart.developments),
+    [filterByEmpresa, cart.developments]
+  );
+  const lots = useMemo(
+    () => filterByDevelopmentEmpresa(cart.lots, cart.developments),
+    [filterByDevelopmentEmpresa, cart.lots, cart.developments]
+  );
+  const contracts = useMemo(
+    () => filterByDevelopmentEmpresa(cart.contracts, cart.developments),
+    [filterByDevelopmentEmpresa, cart.contracts, cart.developments]
+  );
+  const installments = useMemo(
+    () =>
+      filterByDevelopmentEmpresa(
+        cart.installments.map((i) => {
+          const c = cart.contracts.find((x) => x.id === i.contractId);
+          return { ...i, developmentId: c?.developmentId };
+        }),
+        cart.developments
+      ),
+    [
+      filterByDevelopmentEmpresa,
+      cart.installments,
+      cart.contracts,
+      cart.developments,
+    ]
+  );
+
+  const lotesPorStatus = lots.reduce<Record<string, number>>((acc, l) => {
     acc[l.status] = (acc[l.status] ?? 0) + 1;
     return acc;
   }, {});
 
-  const contratosAtivos = cart.contracts.filter(
-    (c) => c.status === "ativo"
-  ).length;
+  const contratosAtivos = contracts.filter((c) => c.status === "ativo").length;
 
   const aReceber = aReceberFinanceiroTitulos(fin.recebimentos);
   const emAtrasoFin = emAtrasoFinanceiroTitulos(fin.recebimentos);
-  const aReceberCtr = aReceberContratos(cart.installments);
+  const aReceberCtr = aReceberContratos(installments);
 
   const venc7 = fin.recebimentos.filter(
     (r) =>
@@ -79,7 +110,7 @@ export default function DashboardOperacionalPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Dashboard · Números gerais"
-        description="Operacional — cada número abre a lista de origem."
+        description={`Operacional — filtro empresa: ${selectedId === "todas" ? "Todas" : selectedId.slice(0, 8)}…`}
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -96,7 +127,7 @@ export default function DashboardOperacionalPage() {
         items={[
           {
             label: "Empreendimentos",
-            value: cart.developments.length,
+            value: developments.length,
             hint: "Abrir lista",
           },
           {

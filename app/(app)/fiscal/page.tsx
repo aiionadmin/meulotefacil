@@ -18,6 +18,7 @@ import {
   buildDimobText,
   buildSpedContribuicoes,
 } from "@/lib/export/fiscal-files";
+import { useEmpresa } from "@/lib/empresa/context";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { LOTEWIN_PANEL_2026_11_24 } from "@/lib/domain/operacoes-seed";
@@ -33,6 +34,28 @@ const COLS = [
 export default function FiscalPage() {
   const { state, vincularNfe } = useFluxo();
   const { state: cart } = useCarteira();
+  const {
+    selected,
+    selectedId,
+    filterByEmpresa,
+    filterByDevelopmentEmpresa,
+  } = useEmpresa();
+  const developments = filterByEmpresa(cart.developments);
+  const contracts = filterByDevelopmentEmpresa(
+    cart.contracts,
+    cart.developments
+  );
+  const installments = filterByDevelopmentEmpresa(
+    cart.installments.map((i) => {
+      const c = cart.contracts.find((x) => x.id === i.contractId);
+      return { ...i, developmentId: c?.developmentId };
+    }),
+    cart.developments
+  );
+  const empresaNome =
+    selectedId === "todas"
+      ? "CONSOLIDADO MLF"
+      : (selected?.razaoSocial ?? selected?.nome ?? "MEU LOTE FACIL").toUpperCase();
 
   const toCard = useCallback(
     (f: FiscalDoc) => ({
@@ -173,15 +196,21 @@ export default function FiscalPage() {
                   onClick={() => {
                     const text = buildDimobText({
                       ano: 2026,
-                      empresa: "MEU LOTE FACIL",
-                      empreendimentos: cart.developments.length,
+                      empresa: empresaNome,
+                      empreendimentos: developments.length,
                       metaEmpreendimentos:
                         LOTEWIN_PANEL_2026_11_24.empreendimentos,
-                      contracts: cart.contracts,
+                      contracts: contracts.map((c) => ({
+                        ...c,
+                        documento: c.compradorId,
+                      })),
                       metaContratos: LOTEWIN_PANEL_2026_11_24.contratos,
                     });
-                    downloadTextTemplate("dimob-2026.txt", text);
-                    notify("DIMOB gerado", "dimob-2026.txt");
+                    downloadTextTemplate(
+                      `dimob-2026-${selectedId === "todas" ? "consolidado" : selectedId.slice(0, 8)}.txt`,
+                      text
+                    );
+                    notify("DIMOB gerado", empresaNome);
                   }}
                 >
                   Gerar arquivo
@@ -197,12 +226,15 @@ export default function FiscalPage() {
                   variant="outline"
                   onClick={() => {
                     const text = buildSpedContribuicoes({
-                      empresa: "MEU LOTE FACIL",
-                      empreendimentos: cart.developments.length,
-                      contracts: cart.contracts,
+                      empresa: empresaNome,
+                      empreendimentos: developments.length,
+                      contracts,
                     });
-                    downloadTextTemplate("sped-contribuicoes.txt", text);
-                    notify("SPED gerado", "sped-contribuicoes.txt");
+                    downloadTextTemplate(
+                      `sped-contribuicoes-${selectedId === "todas" ? "consolidado" : selectedId.slice(0, 8)}.txt`,
+                      text
+                    );
+                    notify("SPED gerado", empresaNome);
                   }}
                 >
                   Gerar arquivo
@@ -218,10 +250,10 @@ export default function FiscalPage() {
                   variant="outline"
                   onClick={() => {
                     downloadTextTemplate(
-                      "contabilidade.csv",
-                      buildContabilidadeCsv(cart.installments)
+                      `contabilidade-${selectedId === "todas" ? "consolidado" : selectedId.slice(0, 8)}.csv`,
+                      buildContabilidadeCsv(installments)
                     );
-                    notify("Arquivo contábil gerado", "contabilidade.csv");
+                    notify("Arquivo contábil gerado", empresaNome);
                   }}
                 >
                   Gerar arquivo
@@ -230,6 +262,10 @@ export default function FiscalPage() {
             },
           ]}
         />
+        <p className="mt-2 text-xs text-muted-foreground">
+          H28 — arquivos gerados com a empresa do seletor da barra (
+          {selectedId === "todas" ? "consolidado" : empresaNome}).
+        </p>
       </ModuleSection>
     </div>
   );
