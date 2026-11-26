@@ -243,6 +243,87 @@ export function seedFase1(): Fase1State {
           { codigo: "construcao", nome: "Construção", ordem: 4, ativo: true },
         ],
       },
+      {
+        id: "lk-bases_insumo",
+        codigo: "bases_insumo",
+        nome: "Bases de insumos",
+        itens: [
+          { codigo: "sinapi", nome: "SINAPI", ordem: 1, ativo: true },
+          { codigo: "sicro", nome: "SICRO", ordem: 2, ativo: true },
+          { codigo: "propria", nome: "Base própria", ordem: 3, ativo: true },
+        ],
+      },
+      {
+        id: "lk-bases_comp",
+        codigo: "bases_composicao",
+        nome: "Bases de composições",
+        itens: [
+          { codigo: "tcpo", nome: "TCPO", ordem: 1, ativo: true },
+          { codigo: "propria", nome: "Composição própria", ordem: 2, ativo: true },
+        ],
+      },
+      {
+        id: "lk-solicitantes",
+        codigo: "solicitantes",
+        nome: "Solicitantes",
+        itens: [
+          { codigo: "engenharia", nome: "Engenharia", ordem: 1, ativo: true },
+          { codigo: "comercial", nome: "Comercial", ordem: 2, ativo: true },
+          { codigo: "financeiro", nome: "Financeiro", ordem: 3, ativo: true },
+        ],
+      },
+      {
+        id: "lk-cond_pag",
+        codigo: "condicoes_pagamento",
+        nome: "Condições de pagamento",
+        itens: [
+          { codigo: "a_vista", nome: "À vista", ordem: 1, ativo: true },
+          { codigo: "7d", nome: "7 dias", ordem: 2, ativo: true },
+          { codigo: "14d", nome: "14 dias", ordem: 3, ativo: true },
+          { codigo: "30d", nome: "30 dias", ordem: 4, ativo: true },
+        ],
+      },
+      {
+        id: "lk-seg_forn",
+        codigo: "segmentos_fornecedor",
+        nome: "Segmentos de fornecedor",
+        itens: [
+          { codigo: "materiais", nome: "Materiais", ordem: 1, ativo: true },
+          { codigo: "servicos", nome: "Serviços", ordem: 2, ativo: true },
+          { codigo: "equipamentos", nome: "Equipamentos", ordem: 3, ativo: true },
+        ],
+      },
+      {
+        id: "lk-fontes_cli",
+        codigo: "fontes_cliente",
+        nome: "Fontes de cliente",
+        itens: [
+          { codigo: "indicacao", nome: "Indicação", ordem: 1, ativo: true },
+          { codigo: "digital", nome: "Digital", ordem: 2, ativo: true },
+          { codigo: "placa", nome: "Placa", ordem: 3, ativo: true },
+        ],
+      },
+      {
+        id: "lk-setores_cli",
+        codigo: "setores_cliente",
+        nome: "Setores de cliente",
+        itens: [
+          { codigo: "pf", nome: "Pessoa física", ordem: 1, ativo: true },
+          { codigo: "pj", nome: "Pessoa jurídica", ordem: 2, ativo: true },
+          { codigo: "investidor", nome: "Investidor", ordem: 3, ativo: true },
+        ],
+      },
+      {
+        id: "lk-tags_arquivo",
+        codigo: "tags_arquivo",
+        nome: "Tags de arquivo",
+        itens: [
+          { codigo: "documento", nome: "Documento", ordem: 1, ativo: true },
+          { codigo: "planta", nome: "Planta", ordem: 2, ativo: true },
+          { codigo: "contrato", nome: "Contrato", ordem: 3, ativo: true },
+          { codigo: "fiscal", nome: "Fiscal", ordem: 4, ativo: true },
+        ],
+      },
     ],
     files: [
       {

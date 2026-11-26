@@ -16,8 +16,10 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import { canApprove } from "@/lib/alcadas/check";
 import { formatBRL } from "@/lib/masks/br";
 import { useFluxo } from "@/lib/store/fluxo-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 import type { CollectionCase } from "@/lib/domain/fluxo-types";
 import { faixaAtrasoLabel } from "@/lib/cobranca/faixas";
 import { emAtrasoCobranca } from "@/lib/indicators/receivables";
@@ -34,6 +36,9 @@ const FAIXA_COLS = [
 
 export default function CobrancaPage() {
   const { state, registrarContato, proporAcordo, pausarRegua } = useFluxo();
+  const { currentUser, state: f1 } = useFase1();
+  const perfilNome =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const [selected, setSelected] = useState<CollectionCase | null>(null);
 
   const totalAtraso = emAtrasoCobranca(state.collection);
@@ -189,7 +194,18 @@ export default function CobrancaPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  proporAcordo(selected.id, 20, 3);
+                  const descontoPct = 20;
+                  const gate = canApprove({
+                    rules: f1.approvalRules,
+                    tipo: "Desconto acima do limite",
+                    valor: descontoPct,
+                    perfilNome,
+                  });
+                  if (!gate.ok) {
+                    notify("Alçada insuficiente", gate.reason);
+                    return;
+                  }
+                  proporAcordo(selected.id, descontoPct, 3);
                   notify("Acordo proposto · régua pausada");
                   setSelected(null);
                 }}

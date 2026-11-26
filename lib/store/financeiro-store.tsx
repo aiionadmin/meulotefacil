@@ -98,6 +98,8 @@ type FinanceiroApi = {
     valor: number;
     pago: boolean;
   }) => Transferencia | null;
+  /** G15 — conciliar (marcar como paga) em lote. */
+  conciliarTransferencias: (ids: string[]) => number;
   addPreLancamento: (input: {
     descricao: string;
     valor: number;
@@ -558,6 +560,42 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return tr;
+      },
+      conciliarTransferencias: (ids) => {
+        const setIds = new Set(ids);
+        const alvos = state.transferencias.filter(
+          (t) => setIds.has(t.id) && !t.pago
+        );
+        if (!alvos.length) return 0;
+        setState((s) => {
+          let contas = s.contas;
+          for (const t of alvos) {
+            contas = contas.map((c) => {
+              if (c.id === t.deContaId) {
+                return {
+                  ...c,
+                  saldo: Math.round((c.saldo - t.valor) * 100) / 100,
+                };
+              }
+              if (c.id === t.paraContaId) {
+                return {
+                  ...c,
+                  saldo: Math.round((c.saldo + t.valor) * 100) / 100,
+                };
+              }
+              return c;
+            });
+          }
+          const alvoSet = new Set(alvos.map((t) => t.id));
+          return {
+            ...s,
+            contas,
+            transferencias: s.transferencias.map((t) =>
+              alvoSet.has(t.id) ? { ...t, pago: true } : t
+            ),
+          };
+        });
+        return alvos.length;
       },
       addPreLancamento: (input) => {
         const pre: PreLancamento = {
