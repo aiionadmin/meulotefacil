@@ -14,12 +14,14 @@ export function PaginatedTable({
   empty,
   onRowClick,
   initialPageSize = 25,
+  exportName,
 }: {
   columns: { key: string; label: string; className?: string }[];
   rows: Record<string, React.ReactNode>[];
   empty?: string;
   onRowClick?: (index: number) => void;
   initialPageSize?: number;
+  exportName?: string;
 }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -40,6 +42,8 @@ export function PaginatedTable({
         rows={paged.items}
         empty={empty}
         paginate={false}
+        exportName={exportName}
+        exportRows={rows}
         onRowClick={
           onRowClick
             ? (index) => {

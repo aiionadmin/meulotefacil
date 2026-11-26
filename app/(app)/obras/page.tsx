@@ -18,6 +18,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
+import { useServerPage } from "@/lib/ui/use-server-page";
 import { useObras } from "@/lib/store/obras-store";
 import type { ObraStatus } from "@/lib/domain/obras-types";
 import { useCarteira } from "@/lib/store/carteira-store";
@@ -35,6 +36,12 @@ export default function ObrasPage() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [open, setOpen] = useState(false);
+  const server = useServerPage({
+    url: "/api/list/obras",
+    page: 1,
+    pageSize: 25,
+    q,
+  });
   const [form, setForm] = useState({
     codigo: "",
     nome: "",
@@ -106,10 +113,12 @@ export default function ObrasPage() {
             ),
           },
           {
-            label: "Realizado",
-            value: formatBRL(
-              state.obras.reduce((a, o) => a + o.realizado, 0)
-            ),
+            label: "API B17",
+            value: server.loading
+              ? "…"
+              : server.data
+                ? `${server.data.total} · ${Math.round(server.data.elapsedMs ?? 0)}ms`
+                : server.error ?? "—",
           },
         ]}
       />
@@ -130,6 +139,7 @@ export default function ObrasPage() {
       </FilterBar>
 
       <PaginatedTable
+        exportName="obras"
         columns={[
           { key: "img", label: "" },
           { key: "codigo", label: "Código" },

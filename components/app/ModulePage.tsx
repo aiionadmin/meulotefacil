@@ -6,6 +6,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  downloadExcel,
+  downloadListPdf,
+  printList,
+  reactNodeText,
+} from "@/lib/export/list-export";
 import { usePageTitle } from "@/lib/ui/use-page-title";
 import { paginate } from "@/lib/ui/pagination";
 
@@ -69,6 +75,9 @@ export function DataTable({
   onRowClick,
   pageSize = 20,
   paginate: enablePaginate = true,
+  exportName,
+  exportable = true,
+  exportRows,
 }: {
   columns: { key: string; label: string; className?: string }[];
   rows: Record<string, React.ReactNode>[];
@@ -77,8 +86,14 @@ export function DataTable({
   /** B17 — paginação padrão em todas as listas */
   pageSize?: number;
   paginate?: boolean;
+  /** C16 — nome do arquivo/título nas exportações */
+  exportName?: string;
+  exportable?: boolean;
+  /** Quando a tabela mostra só uma página, exporta a lista completa */
+  exportRows?: Record<string, React.ReactNode>[];
 }) {
   const [page, setPage] = useState(1);
+  const title = exportName ?? "lista";
 
   const pageData = useMemo(() => {
     if (!enablePaginate) {
@@ -93,6 +108,15 @@ export function DataTable({
     return paginate(rows, page, pageSize);
   }, [rows, page, pageSize, enablePaginate]);
 
+  const exportMatrix = useMemo(() => {
+    const source = exportRows ?? rows;
+    const headers = columns.map((c) => c.label);
+    const data = source.map((row) =>
+      columns.map((c) => reactNodeText(row[c.key]))
+    );
+    return { headers, data };
+  }, [columns, rows, exportRows]);
+
   if (!rows.length) {
     return (
       <Card>
@@ -105,6 +129,38 @@ export function DataTable({
 
   return (
     <Card className="overflow-hidden">
+      {exportable ? (
+        <div className="flex flex-wrap gap-2 border-b border-linha px-4 py-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              downloadExcel(title, exportMatrix.headers, exportMatrix.data)
+            }
+          >
+            Excel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              downloadListPdf(title, exportMatrix.headers, exportMatrix.data)
+            }
+          >
+            PDF
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => printList(title)}
+          >
+            Imprimir
+          </Button>
+        </div>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="border-b border-linha bg-paper-muted/60">
