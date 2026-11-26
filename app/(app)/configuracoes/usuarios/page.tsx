@@ -40,7 +40,7 @@ export default function UsuariosConfigPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Usuários"
-        description="Nome, e-mail, perfil, status e usuário-chave. Empresas e empreendimentos visíveis entram com a Fase 2."
+        description="Nome, e-mail, perfil, status e usuário-chave. Visibilidade de empresas e empreendimentos no cadastro."
         actions={
           <Button size="sm" onClick={() => setOpen(true)}>
             Novo usuário

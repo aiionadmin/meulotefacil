@@ -43,7 +43,7 @@ export default function DocumentosPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Documentos do morador"
-        description="Checklist por processo. Uploads entram no repositório de Arquivos (demo local)."
+        description="Checklist por processo. Uploads entram no repositório de Arquivos ()."
       />
       <KpiGrid
         items={[

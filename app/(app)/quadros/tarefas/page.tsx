@@ -1,11 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
 import { BoardViews } from "@/components/kanban/BoardViews";
+import {
+  DetailRow,
+  DetailSheet,
+  notify,
+} from "@/components/app/ModuleToolkit";
 import { useFase1 } from "@/lib/store/fase1-store";
-import { notify } from "@/components/app/ModuleToolkit";
+import { statusLabel } from "@/lib/status/labels";
 
 const COLS = [
   { id: "a_fazer", label: "A fazer" },
@@ -15,6 +21,8 @@ const COLS = [
 
 export default function QuadroTarefasPage() {
   const { state, moveTask } = useFase1();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = state.tasks.find((t) => t.id === selectedId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -35,7 +43,7 @@ export default function QuadroTarefasPage() {
           columnId: t.status,
           title: t.titulo,
           subtitle: t.responsavelNome,
-          badge: t.prioridade,
+          badge: statusLabel(t.prioridade),
           meta: t.prazo,
         }))}
         onMove={(cardId, to) => {
@@ -43,7 +51,28 @@ export default function QuadroTarefasPage() {
           notify("Tarefa movida");
           return true;
         }}
+        onOpen={setSelectedId}
       />
+      <DetailSheet
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelectedId(null)}
+        title={selected?.titulo ?? ""}
+      >
+        {selected ? (
+          <div className="space-y-2">
+            <DetailRow label="Status" value={statusLabel(selected.status)} />
+            <DetailRow
+              label="Prioridade"
+              value={statusLabel(selected.prioridade)}
+            />
+            <DetailRow
+              label="Responsável"
+              value={selected.responsavelNome ?? "—"}
+            />
+            <DetailRow label="Prazo" value={selected.prazo ?? "—"} />
+          </div>
+        ) : null}
+      </DetailSheet>
     </div>
   );
 }

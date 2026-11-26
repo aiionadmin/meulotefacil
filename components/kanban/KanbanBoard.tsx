@@ -60,7 +60,12 @@ function SortableCard({
       )}
       {...attributes}
       {...listeners}
-      onDoubleClick={() => onOpen?.(card.id)}
+      onClick={(e) => {
+        // B16 — clique abre o card; arraste usa activationConstraint de distância
+        if (isDragging) return;
+        e.stopPropagation();
+        onOpen?.(card.id);
+      }}
     >
       <p className="font-medium">{card.title}</p>
       {card.subtitle ? (

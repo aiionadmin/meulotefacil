@@ -38,7 +38,7 @@ export default function ReajustesPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Reajuste e operações"
-        description="Fase 4 — reajuste anual por índice e operações sobre o contrato."
+        description="reajuste anual por índice e operações sobre o contrato."
         actions={
           <>
             <Button size="sm" variant="outline" onClick={() => setOpOpen(true)}>

@@ -13,6 +13,7 @@ import { BoardViews } from "@/components/kanban/BoardViews";
 import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import type { JornadaColuna, Lead } from "@/lib/domain/fluxo-types";
+import { statusLabel } from "@/lib/status/labels";
 
 export default function JornadaPage() {
   const { state, moveLead, marcarPerdido } = useFluxo();
@@ -43,7 +44,7 @@ export default function JornadaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Jornada do cliente"
-        description="Fase 8 — arrastar só nas colunas 1–2 (e Perdido). Demais etapas mudam por evento do sistema."
+        description="arrastar só nas colunas 1–2 (e Perdido). Demais etapas mudam por evento do sistema."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -86,9 +87,9 @@ export default function JornadaPage() {
         {selected ? (
           <div className="space-y-2">
             <DetailRow label="Telefone" value={selected.telefone} />
-            <DetailRow label="Origem" value={selected.origem} />
+            <DetailRow label="Origem" value={statusLabel(selected.origem)} />
             <DetailRow label="Empreendimento" value={selected.empInteresse ?? "—"} />
-            <DetailRow label="Etapa" value={selected.etapa} />
+            <DetailRow label="Etapa" value={statusLabel(selected.etapa)} />
             <DetailRow label="Responsável" value={selected.responsavel} />
             <div className="flex flex-wrap gap-2 pt-3">
               {selected.etapa === "novo_contato" ||

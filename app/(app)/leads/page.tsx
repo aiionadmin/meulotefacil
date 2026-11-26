@@ -19,6 +19,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import type { LeadOrigem } from "@/lib/domain/fluxo-types";
+import { statusLabel } from "@/lib/status/labels";
 
 export default function LeadsPage() {
   const { state, addLead, moveLead } = useFluxo();
@@ -32,23 +33,36 @@ export default function LeadsPage() {
     origem: "whatsapp" as LeadOrigem,
   });
 
+  const activeLeads = useMemo(
+    () =>
+      // B15 — lead convertido (cobrança / carteira em dia) sai da lista
+      state.leads.filter(
+        (l) =>
+          l.etapa !== "cobranca" &&
+          l.etapa !== "carteira_em_dia" &&
+          l.etapa !== "perdido" &&
+          l.etapa !== "retomado"
+      ),
+    [state.leads]
+  );
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return state.leads;
-    return state.leads.filter((l) =>
+    if (!term) return activeLeads;
+    return activeLeads.filter((l) =>
       [l.nome, l.telefone, l.origem, l.etapa, l.empInteresse]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
         .includes(term)
     );
-  }, [state.leads, q]);
+  }, [activeLeads, q]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Leads"
-        description="Fase 8 — origem, responsável e etapa na jornada."
+        description="origem, responsável e etapa na jornada."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
@@ -63,14 +77,15 @@ export default function LeadsPage() {
 
       <KpiGrid
         items={[
-          { label: "Leads", value: state.leads.length },
+          { label: "Leads", value: activeLeads.length },
           {
             label: "Novos",
-            value: state.leads.filter((l) => l.etapa === "novo_contato").length,
+            value: activeLeads.filter((l) => l.etapa === "novo_contato").length,
           },
           {
             label: "Em atendimento",
-            value: state.leads.filter((l) => l.etapa === "em_atendimento").length,
+            value: activeLeads.filter((l) => l.etapa === "em_atendimento")
+              .length,
           },
           {
             label: "Propostas",
@@ -94,9 +109,9 @@ export default function LeadsPage() {
           nome: l.nome,
           tel: l.telefone,
           emp: l.empInteresse ?? "—",
-          origem: l.origem,
+          origem: statusLabel(l.origem),
           etapa: (
-            <StatusPill tone="info">{l.etapa.replace(/_/g, " ")}</StatusPill>
+            <StatusPill tone="info">{statusLabel(l.etapa)}</StatusPill>
           ),
           acao:
             l.etapa === "novo_contato" ? (

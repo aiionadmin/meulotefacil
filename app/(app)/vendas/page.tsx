@@ -51,7 +51,7 @@ export default function VendasPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Propostas e reservas"
-        description="Fase 8 — simular plano, reservar lote e converter em venda/contrato."
+        description="simular plano, reservar lote e converter em venda/contrato."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>

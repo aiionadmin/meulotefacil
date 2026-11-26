@@ -20,6 +20,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { statusLabel } from "@/lib/status/labels";
 import { useOperacoes } from "@/lib/store/operacoes-store";
 import type { Payable, Receivable } from "@/lib/domain/operacoes-types";
 
@@ -88,7 +89,7 @@ export default function FinanceiroPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Financeiro"
-        description="Fase 6 — a pagar, a receber, contas, transferências e pré-lançamentos."
+        description="a pagar, a receber, contas, transferências e pré-lançamentos."
         actions={
           <>
             <Button size="sm" variant="outline" onClick={() => setOpenTr(true)}>
@@ -105,7 +106,7 @@ export default function FinanceiroPage() {
         items={[
           { label: "Saldo contas", value: formatBRL(saldoContas) },
           { label: "A pagar", value: formatBRL(abertoPagar) },
-          { label: "A receber", value: formatBRL(abertoReceber) },
+          { label: "A receber financeiro", value: formatBRL(abertoReceber) },
           {
             label: "Pré-lançamentos",
             value: state.preEntries.filter((p) => p.status === "pendente").length,
@@ -166,7 +167,7 @@ export default function FinanceiroPage() {
                       : "warn"
                 }
               >
-                {p.status.replace("_", " ")}
+                {statusLabel(p.status)}
               </StatusPill>
             ),
           }))}
@@ -205,7 +206,7 @@ export default function FinanceiroPage() {
                       : "warn"
                 }
               >
-                {r.status.replace("_", " ")}
+                {statusLabel(r.status)}
               </StatusPill>
             ),
           }))}

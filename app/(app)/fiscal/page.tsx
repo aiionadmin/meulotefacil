@@ -32,7 +32,7 @@ export default function FiscalPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Fiscal e contábil"
-        description="Fase 10 — NFe recebidas, NFSe emitidas; DIMOB/SPED sob demanda do contador."
+        description="NFe recebidas, NFSe emitidas; DIMOB/SPED sob demanda do contador."
       />
 
       <KpiGrid

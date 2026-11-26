@@ -1,8 +1,13 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { usePageTitle } from "@/lib/ui/use-page-title";
+import { paginate } from "@/lib/ui/pagination";
 
 export function ModuleHeader({
   title,
@@ -13,6 +18,7 @@ export function ModuleHeader({
   description?: string;
   actions?: React.ReactNode;
 }) {
+  usePageTitle(title);
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
@@ -61,12 +67,32 @@ export function DataTable({
   rows,
   empty = "Nenhum registro.",
   onRowClick,
+  pageSize = 20,
+  paginate: enablePaginate = true,
 }: {
   columns: { key: string; label: string; className?: string }[];
   rows: Record<string, React.ReactNode>[];
   empty?: string;
   onRowClick?: (index: number) => void;
+  /** B17 — paginação padrão em todas as listas */
+  pageSize?: number;
+  paginate?: boolean;
 }) {
+  const [page, setPage] = useState(1);
+
+  const pageData = useMemo(() => {
+    if (!enablePaginate) {
+      return {
+        items: rows,
+        page: 1,
+        pageSize: rows.length || pageSize,
+        total: rows.length,
+        totalPages: 1,
+      };
+    }
+    return paginate(rows, page, pageSize);
+  }, [rows, page, pageSize, enablePaginate]);
+
   if (!rows.length) {
     return (
       <Card>
@@ -97,25 +123,63 @@ export function DataTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
-              <tr
-                key={i}
-                onClick={onRowClick ? () => onRowClick(i) : undefined}
-                className={cn(
-                  "border-b border-linha/70 last:border-0 hover:bg-paper-muted/40",
-                  onRowClick && "cursor-pointer"
-                )}
-              >
-                {columns.map((col) => (
-                  <td key={col.key} className={cn("px-4 py-3", col.className)}>
-                    {row[col.key]}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {pageData.items.map((row, i) => {
+              const absoluteIndex = (pageData.page - 1) * pageData.pageSize + i;
+              return (
+                <tr
+                  key={absoluteIndex}
+                  onClick={
+                    onRowClick ? () => onRowClick(absoluteIndex) : undefined
+                  }
+                  className={cn(
+                    "border-b border-linha/70 last:border-0 hover:bg-paper-muted/40",
+                    onRowClick && "cursor-pointer"
+                  )}
+                >
+                  {columns.map((col) => (
+                    <td
+                      key={col.key}
+                      className={cn("px-4 py-3", col.className)}
+                    >
+                      {row[col.key]}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+      {enablePaginate && pageData.totalPages > 1 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-linha px-4 py-3 text-sm">
+          <p className="text-muted-foreground">
+            {pageData.total} registro{pageData.total === 1 ? "" : "s"} · página{" "}
+            {pageData.page} de {pageData.totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pageData.page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pageData.page >= pageData.totalPages}
+              onClick={() =>
+                setPage((p) => Math.min(pageData.totalPages, p + 1))
+              }
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </Card>
   );
 }
@@ -152,7 +216,7 @@ export function ModuleSection({
 }) {
   return (
     <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="font-display text-lg text-ink">{title}</h2>
           {description ? (
@@ -160,7 +224,7 @@ export function ModuleSection({
           ) : null}
         </div>
         {actionHref && actionLabel ? (
-          <Button asChild variant="outline" size="sm">
+          <Button asChild size="sm" variant="outline">
             <Link href={actionHref}>{actionLabel}</Link>
           </Button>
         ) : null}

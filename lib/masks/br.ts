@@ -42,8 +42,4 @@ export function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function formatDateBR(isoOrDate: string | Date) {
-  const d = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
-  if (Number.isNaN(d.getTime())) return String(isoOrDate);
-  return d.toLocaleDateString("pt-BR");
-}
+export { formatDateBR, formatDateTimeBR, todayDateOnly } from "@/lib/dates/format";

@@ -5,18 +5,15 @@ import { nucleos, statusNucleoLabel, lotesLabel } from "@/lib/data/nucleos";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NucleosMap } from "@/components/site/NucleosMap";
+import { ModuleHeader } from "@/components/app/ModulePage";
 
 export default function NucleosPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl text-brand-navy dark:text-brand-cream">
-          Núcleos
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Portfólio operacional, {/* TODO: plugar Supabase */}
-        </p>
-      </div>
+      <ModuleHeader
+        title="Núcleos"
+        description="Portfólio operacional de núcleos em Campinas e região."
+      />
 
       <NucleosMap />
 

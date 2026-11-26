@@ -40,7 +40,7 @@ export default function BoletosPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Boletos e remessa"
-        description="Fase 4 — emissão, remessa CNAB e retorno (demo)."
+        description="emissão, remessa CNAB e retorno."
         actions={
           <>
             <Button

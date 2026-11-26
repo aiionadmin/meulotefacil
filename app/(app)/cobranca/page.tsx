@@ -19,6 +19,9 @@ import {
 import { formatBRL } from "@/lib/masks/br";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import type { CollectionCase } from "@/lib/domain/fluxo-types";
+import { faixaAtrasoLabel } from "@/lib/cobranca/faixas";
+import { emAtrasoCobranca } from "@/lib/indicators/receivables";
+import { statusLabel } from "@/lib/status/labels";
 
 export default function CobrancaPage() {
   const { state, registrarContato, proporAcordo, pausarRegua } = useFluxo();
@@ -36,16 +39,13 @@ export default function CobrancaPage() {
     );
   }, [state.collection, q]);
 
-  const totalAtraso = state.collection.reduce(
-    (a, c) => a + c.valorAtualizado,
-    0
-  );
+  const totalAtraso = emAtrasoCobranca(state.collection);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Cobrança e inadimplentes"
-        description="Fase 9 — régua, contatos e acordos."
+        description="régua, contatos e acordos."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/quadros/cobranca">Quadro cobrança</Link>
@@ -56,7 +56,7 @@ export default function CobrancaPage() {
       <KpiGrid
         items={[
           { label: "Casos", value: state.collection.length },
-          { label: "Em atraso (R$)", value: formatBRL(totalAtraso) },
+          { label: "Em atraso (cobrança)", value: formatBRL(totalAtraso) },
           { label: "Acordos", value: state.agreements.length },
           {
             label: "Régua pausada",
@@ -72,7 +72,8 @@ export default function CobrancaPage() {
           { key: "cliente", label: "Cliente" },
           { key: "ctr", label: "Contrato" },
           { key: "dias", label: "Dias" },
-          { key: "valor", label: "Atualizado" },
+          { key: "original", label: "Valor original" },
+          { key: "valor", label: "Valor atualizado" },
           { key: "faixa", label: "Faixa" },
           { key: "contato", label: "Último contato" },
         ]}
@@ -88,10 +89,11 @@ export default function CobrancaPage() {
           ),
           ctr: c.contratoNumero,
           dias: c.diasAtraso,
+          original: formatBRL(c.valorOriginal),
           valor: formatBRL(c.valorAtualizado),
           faixa: (
             <StatusPill tone={c.faixa === "acordo" ? "ok" : "warn"}>
-              {c.faixa.replace(/_/g, " ")}
+              {faixaAtrasoLabel(c.faixa)}
             </StatusPill>
           ),
           contato: c.ultimoContato ?? "—",
@@ -112,7 +114,9 @@ export default function CobrancaPage() {
             valor: formatBRL(a.valorAtualizado),
             desc: formatBRL(a.desconto),
             parc: a.qtdParcelas,
-            status: <StatusPill tone="ok">{a.status}</StatusPill>,
+            status: (
+              <StatusPill tone="ok">{statusLabel(a.status)}</StatusPill>
+            ),
           }))}
         />
       </ModuleSection>

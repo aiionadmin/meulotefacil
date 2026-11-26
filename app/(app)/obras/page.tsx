@@ -45,7 +45,7 @@ export default function ObrasPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Obras e orçamento"
-        description="Fase 7 — gestão de custos por empreendimento (centro de custo compartilhado)."
+        description="gestão de custos por empreendimento (centro de custo compartilhado)."
       />
 
       <KpiGrid
