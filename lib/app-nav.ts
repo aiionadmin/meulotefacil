@@ -51,8 +51,11 @@ export const APP_NAV: AppNavGroup[] = [
     id: "empreendimentos",
     label: "4. Empreendimentos",
     items: [
-      { href: "/empreendimentos", label: "Empreendimentos e lotes", description: "Estoque, status, geração em massa" },
+      { href: "/empreendimentos", label: "Empreendimentos e lotes", description: "Cadastro completo, status e estoque" },
       { href: "/empreendimentos/planta", label: "Planta do loteamento", description: "Lotes clicáveis por status" },
+      { href: "/planos-pagamento", label: "Planos de pagamento", description: "Entradas, prestações e moedas" },
+      { href: "/comissoes", label: "Comissões", description: "Previsto, liberado e pago" },
+      { href: "/cartorios", label: "Cartórios e escrituras", description: "RI e protocolos" },
     ],
   },
   {
@@ -60,6 +63,8 @@ export const APP_NAV: AppNavGroup[] = [
     label: "5. Contratos e ficha",
     items: [
       { href: "/carteira", label: "Ficha financeira", description: "Parcelas, encargos e caixa" },
+      { href: "/indices", label: "Índices", description: "Cotações por competência" },
+      { href: "/reajustes", label: "Reajustes", description: "Correção anual e resíduos" },
       { href: "/reajustes", label: "Reajuste e operações", description: "Índice anual e operações" },
     ],
   },
@@ -68,6 +73,7 @@ export const APP_NAV: AppNavGroup[] = [
     label: "6. Recebimentos",
     items: [
       { href: "/boletos", label: "Boletos, remessa e retorno", description: "Emissão CNAB" },
+      { href: "/caixa", label: "Caixa", description: "Recebimento e recibo" },
     ],
   },
   {

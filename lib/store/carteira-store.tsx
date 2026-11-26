@@ -205,12 +205,19 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
               ...l,
               status,
               bloqueiaVenda:
-                status === "bloqueado" ||
                 status === "vendido" ||
                 status === "reservado" ||
                 status === "quitado" ||
-                status === "escritura",
-              bloqueiaFinanceiro: status === "bloqueado",
+                status === "escritura" ||
+                status === "advogado" ||
+                status === "caucionado" ||
+                status === "invadido" ||
+                status === "juridico",
+              bloqueiaFinanceiro:
+                status === "advogado" ||
+                status === "caucionado" ||
+                status === "invadido" ||
+                status === "juridico",
             };
           });
           return { ...s, lots, lotHistory: history.slice(0, 80) };
