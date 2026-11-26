@@ -121,6 +121,8 @@ type CarteiraApi = {
     valor: number;
   }) => boolean;
   cancelarBoleto: (installmentId: string) => boolean;
+  /** C15 — cancelar boletos por id do slip. */
+  cancelarBoletosPorIds: (ids: string[]) => number;
 };
 
 const Ctx = createContext<CarteiraApi | null>(null);
@@ -866,6 +868,25 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return ok;
+      },
+      cancelarBoletosPorIds: (ids) => {
+        const set = new Set(ids);
+        let n = 0;
+        setState((s) => {
+          n = s.bankSlips.filter(
+            (b) => set.has(b.id) && b.status !== "cancelado"
+          ).length;
+          if (!n) return s;
+          return {
+            ...s,
+            bankSlips: s.bankSlips.map((b) =>
+              set.has(b.id) && b.status !== "cancelado"
+                ? { ...b, status: "cancelado" as const }
+                : b
+            ),
+          };
+        });
+        return n;
       },
     };
   }, [state, ready, saldoDevedor]);

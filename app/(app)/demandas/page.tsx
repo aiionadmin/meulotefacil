@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,8 @@ import {
   ModuleHeader,
   KpiGrid,
   StatusPill,
-  ModuleSection,
 } from "@/components/app/ModulePage";
-import { PaginatedTable } from "@/components/app/PaginatedTable";
-import { BoardViews } from "@/components/kanban/BoardViews";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import {
   Field,
   FilterBar,
@@ -23,6 +21,7 @@ import { formatDateBR } from "@/lib/masks/br";
 import { useServerPage } from "@/lib/ui/use-server-page";
 import { useParte5 } from "@/lib/store/parte5-store";
 import type {
+  Demanda,
   DemandaPrioridade,
   DemandaStatus,
 } from "@/lib/domain/parte5-types";
@@ -39,11 +38,16 @@ const COLS: { id: DemandaStatus; label: string }[] = [
 ];
 
 export default function DemandasPage() {
-  const { state, addDemanda, moverDemanda } = useParte5();
+  const {
+    state,
+    addDemanda,
+    moverDemanda,
+    atribuirDemandas,
+    concluirDemandas,
+  } = useParte5();
   const { state: cart } = useCarteira();
   const { openClient } = useClientCard();
   const [q, setQ] = useState("");
-  const [view, setView] = useState<"lista" | "quadro">("quadro");
   const [open, setOpen] = useState(false);
   const server = useServerPage({
     url: "/api/list/demandas",
@@ -87,25 +91,38 @@ export default function DemandasPage() {
     );
   }, [state.demandas, q]);
 
-  const tipoNome = (id: string) =>
-    state.demandaTipos.find((t) => t.id === id)?.nome ?? "—";
+  const tipoNome = useCallback(
+    (id: string) =>
+      state.demandaTipos.find((t) => t.id === id)?.nome ?? "—",
+    [state.demandaTipos]
+  );
+
+  const toCard = useCallback(
+    (d: Demanda) => ({
+      id: d.id,
+      columnId: d.status,
+      title: d.numero,
+      subtitle: `${tipoNome(d.tipoId)} · ${d.descricao}`,
+      meta: `${d.empreendimentoNome}${d.quadra ? ` ${d.quadra}-${d.lote}` : ""}`,
+      badge:
+        d.prazo < hoje &&
+        d.status !== "concluida" &&
+        d.status !== "cancelada"
+          ? "atrasada"
+          : d.prioridade === "urgente" || d.prioridade === "alta"
+            ? d.prioridade
+            : undefined,
+    }),
+    [tipoNome, hoje]
+  );
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Demandas"
-        description="Pedidos operacionais (água, energia, marcação…) — interno e portais."
+        description="Pedidos operacionais — Kanban | Lista com ações em lote (C15)."
         actions={
           <>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                setView((v) => (v === "lista" ? "quadro" : "lista"))
-              }
-            >
-              {view === "lista" ? "Quadro" : "Lista"}
-            </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/portal/cliente">Portal cliente</Link>
             </Button>
@@ -118,8 +135,15 @@ export default function DemandasPage() {
 
       <KpiGrid
         items={[
-          { label: "Abertas", value: state.demandas.filter((d) => d.status === "aberta").length },
-          { label: "Em execução", value: state.demandas.filter((d) => d.status === "em_execucao").length },
+          {
+            label: "Abertas",
+            value: state.demandas.filter((d) => d.status === "aberta").length,
+          },
+          {
+            label: "Em execução",
+            value: state.demandas.filter((d) => d.status === "em_execucao")
+              .length,
+          },
           { label: "Atrasadas", value: atrasadas },
           {
             label: "API B17",
@@ -134,64 +158,103 @@ export default function DemandasPage() {
 
       <FilterBar value={q} onChange={setQ} placeholder="Buscar demanda…" />
 
-      {view === "quadro" ? (
-        <BoardViews
-          storageKey="demandas"
-          columns={COLS}
-          cards={filtered.map((d) => ({
-            id: d.id,
-            columnId: d.status,
-            title: d.numero,
-            subtitle: `${tipoNome(d.tipoId)} · ${d.descricao}`,
-            meta: `${d.empreendimentoNome}${d.quadra ? ` ${d.quadra}-${d.lote}` : ""}`,
-            badge:
-              d.prazo < hoje &&
-              d.status !== "concluida" &&
-              d.status !== "cancelada"
-                ? "atrasada"
-                : d.prioridade === "urgente" || d.prioridade === "alta"
-                  ? d.prioridade
-                  : undefined,
-          }))}
-          onMove={(cardId, to) => {
-            moverDemanda(cardId, to as DemandaStatus);
-            notify(`Status → ${to.replace(/_/g, " ")}`);
-            return true;
-          }}
-        />
-      ) : (
-        <ModuleSection title="Lista">
-          <PaginatedTable
-            exportName="demandas"
-            columns={[
-              { key: "num", label: "Nº" },
-              { key: "tipo", label: "Tipo" },
-              { key: "emp", label: "Empreendimento" },
-              { key: "cli", label: "Cliente" },
-              { key: "prio", label: "Prioridade" },
-              { key: "resp", label: "Responsável" },
-              { key: "prazo", label: "Prazo" },
-              { key: "origem", label: "Origem" },
-              { key: "status", label: "Status" },
-            ]}
-            rows={filtered.map((d) => ({
-              num: d.numero,
-              tipo: tipoNome(d.tipoId),
-              emp: `${d.empreendimentoNome}${d.quadra ? ` · ${d.quadra}-${d.lote}` : ""}`,
-              cli: d.clienteNome ?? "—",
-              prio: d.prioridade,
-              resp: d.responsavel,
-              prazo: formatDateBR(d.prazo),
-              origem: d.origem.replace(/_/g, " "),
-              status: (
-                <StatusPill tone="info">
-                  {d.status.replace(/_/g, " ")}
-                </StatusPill>
-              ),
-            }))}
-          />
-        </ModuleSection>
-      )}
+      <ProcessBoard
+        storageKey="demandas"
+        columns={COLS}
+        rows={filtered}
+        toCard={toCard}
+        onMove={(cardId, to) => {
+          moverDemanda(cardId, to as DemandaStatus);
+          notify(`Status → ${to.replace(/_/g, " ")}`);
+          return true;
+        }}
+        onOpen={(id) => {
+          const d = state.demandas.find((x) => x.id === id);
+          if (d?.clienteNome) {
+            openClient({
+              nome: d.clienteNome,
+              personId: d.clienteId,
+            });
+          }
+        }}
+        exportName="demandas"
+        bulkActions={[
+          {
+            label: "Atribuir a mim",
+            onClick: (ids) => {
+              const n = atribuirDemandas(ids, "Atendimento");
+              notify(`${n} demanda(s) atribuídas`);
+            },
+          },
+          {
+            label: "Concluir seleção",
+            onClick: (ids) => {
+              const n = concluirDemandas(ids);
+              notify(n ? `${n} concluída(s)` : "Nenhuma pendente");
+            },
+          },
+        ]}
+        listColumns={[
+          {
+            key: "num",
+            label: "Nº",
+            filter: { type: "text" },
+            getValue: (d) => d.numero,
+          },
+          {
+            key: "tipo",
+            label: "Tipo",
+            filter: { type: "text" },
+            getValue: (d) => tipoNome(d.tipoId),
+          },
+          {
+            key: "emp",
+            label: "Empreendimento",
+            filter: { type: "text" },
+            getValue: (d) =>
+              `${d.empreendimentoNome}${d.quadra ? ` · ${d.quadra}-${d.lote}` : ""}`,
+          },
+          {
+            key: "cli",
+            label: "Cliente",
+            filter: { type: "text" },
+            getValue: (d) => d.clienteNome ?? "—",
+          },
+          {
+            key: "prio",
+            label: "Prioridade",
+            filter: { type: "text" },
+            getValue: (d) => d.prioridade,
+          },
+          {
+            key: "resp",
+            label: "Responsável",
+            filter: { type: "text" },
+            getValue: (d) => d.responsavel,
+          },
+          {
+            key: "prazo",
+            label: "Prazo",
+            filter: { type: "period" },
+            getValue: (d) => d.prazo,
+            render: (d) => formatDateBR(d.prazo),
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: COLS.map((c) => ({ value: c.id, label: c.label })),
+            },
+            getValue: (d) => d.status,
+            render: (d) => (
+              <StatusPill tone="info">
+                {d.status.replace(/_/g, " ")}
+              </StatusPill>
+            ),
+          },
+        ]}
+      />
 
       <FormDialog
         open={open}
