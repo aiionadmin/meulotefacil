@@ -68,6 +68,7 @@ type FinanceiroApi = {
   ) => boolean;
   estornarPagamento: (id: string) => boolean;
   conciliarPagamento: (id: string) => boolean;
+  desconciliarPagamento: (id: string) => boolean;
   setPagamentoStatus: (id: string, status: PagamentoStatus) => boolean;
   setRecebimentoStatus: (
     id: string,
@@ -332,6 +333,17 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           ...s,
           pagamentos: s.pagamentos.map((p) =>
             p.id === id ? { ...p, conciliado: true } : p
+          ),
+        }));
+        return true;
+      },
+      desconciliarPagamento: (id) => {
+        const p = state.pagamentos.find((x) => x.id === id);
+        if (!p?.conciliado) return false;
+        setState((s) => ({
+          ...s,
+          pagamentos: s.pagamentos.map((x) =>
+            x.id === id ? { ...x, conciliado: false } : x
           ),
         }));
         return true;
