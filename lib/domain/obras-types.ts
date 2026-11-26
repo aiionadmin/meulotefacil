@@ -241,4 +241,6 @@ export type ObrasCatalogState = {
   relatoriosGerenciais: RelatorioGerencial[];
   bdiModo: "dinamico" | "fixo";
   arredondamento: number;
+  /** D11 — horas de expediente por dia (escala o Gantt). */
+  expedienteHoras: number;
 };

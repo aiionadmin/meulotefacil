@@ -1,6 +1,7 @@
 "use client";
 
-import { ModuleHeader, DataTable, StatusPill } from "@/components/app/ModulePage";
+import { ModuleHeader, StatusPill } from "@/components/app/ModulePage";
+import { ProcessList } from "@/components/app/ProcessList";
 import { useCarteira } from "@/lib/store/carteira-store";
 
 export default function PlanosPagamentoPage() {
@@ -9,30 +10,62 @@ export default function PlanosPagamentoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Planos de pagamento"
-        description="Cadastro e consulta de planos (entradas, prestações e moedas)."
+        description="Cadastro e consulta de planos — lista filtrável (C14/C16)."
       />
-      <DataTable
-        columns={[
-          { key: "nome", label: "Nome" },
-          { key: "entradas", label: "Entradas" },
-          { key: "prestacoes", label: "Prestações" },
-          { key: "moeda", label: "Moeda" },
-          { key: "series", label: "Séries" },
-          { key: "ativo", label: "Ativo" },
-        ]}
-        rows={state.paymentPlans.map((p) => ({
-          nome: p.nome,
-          entradas: String(p.entradas),
-          prestacoes: String(p.prestacoes),
-          moeda: `${p.moedaRef} / resíduo ${p.moedaResiduo}`,
-          series: p.series,
-          ativo: (
-            <StatusPill tone={p.ativo ? "ok" : "neutral"}>
-              {p.ativo ? "Sim" : "Não"}
-            </StatusPill>
-          ),
-        }))}
+      <ProcessList
+        storageKey="planos-pagamento"
+        exportName="planos-pagamento"
+        rows={state.paymentPlans}
         empty="Nenhum plano cadastrado."
+        columns={[
+          {
+            key: "nome",
+            label: "Nome",
+            filter: { type: "text" },
+            getValue: (p) => p.nome,
+          },
+          {
+            key: "entradas",
+            label: "Entradas",
+            filter: { type: "range" },
+            getValue: (p) => p.entradas,
+          },
+          {
+            key: "prestacoes",
+            label: "Prestações",
+            filter: { type: "range" },
+            getValue: (p) => p.prestacoes,
+          },
+          {
+            key: "moeda",
+            label: "Moeda",
+            filter: { type: "text" },
+            getValue: (p) => `${p.moedaRef} / resíduo ${p.moedaResiduo}`,
+          },
+          {
+            key: "series",
+            label: "Séries",
+            filter: { type: "text" },
+            getValue: (p) => p.series,
+          },
+          {
+            key: "ativo",
+            label: "Ativo",
+            filter: {
+              type: "status",
+              options: [
+                { value: "sim", label: "Sim" },
+                { value: "nao", label: "Não" },
+              ],
+            },
+            getValue: (p) => (p.ativo ? "sim" : "nao"),
+            render: (p) => (
+              <StatusPill tone={p.ativo ? "ok" : "neutral"}>
+                {p.ativo ? "Sim" : "Não"}
+              </StatusPill>
+            ),
+          },
+        ]}
       />
     </div>
   );

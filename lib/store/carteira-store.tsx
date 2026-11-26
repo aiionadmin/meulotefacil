@@ -11,6 +11,7 @@ import {
 import { unifiedCarteiraSeed } from "@/lib/domain/unified-seed";
 import type {
   BankSlip,
+  CaixaFechamento,
   CaixaMovimento,
   Cartorio,
   CarteiraState,
@@ -153,6 +154,13 @@ type CarteiraApi = {
   setEscrituraStatus: (
     id: string,
     status: Escritura["status"]
+  ) => boolean;
+  /** H20 — fechar caixa do dia. */
+  fecharCaixa: (quem?: string) => CaixaFechamento | null;
+  /** C05 — polígono do lote na planta. */
+  setLotPlantaPoligono: (
+    lotId: string,
+    pontos: { x: number; y: number }[]
   ) => boolean;
 };
 
@@ -1047,6 +1055,53 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
             ...s,
             escrituras: s.escrituras.map((e) =>
               e.id === id ? { ...e, status } : e
+            ),
+          };
+        });
+        return ok;
+      },
+      fecharCaixa: (quem) => {
+        let fech: CaixaFechamento | null = null;
+        setState((s) => {
+          const abertos = s.caixa.filter(
+            (m) => !m.fechamentoId && !m.estornado
+          );
+          const estornos = s.caixa.filter(
+            (m) => !m.fechamentoId && m.estornado
+          );
+          if (!abertos.length && !estornos.length) return s;
+          const id = uid("cxf");
+          const entradas = abertos.reduce((a, m) => a + m.valor, 0);
+          const valorEstornos = estornos.reduce((a, m) => a + m.valor, 0);
+          fech = {
+            id,
+            data: todayIso(),
+            saldoAntes: s.caixaSaldo - entradas + valorEstornos,
+            entradas: Math.round(entradas * 100) / 100,
+            estornos: Math.round(valorEstornos * 100) / 100,
+            saldoDepois: s.caixaSaldo,
+            qtdMovimentos: abertos.length,
+            quem: quem ?? "Admin Demo",
+          };
+          return {
+            ...s,
+            caixa: s.caixa.map((m) =>
+              !m.fechamentoId ? { ...m, fechamentoId: id } : m
+            ),
+            caixaFechamentos: [fech!, ...(s.caixaFechamentos ?? [])],
+          };
+        });
+        return fech;
+      },
+      setLotPlantaPoligono: (lotId, pontos) => {
+        let ok = false;
+        setState((s) => {
+          if (!s.lots.some((l) => l.id === lotId)) return s;
+          ok = true;
+          return {
+            ...s,
+            lots: s.lots.map((l) =>
+              l.id === lotId ? { ...l, plantaPoligono: pontos } : l
             ),
           };
         });

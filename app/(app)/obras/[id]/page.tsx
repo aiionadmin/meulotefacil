@@ -21,6 +21,7 @@ import {
 import { downloadExcel, printList } from "@/lib/export/list-export";
 import { formatBRL } from "@/lib/masks/br";
 import { buildFisicoFinanceiro } from "@/lib/obras/fisico-financeiro";
+import { computeGanttCritico } from "@/lib/obras/gantt-critico";
 import { useObras } from "@/lib/store/obras-store";
 import { precoComBdi } from "@/lib/money/orcamento";
 
@@ -269,7 +270,11 @@ export default function ObraDetalhePage() {
 
       <ModuleSection title="Cronograma / Gantt (caminho crítico)">
         {(() => {
-          const itens = state.cronograma.filter((c) => c.obraId === obra.id);
+          const raw = state.cronograma.filter((c) => c.obraId === obra.id);
+          const itens = computeGanttCritico(
+            raw,
+            state.expedienteHoras ?? 8
+          );
           if (!itens.length) {
             return (
               <p className="text-sm text-muted-foreground">
@@ -286,6 +291,11 @@ export default function ObraDetalhePage() {
           const span = Math.max(1, max - min);
           return (
             <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                D11 — expediente {state.expedienteHoras ?? 8}h/dia ·{" "}
+                {itens.filter((i) => i.caminhoCritico).length} no caminho
+                crítico
+              </p>
               {itens.map((c) => {
                 const a = new Date(c.inicio + "T12:00:00").getTime();
                 const b = new Date(c.fim + "T12:00:00").getTime();
@@ -294,32 +304,38 @@ export default function ObraDetalhePage() {
                 return (
                   <div
                     key={c.id}
-                    className="grid grid-cols-[10rem_1fr] gap-2 text-xs"
+                    className="grid grid-cols-[12rem_1fr] gap-2 text-xs"
                   >
                     <span
                       className={
-                        c.critico ? "font-semibold text-destructive" : ""
+                        c.caminhoCritico
+                          ? "font-semibold text-destructive"
+                          : ""
                       }
                     >
                       {c.label}
-                      {c.critico ? " ★" : ""}
+                      {c.caminhoCritico ? " ★" : ""}
+                      <span className="ml-1 text-muted-foreground">
+                        folga {c.folgaDias}d
+                      </span>
                     </span>
                     <div className="relative h-6 rounded bg-muted">
                       <div
                         className={`absolute top-0.5 h-5 rounded ${
-                          c.critico
+                          c.caminhoCritico
                             ? "bg-destructive/80"
                             : "bg-brand-orange/80"
                         }`}
                         style={{ left: `${left}%`, width: `${width}%` }}
-                        title={`${c.inicio} → ${c.fim} · ${c.duracaoDias}d`}
+                        title={`${c.inicio} → ${c.fim} · ${c.duracaoDias}d · folga ${c.folgaDias}d`}
                       />
                     </div>
                   </div>
                 );
               })}
               <p className="text-xs text-muted-foreground">
-                ★ caminho crítico · barras proporcionais ao período
+                ★ caminho crítico (folga 0) · datas recalculadas por
+                predecessores
               </p>
             </div>
           );

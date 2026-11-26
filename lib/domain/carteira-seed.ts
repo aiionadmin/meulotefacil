@@ -367,6 +367,7 @@ export function seedCarteira(): CarteiraState {
     ],
     escrituras: [],
     caixa: [],
+    caixaFechamentos: [],
     comissoes: [
       {
         id: "cm-1",

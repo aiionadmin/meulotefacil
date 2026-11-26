@@ -343,5 +343,6 @@ export function seedObras(): ObrasCatalogState {
     ],
     bdiModo: "dinamico" as const,
     arredondamento: 2,
+    expedienteHoras: 8,
   };
 }

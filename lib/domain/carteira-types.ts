@@ -134,6 +134,20 @@ export type CaixaMovimento = {
   autenticacao: string;
   vias: 1 | 2;
   estornado?: boolean;
+  /** Movimento entra no fechamento quando marcado. */
+  fechamentoId?: string;
+};
+
+/** H20 — fechamento de caixa. */
+export type CaixaFechamento = {
+  id: string;
+  data: string;
+  saldoAntes: number;
+  entradas: number;
+  estornos: number;
+  saldoDepois: number;
+  qtdMovimentos: number;
+  quem: string;
 };
 
 export type Lot = {
@@ -157,6 +171,8 @@ export type Lot = {
   direita?: string;
   esquerda?: string;
   matricula?: string;
+  /** C05 — polígono da área na planta (0–100 % do canvas). */
+  plantaPoligono?: { x: number; y: number }[];
 };
 
 export type PriceTable = {
@@ -315,6 +331,7 @@ export type CarteiraState = {
   cartorios: Cartorio[];
   escrituras: Escritura[];
   caixa: CaixaMovimento[];
+  caixaFechamentos?: CaixaFechamento[];
   comissoes: {
     id: string;
     corretorNome: string;
