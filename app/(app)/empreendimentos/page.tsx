@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL } from "@/lib/masks/br";
 import { downloadTextTemplate } from "@/lib/export/list-export";
 import {
@@ -139,6 +140,23 @@ export default function EmpreendimentosPage() {
   const disponiveis = state.lots.filter((l) => l.status === "disponivel").length;
   const vendidos = state.lots.filter((l) => l.status === "vendido").length;
 
+  const LOT_COLS = LOT_STATUSES.map((s) => ({
+    id: s,
+    label: statusLabel(s),
+  }));
+
+  const toLotCard = useCallback(
+    (l: Lot) => ({
+      id: l.id,
+      columnId: l.status,
+      title: `${l.quadra}/${l.lote}`,
+      subtitle: l.empNome,
+      badge: formatBRL(l.valor),
+      meta: l.compradorNome ?? `${l.area} m²`,
+    }),
+    []
+  );
+
   return (
     <div className="space-y-6">
       <ModuleHeader
@@ -223,49 +241,79 @@ export default function EmpreendimentosPage() {
         </select>
       </FilterBar>
 
-      <DataTable
-        columns={[
-          { key: "sel", label: "" },
-          { key: "emp", label: "Empreendimento" },
-          { key: "ql", label: "Q/L" },
-          { key: "area", label: "Área" },
-          { key: "valor", label: "Valor" },
-          { key: "status", label: "Status" },
-          { key: "comprador", label: "Comprador" },
+      <ProcessBoard
+        storageKey="lotes"
+        columns={LOT_COLS}
+        rows={lotes}
+        toCard={toLotCard}
+        columnTotals={(_, items) => items.reduce((a, l) => a + l.valor, 0)}
+        onOpen={(id) => setSelected(state.lots.find((l) => l.id === id) ?? null)}
+        onMove={(id, to) => {
+          changeLotStatus([id], to as LotStatus, "Movido no quadro de lotes");
+          notify(`Lote → ${statusLabel(to)}`);
+          return true;
+        }}
+        bulkActions={[
+          {
+            label: "Marcar seleção",
+            onClick: (ids) => {
+              setSelectedIds(ids);
+              notify(`${ids.length} lote(s) selecionado(s) para alterar status`);
+            },
+          },
         ]}
-        rows={lotes.map((l) => ({
-          sel: (
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(l.id)}
-              onChange={(e) =>
-                setSelectedIds((ids) =>
-                  e.target.checked
-                    ? [...ids, l.id]
-                    : ids.filter((id) => id !== l.id)
-                )
-              }
-            />
-          ),
-          emp: (
-            <button
-              type="button"
-              className="text-left font-medium hover:text-brand-orange"
-              onClick={() => setSelected(l)}
-            >
-              {l.empNome}
-            </button>
-          ),
-          ql: `${l.quadra}/${l.lote}`,
-          area: `${l.area} m²`,
-          valor: formatBRL(l.valor),
-          status: (
-            <StatusPill tone={STATUS_TONE[l.status]}>
-              {statusLabel(l.status)}
-            </StatusPill>
-          ),
-          comprador: l.compradorNome ?? "—",
-        }))}
+        exportName="lotes"
+        listColumns={[
+          {
+            key: "emp",
+            label: "Empreendimento",
+            filter: { type: "text" },
+            getValue: (l) => l.empNome,
+          },
+          {
+            key: "ql",
+            label: "Q/L",
+            filter: { type: "text" },
+            getValue: (l) => `${l.quadra}/${l.lote}`,
+          },
+          {
+            key: "area",
+            label: "Área",
+            filter: { type: "range" },
+            getValue: (l) => l.area,
+            render: (l) => `${l.area} m²`,
+          },
+          {
+            key: "valor",
+            label: "Valor",
+            filter: { type: "range" },
+            getValue: (l) => l.valor,
+            render: (l) => formatBRL(l.valor),
+          },
+          {
+            key: "status",
+            label: "Status",
+            filter: {
+              type: "status",
+              options: LOT_COLS.map((c) => ({
+                value: c.id,
+                label: c.label,
+              })),
+            },
+            getValue: (l) => l.status,
+            render: (l) => (
+              <StatusPill tone={STATUS_TONE[l.status]}>
+                {statusLabel(l.status)}
+              </StatusPill>
+            ),
+          },
+          {
+            key: "comprador",
+            label: "Comprador",
+            filter: { type: "text" },
+            getValue: (l) => l.compradorNome ?? "",
+          },
+        ]}
       />
 
       <DetailSheet
