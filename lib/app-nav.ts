@@ -92,7 +92,12 @@ export const APP_NAV: AppNavGroup[] = [
     id: "obras",
     label: "9. Obras",
     items: [
-      { href: "/obras", label: "Obras e orçamento", description: "Gestão de custos e árvore" },
+      { href: "/obras", label: "Minhas obras", description: "Cadastro independente" },
+      { href: "/obras/orcamentos", label: "Orçamentos", description: "Lista e funil de propostas" },
+      { href: "/obras/gestao", label: "Gestão", description: "Orçado x realizado e Curva S" },
+      { href: "/obras/rdo", label: "RDO", description: "Relatório diário de obras" },
+      { href: "/obras/insumos", label: "Insumos", description: "Catálogo" },
+      { href: "/obras/composicoes", label: "Composições", description: "Catálogo com coeficientes" },
     ],
   },
   {

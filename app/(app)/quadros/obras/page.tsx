@@ -1,68 +1,55 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
 import { BoardViews } from "@/components/kanban/BoardViews";
-import { DetailRow, DetailSheet } from "@/components/app/ModuleToolkit";
-import { useOperacoes } from "@/lib/store/operacoes-store";
+import { useObras } from "@/lib/store/obras-store";
 import { formatBRL } from "@/lib/masks/br";
-import { statusLabel } from "@/lib/status/labels";
+import { notify } from "@/components/app/ModuleToolkit";
+import type { ObraStatus } from "@/lib/domain/obras-types";
 
 const COLS = [
-  { id: "em orçamento", label: "Em orçamento" },
-  { id: "em andamento", label: "Em andamento" },
+  { id: "em_orcamento", label: "Em orçamento" },
+  { id: "em_andamento", label: "Em andamento" },
   { id: "paralisada", label: "Paralisada" },
   { id: "finalizada", label: "Finalizada" },
 ];
 
 export default function QuadroObrasPage() {
-  const { state } = useOperacoes();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = state.works.find((w) => w.id === selectedId) ?? null;
+  const { state, updateObra } = useObras();
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Quadro: obras"
-        description="Visão por status da obra."
+        description="Status da obra — mesmos dados de Minhas obras."
         actions={
           <Button size="sm" variant="outline" asChild>
-            <Link href="/obras">Gestão de custos</Link>
+            <Link href="/obras">Minhas obras</Link>
           </Button>
         }
       />
       <BoardViews
-        storageKey="obras"
-        columns={COLS.map((c) => ({ ...c, droppable: false }))}
-        cards={state.works.map((w) => ({
+        storageKey="obras-quadro"
+        columns={COLS}
+        cards={state.obras.map((w) => ({
           id: w.id,
           columnId: w.status,
           title: w.nome,
-          subtitle: `${w.fisico}% físico`,
+          subtitle: `${w.clienteNome} · ${w.fisicoPct}% físico`,
           meta: formatBRL(w.realizado),
+          badge: w.codigo,
         }))}
-        onMove={() => false}
-        onOpen={setSelectedId}
+        onMove={(id, to) => {
+          updateObra(id, { status: to as ObraStatus });
+          notify("Status da obra atualizado");
+          return true;
+        }}
+        onOpen={(id) => {
+          window.location.href = `/obras/${id}`;
+        }}
       />
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelectedId(null)}
-        title={selected?.nome ?? ""}
-      >
-        {selected ? (
-          <div className="space-y-2">
-            <DetailRow label="Status" value={statusLabel(selected.status)} />
-            <DetailRow label="Físico" value={`${selected.fisico}%`} />
-            <DetailRow label="Orçado" value={formatBRL(selected.orcado)} />
-            <DetailRow
-              label="Realizado"
-              value={formatBRL(selected.realizado)}
-            />
-          </div>
-        ) : null}
-      </DetailSheet>
     </div>
   );
 }
