@@ -20,6 +20,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { canApprove } from "@/lib/alcadas/check";
 import { formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
@@ -424,20 +425,16 @@ export default function ComprasSolicitacoesPage() {
         }}
       >
         <Field label="Centro de custo *">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
             value={form.centroKey}
-            onChange={(e) => setForm({ ...form, centroKey: e.target.value })}
-            required
-          >
-            <option value="">Selecione…</option>
-            {centros.map((c) => (
-              <option key={c.key} value={c.key}>
-                {c.centro.tipo === "obra" ? "Obra · " : "Empresa · "}
-                {c.centro.label}
-              </option>
-            ))}
-          </select>
+            onChange={(centroKey) => setForm({ ...form, centroKey })}
+            placeholder="Buscar obra ou empresa…"
+            options={centros.map((c) => ({
+              value: c.key,
+              label: c.centro.label,
+              meta: c.centro.tipo === "obra" ? "Obra" : "Empresa",
+            }))}
+          />
         </Field>
         <Field label="Descrição *">
           <Input

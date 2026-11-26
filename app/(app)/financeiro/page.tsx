@@ -19,6 +19,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { canApprove } from "@/lib/alcadas/check";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
@@ -41,6 +42,8 @@ export default function PagamentosPage() {
     estornarPagamento,
     conciliarPagamento,
     desconciliarPagamento,
+    baixarPagamentosLote,
+    conciliarPagamentosLote,
     setPagamentoStatus,
   } = useFinanceiro();
   const { currentUser, state: f1 } = useFase1();
@@ -207,6 +210,31 @@ export default function PagamentosPage() {
           return ok;
         }}
         exportName="pagamentos"
+        bulkActions={[
+          {
+            label: "Baixar seleção",
+            onClick: (ids) => {
+              const n = baixarPagamentosLote(ids);
+              notify(n ? `${n} pagamento(s) baixados` : "Nenhum em aberto");
+            },
+          },
+          {
+            label: "Conciliar seleção",
+            onClick: (ids) => {
+              const gate = canApprove({
+                rules: f1.approvalRules,
+                tipo: "Conciliar",
+                perfilNome,
+              });
+              if (!gate.ok) {
+                notify("Alçada insuficiente", gate.reason);
+                return;
+              }
+              const n = conciliarPagamentosLote(ids);
+              notify(n ? `${n} conciliado(s)` : "Nenhum elegível");
+            },
+          },
+        ]}
         listColumns={[
           {
             key: "venc",
@@ -503,23 +531,32 @@ export default function PagamentosPage() {
           />
         </Field>
         <Field label="Categoria *">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
             value={form.categoriaId}
-            onChange={(e) =>
-              setForm({ ...form, categoriaId: e.target.value })
-            }
-          >
-            <option value="">Selecione…</option>
-            {state.categorias
+            onChange={(categoriaId) => setForm({ ...form, categoriaId })}
+            placeholder="Buscar categoria…"
+            options={state.categorias
               .filter((c) => c.ativo)
-              .slice(0, 40)
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-          </select>
+              .map((c) => ({
+                value: c.id,
+                label: c.nome,
+                meta: c.planoId,
+              }))}
+          />
+        </Field>
+        <Field label="Conta *">
+          <SearchSelect
+            value={form.contaId}
+            onChange={(contaId) => setForm({ ...form, contaId })}
+            placeholder="Buscar conta…"
+            options={state.contas
+              .filter((c) => c.ativa)
+              .map((c) => ({
+                value: c.id,
+                label: c.nome,
+                meta: c.banco,
+              }))}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Competência *">
@@ -541,30 +578,15 @@ export default function PagamentosPage() {
             />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Valor *">
-            <Input
-              type="number"
-              value={form.valor}
-              onChange={(e) =>
-                setForm({ ...form, valor: Number(e.target.value) || 0 })
-              }
-            />
-          </Field>
-          <Field label="Conta *">
-            <select
-              className={fieldControlClass}
-              value={form.contaId || state.contas[0]?.id}
-              onChange={(e) => setForm({ ...form, contaId: e.target.value })}
-            >
-              {state.contas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
+        <Field label="Valor *">
+          <Input
+            type="number"
+            value={form.valor}
+            onChange={(e) =>
+              setForm({ ...form, valor: Number(e.target.value) || 0 })
+            }
+          />
+        </Field>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Forma">
             <select
@@ -581,7 +603,6 @@ export default function PagamentosPage() {
               <option value="boleto">Boleto</option>
               <option value="transferencia">Transferência</option>
               <option value="dinheiro">Dinheiro</option>
-              <option value="cartao">Cartão</option>
               <option value="permuta">Permuta</option>
             </select>
           </Field>

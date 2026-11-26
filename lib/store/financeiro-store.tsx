@@ -70,6 +70,9 @@ type FinanceiroApi = {
   estornarPagamento: (id: string) => boolean;
   conciliarPagamento: (id: string) => boolean;
   desconciliarPagamento: (id: string) => boolean;
+  /** C15 — baixar / conciliar em lote. */
+  baixarPagamentosLote: (ids: string[]) => number;
+  conciliarPagamentosLote: (ids: string[]) => number;
   setPagamentoStatus: (id: string, status: PagamentoStatus) => boolean;
   setRecebimentoStatus: (
     id: string,
@@ -352,6 +355,65 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      baixarPagamentosLote: (ids) => {
+        const set = new Set(ids);
+        let n = 0;
+        setState((s) => {
+          const alvos = s.pagamentos.filter(
+            (p) => set.has(p.id) && p.status !== "pago"
+          );
+          n = alvos.length;
+          if (!n) return s;
+          let contas = s.contas;
+          const pagamentos = s.pagamentos.map((p) => {
+            if (!set.has(p.id) || p.status === "pago") return p;
+            const baixa = Math.round((p.valor - p.valorPago) * 100) / 100;
+            if (baixa <= 0) return p;
+            contas = contas.map((c) =>
+              c.id === p.contaId
+                ? { ...c, saldo: Math.round((c.saldo - baixa) * 100) / 100 }
+                : c
+            );
+            return {
+              ...p,
+              valorPago: p.valor,
+              status: "pago" as PagamentoStatus,
+              pagoEm: todayIso(),
+              historico: [
+                ...p.historico,
+                {
+                  valor: baixa,
+                  data: todayIso(),
+                  contaId: p.contaId,
+                  forma: p.forma,
+                  quem: "Lote C15",
+                },
+              ],
+            };
+          });
+          return { ...s, pagamentos, contas };
+        });
+        return n;
+      },
+      conciliarPagamentosLote: (ids) => {
+        const set = new Set(ids);
+        let n = 0;
+        setState((s) => {
+          n = s.pagamentos.filter(
+            (p) => set.has(p.id) && p.status === "pago" && !p.conciliado
+          ).length;
+          if (!n) return s;
+          return {
+            ...s,
+            pagamentos: s.pagamentos.map((p) =>
+              set.has(p.id) && p.status === "pago" && !p.conciliado
+                ? { ...p, conciliado: true }
+                : p
+            ),
+          };
+        });
+        return n;
       },
       setPagamentoStatus: (id, status) => {
         const p = state.pagamentos.find((x) => x.id === id);
