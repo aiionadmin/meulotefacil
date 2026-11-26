@@ -13,7 +13,7 @@ export default function ListasPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Listas de apoio"
-        description="Status de lote, tipos de parcela, formas de pagamento e demais catálogos ()."
+        description="J04 — motivos de perda, tipos de demanda/obra, unidades, retenções, bases de insumos/composições, solicitantes, condições de pagamento, segmentos, fontes/setores e tags."
       />
       <div className="grid gap-4 md:grid-cols-2">
         {state.lookups.map((list) => (
