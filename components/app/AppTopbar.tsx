@@ -36,6 +36,9 @@ import { createClient } from "@/lib/supabase/client";
 import { clearDemoSession } from "@/lib/auth-demo";
 import { APP_FLAT_NAV, NOVO_ATALHOS } from "@/lib/app-nav";
 import { useFase1 } from "@/lib/store/fase1-store";
+import { useEmpresa } from "@/lib/empresa/context";
+import { fieldControlClass } from "@/components/app/ModuleToolkit";
+import { cn } from "@/lib/utils";
 
 const crumbs: Record<string, string> = Object.fromEntries(
   APP_FLAT_NAV.map((i) => [i.href.replace(/^\//, ""), i.label])
@@ -51,6 +54,7 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { currentUser, currentProfileName, state } = useFase1();
+  const { empresas, selectedId, setSelectedId } = useEmpresa();
   const [open, setOpen] = useState(false);
   const parts = pathname.split("/").filter(Boolean);
   const unread = state.notifications.filter((n) => !n.lida).length;
@@ -106,9 +110,24 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
       </nav>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
-        <span className="hidden text-xs text-muted-foreground xl:inline">
-          {state.organization.nomeFantasia}
-        </span>
+        <label className="hidden items-center gap-1.5 lg:flex">
+          <span className="text-[11px] text-muted-foreground">Empresa</span>
+          <select
+            className={cn(fieldControlClass, "h-8 w-[180px] py-0 text-xs")}
+            value={selectedId}
+            onChange={(e) =>
+              setSelectedId(e.target.value as string | "todas")
+            }
+            aria-label="Selecionar empresa"
+          >
+            <option value="todas">Todas</option>
+            {empresas.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.nome}
+              </option>
+            ))}
+          </select>
+        </label>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm" className="hidden sm:inline-flex">

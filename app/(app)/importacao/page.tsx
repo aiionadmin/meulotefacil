@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ModuleHeader,
@@ -12,9 +13,61 @@ import { notify } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
 import { useOperacoes } from "@/lib/store/operacoes-store";
 import { LOTEWIN_PANEL_2026_11_24 } from "@/lib/domain/operacoes-seed";
+import {
+  downloadTextTemplate,
+  downloadCsv,
+} from "@/lib/export/list-export";
+import { useCarteira } from "@/lib/store/carteira-store";
+
+const EXCEL_MODELS = [
+  {
+    id: "quadras_lotes",
+    label: "Quadras e lotes (C04)",
+    headers: ["quadra", "lote", "area_m2", "valor", "status"],
+  },
+  {
+    id: "clientes",
+    label: "Clientes (C17)",
+    headers: ["nome", "cpf_cnpj", "telefone", "email", "cidade"],
+  },
+  {
+    id: "fornecedores",
+    label: "Fornecedores (C17)",
+    headers: ["razao_social", "cnpj", "telefone", "email"],
+  },
+  {
+    id: "profissionais",
+    label: "Profissionais (C17)",
+    headers: ["nome", "cpf", "especialidade", "telefone"],
+  },
+  {
+    id: "insumos",
+    label: "Insumos (C17)",
+    headers: ["codigo", "descricao", "unidade", "preco"],
+  },
+  {
+    id: "composicoes",
+    label: "Composições (C17)",
+    headers: ["codigo", "descricao", "unidade"],
+  },
+  {
+    id: "lancamentos",
+    label: "Lançamentos (C17)",
+    headers: ["data", "conta", "categoria", "valor", "historico"],
+  },
+  {
+    id: "faturamentos",
+    label: "Faturamentos (C17)",
+    headers: ["data", "cliente", "valor", "documento"],
+  },
+];
 
 export default function ImportacaoPage() {
   const { state, runImportEntity, runImportAllDemo } = useOperacoes();
+  const { massGenerateLots, state: carteira } = useCarteira();
+  const [conferenceRows, setConferenceRows] = useState<
+    { linha: number; payload: string; erros: string[]; acao: string }[]
+  >([]);
 
   const ok = state.importQueue.filter((e) => e.status === "ok").length;
   const parcial = state.importQueue.filter((e) => e.status === "parcial").length;
@@ -24,7 +77,7 @@ export default function ImportacaoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Importação e conferência"
-        description="fila idempotente (legacy_id) e conferência vs painel LoteWin 24/11/2026. Fila de conferência."
+        description="Modelos Excel/CSV, conferência por linha (C04/C17) e fila LoteWin."
         actions={
           <>
             <Button
@@ -59,7 +112,144 @@ export default function ImportacaoPage() {
         </p>
       ) : null}
 
-      <ModuleSection title="Fila de importação ()">
+      <ModuleSection title="Modelos Excel / CSV">
+        <div className="mb-4 flex flex-wrap gap-2">
+          {EXCEL_MODELS.map((m) => (
+            <Button
+              key={m.id}
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                downloadCsv(
+                  `modelo-${m.id}.csv`,
+                  m.headers,
+                  [m.headers.map(() => "")]
+                );
+                notify(`Modelo ${m.label} baixado`);
+              }}
+            >
+              {m.label}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadTextTemplate(
+                "modelo-quadras-lotes.txt",
+                "quadra;lote;area_m2;valor;status\nA;01;250;180000;disponivel\n"
+              );
+              notify("Modelo texto baixado");
+            }}
+          >
+            Modelo .txt (fallback)
+          </Button>
+        </div>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="file"
+            accept=".csv,.xlsx,.xls,text/csv"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              const text = await f.text();
+              const lines = text
+                .split(/\r?\n/)
+                .map((l) => l.trim())
+                .filter(Boolean);
+              const rows = lines.slice(1).map((line, i) => {
+                const cols = line.split(";");
+                const erros: string[] = [];
+                if (!cols[0]) erros.push("quadra vazia");
+                if (!cols[1]) erros.push("lote vazio");
+                return {
+                  linha: i + 2,
+                  payload: line,
+                  erros,
+                  acao: erros.length ? "corrigir" : "criar",
+                };
+              });
+              setConferenceRows(rows);
+              notify(
+                "Conferência pronta",
+                `${rows.length} linhas · ${rows.filter((r) => r.erros.length).length} com erro`
+              );
+            }}
+          />
+          <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
+            Enviar planilha (CSV)
+          </span>
+        </label>
+        {conferenceRows.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            <DataTable
+              columns={[
+                { key: "linha", label: "Linha" },
+                { key: "payload", label: "Dados" },
+                { key: "erros", label: "Erros" },
+                { key: "acao", label: "Ação" },
+              ]}
+              rows={conferenceRows.map((r) => ({
+                linha: r.linha,
+                payload: r.payload,
+                erros: r.erros.length ? r.erros.join("; ") : "—",
+                acao: r.acao,
+              }))}
+            />
+            <Button
+              size="sm"
+              onClick={() => {
+                const valid = conferenceRows.filter((r) => !r.erros.length);
+                if (
+                  carteira.developments[0] &&
+                  valid.length > 0
+                ) {
+                  massGenerateLots({
+                    developmentId: carteira.developments[0].id,
+                    quadra: "IMP",
+                    qtd: Math.min(valid.length, 10),
+                    area: 250,
+                    valor: 180000,
+                  });
+                }
+                notify(
+                  "Importação aplicada",
+                  `${valid.length} linhas ok · relatório final`
+                );
+                setConferenceRows([]);
+              }}
+            >
+              Criar / atualizar linhas válidas
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-2"
+              onClick={() => {
+                downloadCsv(
+                  "relatorio-importacao.csv",
+                  ["linha", "payload", "erros", "acao"],
+                  conferenceRows.map((r) => [
+                    r.linha,
+                    r.payload,
+                    r.erros.join("; "),
+                    r.acao,
+                  ])
+                );
+                notify("Relatório final exportado");
+              }}
+            >
+              Relatório final
+            </Button>
+          </div>
+        ) : null}
+        <p className="mt-3 text-xs text-muted-foreground">
+          Gerar lotes em massa permanece em Empreendimentos.
+        </p>
+      </ModuleSection>
+
+      <ModuleSection title="Fila de importação">
         <DataTable
           columns={[
             { key: "ordem", label: "#" },

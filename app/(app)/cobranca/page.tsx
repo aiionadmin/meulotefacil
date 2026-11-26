@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,9 @@ import {
 import {
   DetailRow,
   DetailSheet,
-  FilterBar,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL } from "@/lib/masks/br";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import type { CollectionCase } from "@/lib/domain/fluxo-types";
@@ -23,29 +23,38 @@ import { faixaAtrasoLabel } from "@/lib/cobranca/faixas";
 import { emAtrasoCobranca } from "@/lib/indicators/receivables";
 import { statusLabel } from "@/lib/status/labels";
 
+const FAIXA_COLS = [
+  { id: "a_vencer_5", label: "A vencer 5d" },
+  { id: "1_30", label: "1–30" },
+  { id: "31_90", label: "31–90" },
+  { id: "acordo", label: "Acordo" },
+  { id: "juridico", label: "Jurídico" },
+  { id: "retomada", label: "Retomada" },
+];
+
 export default function CobrancaPage() {
   const { state, registrarContato, proporAcordo, pausarRegua } = useFluxo();
-  const [q, setQ] = useState("");
   const [selected, setSelected] = useState<CollectionCase | null>(null);
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return state.collection;
-    return state.collection.filter((c) =>
-      [c.cliente, c.contratoNumero, c.empNome, c.faixa]
-        .join(" ")
-        .toLowerCase()
-        .includes(term)
-    );
-  }, [state.collection, q]);
-
   const totalAtraso = emAtrasoCobranca(state.collection);
+
+  const toCard = useCallback(
+    (c: CollectionCase) => ({
+      id: c.id,
+      columnId: c.faixa,
+      title: c.cliente,
+      subtitle: `Ctr ${c.contratoNumero} · ${c.empNome}`,
+      badge: `${c.diasAtraso}d`,
+      meta: formatBRL(c.valorAtualizado),
+    }),
+    []
+  );
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Cobrança e inadimplentes"
-        description="régua, contatos e acordos."
+        description="Régua, contatos e acordos — Kanban | Lista (C19)."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/quadros/cobranca">Quadro cobrança</Link>
@@ -65,39 +74,66 @@ export default function CobrancaPage() {
         ]}
       />
 
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar cliente, contrato…" />
-
-      <DataTable
-        columns={[
-          { key: "cliente", label: "Cliente" },
-          { key: "ctr", label: "Contrato" },
-          { key: "dias", label: "Dias" },
-          { key: "original", label: "Valor original" },
-          { key: "valor", label: "Valor atualizado" },
-          { key: "faixa", label: "Faixa" },
-          { key: "contato", label: "Último contato" },
+      <ProcessBoard
+        storageKey="inadimplentes"
+        columns={FAIXA_COLS}
+        rows={state.collection}
+        toCard={toCard}
+        columnTotals={(_, items) =>
+          items.reduce((a, c) => a + c.valorAtualizado, 0)
+        }
+        onOpen={(id) =>
+          setSelected(state.collection.find((c) => c.id === id) ?? null)
+        }
+        onMove={() => {
+          notify("Mova pela régua / acordo");
+          return false;
+        }}
+        exportName="inadimplentes"
+        listColumns={[
+          {
+            key: "cliente",
+            label: "Cliente",
+            filter: { type: "text" },
+            getValue: (c) => c.cliente,
+          },
+          {
+            key: "ctr",
+            label: "Contrato",
+            filter: { type: "text" },
+            getValue: (c) => c.contratoNumero,
+          },
+          {
+            key: "dias",
+            label: "Dias",
+            filter: { type: "range" },
+            getValue: (c) => c.diasAtraso,
+          },
+          {
+            key: "valor",
+            label: "Valor",
+            filter: { type: "range" },
+            getValue: (c) => c.valorAtualizado,
+            render: (c) => formatBRL(c.valorAtualizado),
+          },
+          {
+            key: "faixa",
+            label: "Faixa",
+            filter: {
+              type: "status",
+              options: FAIXA_COLS.map((f) => ({
+                value: f.id,
+                label: f.label,
+              })),
+            },
+            getValue: (c) => c.faixa,
+            render: (c) => (
+              <StatusPill tone={c.faixa === "acordo" ? "ok" : "warn"}>
+                {faixaAtrasoLabel(c.faixa)}
+              </StatusPill>
+            ),
+          },
         ]}
-        rows={filtered.map((c) => ({
-          cliente: (
-            <button
-              type="button"
-              className="font-medium hover:text-brand-orange"
-              onClick={() => setSelected(c)}
-            >
-              {c.cliente}
-            </button>
-          ),
-          ctr: c.contratoNumero,
-          dias: c.diasAtraso,
-          original: formatBRL(c.valorOriginal),
-          valor: formatBRL(c.valorAtualizado),
-          faixa: (
-            <StatusPill tone={c.faixa === "acordo" ? "ok" : "warn"}>
-              {faixaAtrasoLabel(c.faixa)}
-            </StatusPill>
-          ),
-          contato: c.ultimoContato ?? "—",
-        }))}
       />
 
       <ModuleSection title="Acordos">

@@ -6,10 +6,11 @@ export type JornadaColuna =
   | "proposta_reserva"
   | "contrato"
   | "carteira_em_dia"
-  | "cobranca"
   | "quitado"
   | "escritura"
   | "perdido"
+  | "cancelado"
+  | "distrato"
   | "retomado";
 
 export type LeadOrigem =
@@ -19,6 +20,8 @@ export type LeadOrigem =
   | "site"
   | "manual";
 
+export type LeadClassificacao = "frio" | "morno" | "quente";
+
 export type Lead = {
   id: string;
   nome: string;
@@ -26,11 +29,37 @@ export type Lead = {
   email?: string;
   empInteresse?: string;
   origem: LeadOrigem;
+  /** C09 */
+  campanha?: string;
+  corretor?: string;
+  tipoInteresse?: string;
+  finalidade?: string;
+  faixaValor?: string;
+  entradaDisponivel?: number;
+  parcelaCabe?: number;
+  formaPagamento?: string;
+  prazoDecidir?: string;
+  cidade?: string;
+  bairro?: string;
+  visitou?: boolean;
+  dataVisita?: string;
+  melhorHorario?: string;
+  canalPreferido?: string;
+  objecoes?: string;
+  /** C10 */
+  score?: number;
+  classificacao?: LeadClassificacao;
+  motivoPerda?: string;
   responsavel: string;
   etapa: JornadaColuna;
   criadoEm: string;
   ultimoContato?: string;
   observacoes?: string;
+  /** Selo C06 — atraso sem sair da jornada principal */
+  emAtraso?: boolean;
+  empresaId?: string;
+  /** Timestamp ISO da entrada na etapa atual (C08) */
+  etapaDesde?: string;
 };
 
 export type Proposal = {
@@ -38,13 +67,18 @@ export type Proposal = {
   leadId?: string;
   cliente: string;
   empNome: string;
+  developmentId?: string;
+  lotId?: string;
   loteLabel: string;
+  /** C11 — serviço de regularização em vez de lote */
+  servicoRegularizacao?: boolean;
   valor: number;
   parcelas: number;
   entrada: number;
   validade: string;
   status: "aberta" | "reservada" | "convertida" | "cancelada";
   responsavel: string;
+  empresaId?: string;
 };
 
 export type CollectionCase = {
@@ -64,6 +98,7 @@ export type CollectionCase = {
     | "retomada";
   ultimoContato?: string;
   responsavel: string;
+  empresaId?: string;
 };
 
 export type CollectionContact = {
@@ -97,6 +132,7 @@ export type Lawsuit = {
   valorCausa: number;
   situacao: "ativo" | "suspenso" | "encerrado";
   proximoPrazo?: string;
+  empresaId?: string;
 };
 
 export type RegularizationCase = {
@@ -110,9 +146,13 @@ export type RegularizationCase = {
     | "cartorio"
     | "registro"
     | "matricula"
-    | "entregue";
+    | "entregue"
+    | "cancelado"
+    | "distrato";
   responsavel: string;
   prazo?: string;
+  empresaId?: string;
+  etapaDesde?: string;
 };
 
 export type FiscalDoc = {
@@ -123,6 +163,7 @@ export type FiscalDoc = {
   valor: number;
   emissao: string;
   status: "pendente" | "vinculada" | "cancelada" | "autorizada";
+  empresaId?: string;
 };
 
 export type ReportDef = {
@@ -147,6 +188,8 @@ export type CardMove = {
   quando: string;
   usuario: string;
   motivo?: string;
+  /** C08 — segundos na etapa anterior */
+  tempoNaEtapaSegundos?: number;
 };
 
 export type FluxoState = {

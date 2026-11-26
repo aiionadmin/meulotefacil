@@ -23,6 +23,8 @@ const COLS = [
   { id: "entregue", label: "Entregue" },
 ];
 
+const ORDER = COLS.map((c) => c.id);
+
 export default function QuadroRegularizacaoPage() {
   const { state, avancarRegularizacao } = useFluxo();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export default function QuadroRegularizacaoPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Quadro: regularização e escritura"
-        description="Processo por lote."
+        description="Só avança (C06/C22). Arraste para trás é bloqueado."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/processos">Processos</Link>
@@ -42,18 +44,29 @@ export default function QuadroRegularizacaoPage() {
       <BoardViews
         storageKey="regularizacao"
         columns={COLS}
-        cards={state.regularization.map((r) => ({
-          id: r.id,
-          columnId: r.etapa,
-          title: r.cliente,
-          subtitle: `${r.empNome} · ${r.loteLabel}`,
-          meta: r.responsavel,
-          badge: r.prazo ? `prazo ${formatDateBR(r.prazo)}` : undefined,
-        }))}
-        onMove={(cardId) => {
-          avancarRegularizacao(cardId);
-          notify("Etapa avançada");
-          return true;
+        cards={state.regularization
+          .filter((r) => r.etapa !== "cancelado" && r.etapa !== "distrato")
+          .map((r) => ({
+            id: r.id,
+            columnId: r.etapa,
+            title: r.cliente,
+            subtitle: `${r.empNome} · ${r.loteLabel}`,
+            meta: r.responsavel,
+            badge: r.prazo ? `prazo ${formatDateBR(r.prazo)}` : undefined,
+          }))}
+        onMove={(cardId, to) => {
+          const current = state.regularization.find((r) => r.id === cardId);
+          if (!current) return false;
+          const from = ORDER.indexOf(current.etapa);
+          const dest = ORDER.indexOf(to);
+          if (dest < 0 || dest <= from) {
+            notify("Bloqueado", "Regularização só avança");
+            return false;
+          }
+          const ok = avancarRegularizacao(cardId, to);
+          if (ok) notify("Etapa avançada");
+          else notify("Não foi possível avançar");
+          return ok;
         }}
         onOpen={setSelectedId}
       />
@@ -72,6 +85,17 @@ export default function QuadroRegularizacaoPage() {
               label="Prazo"
               value={selected.prazo ? formatDateBR(selected.prazo) : "—"}
             />
+            <Button
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                const ok = avancarRegularizacao(selected.id);
+                if (ok) notify("Etapa avançada");
+                else notify("Já na última etapa");
+              }}
+            >
+              Avançar
+            </Button>
           </div>
         ) : null}
       </DetailSheet>
