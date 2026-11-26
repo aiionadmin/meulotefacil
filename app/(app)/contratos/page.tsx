@@ -195,22 +195,51 @@ export default function ContratosPage() {
               <Button size="sm" asChild>
                 <Link href={`/carteira?contrato=${selected.id}`}>Ficha</Link>
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  registrarOperacao(
-                    selected.id,
-                    "retomada",
-                    "Retomada demo — lote volta a disponível"
-                  );
-                  notify("Retomada registrada");
-                  setSelected(null);
-                }}
-              >
-                Retomar lote
-              </Button>
+              {(
+                [
+                  ["retomada", "Retomar lote"],
+                  ["transferencia", "Transferência"],
+                  ["renegociacao", "Renegociação"],
+                  ["troca", "Troca de lote"],
+                  ["antecipacao", "Adiantamento"],
+                  ["alteracao_plano", "Alterar plano"],
+                  ["distrato", "Distrato"],
+                ] as const
+              ).map(([tipo, label]) => (
+                <Button
+                  key={tipo}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    registrarOperacao(
+                      selected.id,
+                      tipo,
+                      `${label} registrada em ${new Date().toISOString().slice(0, 10)}`
+                    );
+                    notify(label, `Contrato ${selected.numero}`);
+                    setSelected(null);
+                  }}
+                >
+                  {label}
+                </Button>
+              ))}
             </div>
+            {state.operations.filter((o) => o.contractId === selected.id)
+              .length > 0 ? (
+              <div className="mt-3 space-y-1 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Histórico de operações
+                </p>
+                {state.operations
+                  .filter((o) => o.contractId === selected.id)
+                  .slice(0, 8)
+                  .map((o) => (
+                    <p key={o.id} className="text-xs text-muted-foreground">
+                      {o.quando}: {o.tipo} — {o.detalhe}
+                    </p>
+                  ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </DetailSheet>

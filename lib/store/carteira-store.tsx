@@ -461,7 +461,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           let lots = s.lots;
           let contracts = s.contracts;
           let cards = s.cards;
-          if (tipo === "retomada") {
+          if (tipo === "retomada" || tipo === "distrato") {
             const ct = s.contracts.find((c) => c.id === contractId);
             if (ct) {
               contracts = contracts.map((c) =>

@@ -256,7 +256,9 @@ export type ContractOperation = {
     | "troca"
     | "retomada"
     | "antecipacao"
-    | "acordo";
+    | "acordo"
+    | "distrato"
+    | "alteracao_plano";
   quando: string;
   detalhe: string;
   desfeita: boolean;
