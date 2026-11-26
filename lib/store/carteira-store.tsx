@@ -12,10 +12,12 @@ import { unifiedCarteiraSeed } from "@/lib/domain/unified-seed";
 import type {
   BankSlip,
   CaixaMovimento,
+  Cartorio,
   CarteiraState,
   Contract,
   ContractOperation,
   Development,
+  Escritura,
   Installment,
   Lot,
   LotStatus,
@@ -136,6 +138,22 @@ type CarteiraApi = {
   /** H12 — liberar / pagar comissão. */
   liberarComissao: (id: string) => boolean;
   pagarComissao: (id: string) => boolean;
+  /** H25 — cartórios e escrituras. */
+  addCartorio: (input: {
+    nome: string;
+    cidade: string;
+    uf: string;
+    contato?: string;
+  }) => Cartorio | null;
+  addEscritura: (input: {
+    contractId: string;
+    cartorioId: string;
+    protocolo: string;
+  }) => Escritura | null;
+  setEscrituraStatus: (
+    id: string,
+    status: Escritura["status"]
+  ) => boolean;
 };
 
 const Ctx = createContext<CarteiraApi | null>(null);
@@ -982,6 +1000,53 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
             caixaSaldo: Math.max(
               0,
               Math.round((s.caixaSaldo - valor) * 100) / 100
+            ),
+          };
+        });
+        return ok;
+      },
+      addCartorio: (input) => {
+        if (!input.nome.trim() || !input.cidade.trim() || !input.uf.trim()) {
+          return null;
+        }
+        const c: Cartorio = {
+          id: uid("crt"),
+          nome: input.nome.trim(),
+          cidade: input.cidade.trim(),
+          uf: input.uf.trim().toUpperCase().slice(0, 2),
+          contato: input.contato?.trim() || undefined,
+        };
+        setState((s) => ({ ...s, cartorios: [c, ...s.cartorios] }));
+        return c;
+      },
+      addEscritura: (input) => {
+        if (
+          !input.contractId ||
+          !input.cartorioId ||
+          !input.protocolo.trim()
+        ) {
+          return null;
+        }
+        const e: Escritura = {
+          id: uid("esc"),
+          contractId: input.contractId,
+          cartorioId: input.cartorioId,
+          protocolo: input.protocolo.trim(),
+          status: "em_andamento",
+          data: todayIso(),
+        };
+        setState((s) => ({ ...s, escrituras: [e, ...s.escrituras] }));
+        return e;
+      },
+      setEscrituraStatus: (id, status) => {
+        let ok = false;
+        setState((s) => {
+          if (!s.escrituras.some((e) => e.id === id)) return s;
+          ok = true;
+          return {
+            ...s,
+            escrituras: s.escrituras.map((e) =>
+              e.id === id ? { ...e, status } : e
             ),
           };
         });

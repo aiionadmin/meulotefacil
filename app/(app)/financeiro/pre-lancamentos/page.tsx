@@ -19,7 +19,8 @@ import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { PreLancamento } from "@/lib/domain/financeiro-types";
 
 export default function PreLancamentosPage() {
-  const { state, addPreLancamento, aprovarPre, recusarPre } = useFinanceiro();
+  const { state, addPreLancamento, aprovarPre, recusarPre, aprovarPresLote } =
+    useFinanceiro();
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
@@ -90,6 +91,17 @@ export default function PreLancamentosPage() {
           return false;
         }}
         exportName="pre-lancamentos"
+        bulkActions={[
+          {
+            label: "Aprovar seleção",
+            onClick: (ids) => {
+              const n = aprovarPresLote(ids);
+              notify(
+                n ? `${n} pré-lançamento(s) aprovados` : "Nenhum pendente"
+              );
+            },
+          },
+        ]}
         listColumns={[
           {
             key: "data",

@@ -69,6 +69,9 @@ type ComprasApi = {
   gerarOrdensDaCotacao: (cotacaoId: string) => OrdemCompra[];
   aprovarOrdem: (id: string) => { ok: boolean; payable?: { id: string; valor: number; favorecido: string; descricao: string; centro: string } };
   negarOrdem: (id: string) => boolean;
+  /** C15 — aprovar / negar OC em lote (aguardando). */
+  aprovarOrdensLote: (ids: string[]) => number;
+  negarOrdensLote: (ids: string[]) => number;
   marcarOcComprada: (id: string) => boolean;
   marcarOcEntregue: (id: string, parcial?: boolean) => boolean;
 };
@@ -522,6 +525,60 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      aprovarOrdensLote: (ids) => {
+        const set = new Set(ids);
+        let n = 0;
+        const permitir = state.config.permitirOcSemCotacao;
+        setState((s) => {
+          const alvos = s.ordens.filter(
+            (o) =>
+              set.has(o.id) &&
+              o.aprovacaoStatus === "aguardando_aprovacao" &&
+              (o.quotationId || permitir)
+          );
+          n = alvos.length;
+          if (!n) return s;
+          return {
+            ...s,
+            ordens: s.ordens.map((o) => {
+              if (
+                !set.has(o.id) ||
+                o.aprovacaoStatus !== "aguardando_aprovacao" ||
+                (!o.quotationId && !permitir)
+              ) {
+                return o;
+              }
+              return {
+                ...o,
+                aprovacaoStatus: "aprovado" as OcAprovacao,
+                compraStatus: "comprado" as const,
+                payableId: o.payableId ?? uid("pay"),
+              };
+            }),
+          };
+        });
+        return n;
+      },
+      negarOrdensLote: (ids) => {
+        const set = new Set(ids);
+        let n = 0;
+        setState((s) => {
+          n = s.ordens.filter(
+            (o) =>
+              set.has(o.id) && o.aprovacaoStatus === "aguardando_aprovacao"
+          ).length;
+          if (!n) return s;
+          return {
+            ...s,
+            ordens: s.ordens.map((o) =>
+              set.has(o.id) && o.aprovacaoStatus === "aguardando_aprovacao"
+                ? { ...o, aprovacaoStatus: "negado" as OcAprovacao }
+                : o
+            ),
+          };
+        });
+        return n;
       },
       marcarOcComprada: (id) => {
         setState((s) => ({
