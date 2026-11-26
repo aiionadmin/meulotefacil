@@ -18,7 +18,9 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { downloadExcel, printList } from "@/lib/export/list-export";
 import { formatBRL } from "@/lib/masks/br";
+import { buildFisicoFinanceiro } from "@/lib/obras/fisico-financeiro";
 import { useObras } from "@/lib/store/obras-store";
 import { precoComBdi } from "@/lib/money/orcamento";
 
@@ -53,6 +55,19 @@ export default function ObraDetalhePage() {
   const [despesa, setDespesa] = useState({ nodeId: "", valor: 0 });
 
   const curva = state.curvaS[id] ?? [];
+  const cronogramaObra = useMemo(
+    () => state.cronograma.filter((c) => c.obraId === id),
+    [state.cronograma, id]
+  );
+  const fisicoFin = useMemo(
+    () =>
+      buildFisicoFinanceiro({
+        cronograma: cronogramaObra,
+        curvaS: curva,
+        nodes,
+      }),
+    [cronogramaObra, curva, nodes]
+  );
 
   const itens = useMemo(
     () => nodes.filter((n) => n.kind === "item"),
@@ -157,6 +172,74 @@ export default function ObraDetalhePage() {
             fis: `${n.fisicoPct}%`,
           }))}
         />
+      </ModuleSection>
+
+      <ModuleSection title="Físico-financeiro por período (D12)">
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              downloadExcel(
+                `fisico-financeiro-${obra.codigo}`,
+                [
+                  "Período",
+                  "Atividades",
+                  "Físico plan. %",
+                  "Físico real. %",
+                  "Fin. plan.",
+                  "Fin. real.",
+                  "Saldo fin.",
+                ],
+                fisicoFin.map((r) => [
+                  r.periodo,
+                  r.atividades,
+                  r.fisicoPlanPct,
+                  r.fisicoRealPct,
+                  r.finPlan,
+                  r.finReal,
+                  r.saldoFin,
+                ])
+              );
+              notify("Excel exportado");
+            }}
+          >
+            Excel
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => printList(`Físico-financeiro · ${obra.nome}`)}
+          >
+            Imprimir
+          </Button>
+        </div>
+        {fisicoFin.length ? (
+          <DataTable
+            columns={[
+              { key: "p", label: "Período" },
+              { key: "at", label: "Ativ." },
+              { key: "pf", label: "Físico plan." },
+              { key: "rf", label: "Físico real." },
+              { key: "pfin", label: "Fin. plan." },
+              { key: "rfin", label: "Fin. real." },
+              { key: "sal", label: "Saldo" },
+            ]}
+            rows={fisicoFin.map((r) => ({
+              p: r.periodo,
+              at: String(r.atividades),
+              pf: `${r.fisicoPlanPct}%`,
+              rf: `${r.fisicoRealPct}%`,
+              pfin: formatBRL(r.finPlan),
+              rfin: formatBRL(r.finReal),
+              sal: formatBRL(r.saldoFin),
+            }))}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Sem períodos — gere a Curva S ou cadastre o cronograma.
+          </p>
+        )}
       </ModuleSection>
 
       <ModuleSection title="Curva S">
