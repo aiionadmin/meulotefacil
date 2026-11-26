@@ -14,6 +14,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { BoardViews } from "@/components/kanban/BoardViews";
+import { canApprove } from "@/lib/alcadas/check";
 import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import type { JornadaColuna, Lead } from "@/lib/domain/fluxo-types";
@@ -23,7 +24,7 @@ import { useClientCard } from "@/lib/client/client-card-context";
 
 export default function JornadaPage() {
   const { state, moveLead, marcarFinal } = useFluxo();
-  const { currentProfileName } = useFase1();
+  const { currentProfileName, state: f1 } = useFase1();
   const { openClient } = useClientCard();
   const isAdmin = (currentProfileName ?? "")
     .toLowerCase()
@@ -255,10 +256,19 @@ export default function JornadaPage() {
             notify("Motivo obrigatório");
             return;
           }
+          const gate = canApprove({
+            rules: f1.approvalRules,
+            tipo: "Correção de avanço de card",
+            perfilNome: currentProfileName ?? "—",
+          });
+          if (!gate.ok) {
+            notify("Alçada insuficiente", gate.reason);
+            return;
+          }
           const ok = moveLead(selected.id, forceTarget, {
             force: true,
             motivo: forceMotivo,
-            usuario: "Admin",
+            usuario: currentProfileName ?? "Admin",
           });
           if (ok) {
             notify("Correção registrada");

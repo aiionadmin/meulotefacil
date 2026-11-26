@@ -19,8 +19,10 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import { canApprove } from "@/lib/alcadas/check";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 import type {
   CondicaoPagamento,
   FormaPagamento,
@@ -38,8 +40,12 @@ export default function PagamentosPage() {
     baixarPagamento,
     estornarPagamento,
     conciliarPagamento,
+    desconciliarPagamento,
     setPagamentoStatus,
   } = useFinanceiro();
+  const { currentUser, state: f1 } = useFase1();
+  const perfilNome =
+    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
 
   const STATUS_COLS = [
     { id: "em_aberto", label: "Em aberto" },
@@ -363,11 +369,44 @@ export default function PagamentosPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => {
+                    const gate = canApprove({
+                      rules: f1.approvalRules,
+                      tipo: "Conciliação bancária",
+                      perfilNome,
+                    });
+                    if (!gate.ok) {
+                      notify("Alçada insuficiente", gate.reason);
+                      return;
+                    }
                     conciliarPagamento(live.id);
                     notify("Conciliado");
                   }}
                 >
                   Conciliar
+                </Button>
+              ) : null}
+              {live.conciliado ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const gate = canApprove({
+                      rules: f1.approvalRules,
+                      tipo: "Desconciliar",
+                      perfilNome,
+                    });
+                    if (!gate.ok) {
+                      notify("Alçada insuficiente", gate.reason);
+                      return;
+                    }
+                    if (!desconciliarPagamento(live.id)) {
+                      notify("Não foi possível desconciliar");
+                      return;
+                    }
+                    notify("Desconciliado");
+                  }}
+                >
+                  Desconciliar
                 </Button>
               ) : null}
             </div>
