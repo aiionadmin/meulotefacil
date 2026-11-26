@@ -82,7 +82,8 @@ type CarteiraApi = {
   estornarParcela: (installmentId: string) => void;
   gerarBoletosMes: () => number;
   gerarRemessa: () => { qtd: number; arquivo?: { nome: string; conteudo: string } };
-  processarRetorno: () => number;
+  /** H23 — se `nossoNumeros` vier do .ret, baixa só esses; senão todos em remessa. */
+  processarRetorno: (nossoNumeros?: string[]) => number;
   aplicarReajuste: (
     fator: number,
     indice: string,
@@ -517,12 +518,23 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         });
         return { qtd, arquivo };
       },
-      processarRetorno: () => {
+      processarRetorno: (nossoNumeros) => {
         let qtd = 0;
         setState((s) => {
-          const alvos = s.bankSlips.filter((b) => b.status === "remessa");
+          const filterNn = nossoNumeros?.length
+            ? new Set(
+                nossoNumeros.map((n) => n.replace(/\D/g, "").replace(/^0+/, ""))
+              )
+            : null;
+          const alvos = s.bankSlips.filter((b) => {
+            if (b.status !== "remessa") return false;
+            if (!filterNn) return true;
+            const nn = b.nossoNumero.replace(/\D/g, "").replace(/^0+/, "");
+            return filterNn.has(nn);
+          });
           qtd = alvos.length;
           if (!qtd) return s;
+          const alvoIds = new Set(alvos.map((b) => b.id));
           let caixa = s.caixaSaldo;
           const paidInst = new Set<string>();
           for (const b of alvos) {
@@ -536,7 +548,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
             ...s,
             caixaSaldo: caixa,
             bankSlips: s.bankSlips.map((b) =>
-              b.status === "remessa" ? { ...b, status: "pago" as const } : b
+              alvoIds.has(b.id) ? { ...b, status: "pago" as const } : b
             ),
             remittances: s.remittances.map((r) =>
               r.status === "gerada" ? { ...r, status: "processada" as const } : r
