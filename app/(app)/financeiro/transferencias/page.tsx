@@ -23,6 +23,7 @@ import { useFinanceiro } from "@/lib/store/financeiro-store";
 export default function TransferenciasPage() {
   const { state, transferir, conciliarTransferencias } = useFinanceiro();
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [situacao, setSituacao] = useState<"todas" | "pagas" | "abertas">(
     "todas"
   );
@@ -37,6 +38,11 @@ export default function TransferenciasPage() {
     paraContaId: "",
     pago: true,
   });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
 
   const nome = (id: string) =>
     state.contas.find((c) => c.id === id)?.nome ?? "—";
@@ -98,7 +104,7 @@ export default function TransferenciasPage() {
             >
               Imprimir
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button size="sm" onClick={() => { setFormDirty(false); setOpen(true); }}>
               Nova
             </Button>
           </>
@@ -190,6 +196,7 @@ export default function TransferenciasPage() {
         open={open}
         onOpenChange={setOpen}
         title="Nova transferência"
+        dirty={formDirty}
         onSubmit={() => {
           const deC = form.deContaId || state.contas[0]?.id;
           const para = form.paraContaId || state.contas[1]?.id;
@@ -210,6 +217,7 @@ export default function TransferenciasPage() {
             return;
           }
           notify("Transferência registrada");
+          setFormDirty(false);
           setOpen(false);
         }}
       >
@@ -217,7 +225,7 @@ export default function TransferenciasPage() {
           <Input
             type="date"
             value={form.data}
-            onChange={(e) => setForm({ ...form, data: e.target.value })}
+            onChange={(e) => patchForm({ data: e.target.value })}
           />
         </Field>
         <Field label="Valor *">
@@ -225,7 +233,7 @@ export default function TransferenciasPage() {
             type="number"
             value={form.valor}
             onChange={(e) =>
-              setForm({ ...form, valor: Number(e.target.value) || 0 })
+              patchForm({ valor: Number(e.target.value) || 0 })
             }
           />
         </Field>
@@ -233,7 +241,7 @@ export default function TransferenciasPage() {
           <select
             className={fieldControlClass}
             value={form.deContaId || state.contas[0]?.id}
-            onChange={(e) => setForm({ ...form, deContaId: e.target.value })}
+            onChange={(e) => patchForm({ deContaId: e.target.value })}
           >
             {state.contas.map((c) => (
               <option key={c.id} value={c.id}>
@@ -247,7 +255,7 @@ export default function TransferenciasPage() {
             className={fieldControlClass}
             value={form.paraContaId || state.contas[1]?.id}
             onChange={(e) =>
-              setForm({ ...form, paraContaId: e.target.value })
+              patchForm({ paraContaId: e.target.value })
             }
           >
             {state.contas.map((c) => (
@@ -260,14 +268,14 @@ export default function TransferenciasPage() {
         <Field label="Descrição">
           <Input
             value={form.descricao}
-            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            onChange={(e) => patchForm({ descricao: e.target.value })}
           />
         </Field>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={form.pago}
-            onChange={(e) => setForm({ ...form, pago: e.target.checked })}
+            onChange={(e) => patchForm({ pago: e.target.checked })}
           />
           Marcar como pago
         </label>

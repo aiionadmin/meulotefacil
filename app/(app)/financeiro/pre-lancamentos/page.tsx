@@ -22,6 +22,7 @@ export default function PreLancamentosPage() {
   const { state, addPreLancamento, aprovarPre, recusarPre, aprovarPresLote } =
     useFinanceiro();
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [motivo, setMotivo] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     descricao: "",
@@ -29,6 +30,11 @@ export default function PreLancamentosPage() {
     solicitante: "Admin Demo",
     centroLabel: "Meu Lote Fácil",
   });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
 
   const STATUS_COLS = [
     { id: "pendente", label: "Pendente" },
@@ -58,7 +64,7 @@ export default function PreLancamentosPage() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/financeiro/pagamentos">Pagamentos</Link>
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button size="sm" onClick={() => { setFormDirty(false); setOpen(true); }}>
               Novo
             </Button>
           </>
@@ -179,6 +185,7 @@ export default function PreLancamentosPage() {
         open={open}
         onOpenChange={setOpen}
         title="Novo pré-lançamento"
+        dirty={formDirty}
         onSubmit={() => {
           if (!form.descricao.trim() || form.valor <= 0) {
             notify("Descrição e valor obrigatórios");
@@ -191,13 +198,14 @@ export default function PreLancamentosPage() {
             centro: { tipo: "empresa", label: form.centroLabel },
           });
           notify("Pré-lançamento criado");
+          setFormDirty(false);
           setOpen(false);
         }}
       >
         <Field label="Descrição *">
           <Input
             value={form.descricao}
-            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            onChange={(e) => patchForm({ descricao: e.target.value })}
           />
         </Field>
         <Field label="Valor *">
@@ -205,7 +213,7 @@ export default function PreLancamentosPage() {
             type="number"
             value={form.valor}
             onChange={(e) =>
-              setForm({ ...form, valor: Number(e.target.value) || 0 })
+              patchForm({ valor: Number(e.target.value) || 0 })
             }
           />
         </Field>
@@ -213,7 +221,7 @@ export default function PreLancamentosPage() {
           <Input
             value={form.solicitante}
             onChange={(e) =>
-              setForm({ ...form, solicitante: e.target.value })
+              patchForm({ solicitante: e.target.value })
             }
           />
         </Field>
@@ -221,7 +229,7 @@ export default function PreLancamentosPage() {
           <Input
             value={form.centroLabel}
             onChange={(e) =>
-              setForm({ ...form, centroLabel: e.target.value })
+              patchForm({ centroLabel: e.target.value })
             }
           />
         </Field>

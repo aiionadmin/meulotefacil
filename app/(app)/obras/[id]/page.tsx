@@ -13,6 +13,7 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import {
+  AttachDropZone,
   Field,
   FormDialog,
   fieldControlClass,
@@ -78,6 +79,8 @@ export default function ObraDetalhePage() {
   const [aba, setAba] = useState<AbaObra>("orcamento");
   const [openItem, setOpenItem] = useState(false);
   const [openDespesa, setOpenDespesa] = useState(false);
+  const [itemDirty, setItemDirty] = useState(false);
+  const [despesaDirty, setDespesaDirty] = useState(false);
   const [form, setForm] = useState({
     kind: "item" as "etapa" | "subetapa" | "item",
     parentId: "",
@@ -90,6 +93,15 @@ export default function ObraDetalhePage() {
     insumoId: "",
   });
   const [despesa, setDespesa] = useState({ nodeId: "", valor: 0 });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setItemDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
+  function patchDespesa(patch: Partial<typeof despesa>) {
+    setDespesaDirty(true);
+    setDespesa((prev) => ({ ...prev, ...patch }));
+  }
 
   const curva = state.curvaS[id] ?? [];
   const cronogramaObra = useMemo(
@@ -147,7 +159,7 @@ export default function ObraDetalhePage() {
             >
               Gerar Curva S
             </Button>
-            <Button size="sm" onClick={() => setOpenItem(true)}>
+            <Button size="sm" onClick={() => { setItemDirty(false); setOpenItem(true); }}>
               + Item / etapa
             </Button>
           </>
@@ -181,7 +193,7 @@ export default function ObraDetalhePage() {
           <option value="paralisada">Paralisada</option>
           <option value="finalizada">Finalizada</option>
         </select>
-        <Button size="sm" variant="outline" onClick={() => setOpenDespesa(true)}>
+        <Button size="sm" variant="outline" onClick={() => { setDespesaDirty(false); setOpenDespesa(true); }}>
           Apropriar despesa
         </Button>
       </div>
@@ -551,29 +563,20 @@ export default function ObraDetalhePage() {
 
       {aba === "arquivos" ? (
         <ModuleSection title="Arquivos do orçamento">
-          <p className="text-sm text-muted-foreground">
+          <p className="mb-3 text-sm text-muted-foreground">
             Anexos por arrastar e soltar (até 10 MB) — integração de storage
             preparada.
           </p>
-          <label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="file"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                if (f.size > 10 * 1024 * 1024) {
-                  notify("Arquivo acima de 10 MB");
-                  return;
-                }
-                notify("Arquivo registrado", f.name);
-                e.target.value = "";
-              }}
-            />
-            <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
-              Enviar arquivo
-            </span>
-          </label>
+          <AttachDropZone
+            onFiles={(files) => {
+              notify(
+                files.length === 1
+                  ? "Arquivo registrado"
+                  : `${files.length} arquivos registrados`,
+                files.map((f) => f.name).join(", ")
+              );
+            }}
+          />
         </ModuleSection>
       ) : null}
 
@@ -606,6 +609,7 @@ export default function ObraDetalhePage() {
         open={openItem}
         onOpenChange={setOpenItem}
         title="Adicionar à árvore"
+        dirty={itemDirty}
         onSubmit={() => {
           if (!form.codigo || !form.descricao) {
             notify("Código e descrição obrigatórios");
@@ -655,6 +659,7 @@ export default function ObraDetalhePage() {
             ordem: nodes.length + 1,
           });
           notify("Linha adicionada");
+          setItemDirty(false);
           setOpenItem(false);
         }}
       >
@@ -663,9 +668,7 @@ export default function ObraDetalhePage() {
             className={fieldControlClass}
             value={form.kind}
             onChange={(e) =>
-              setForm({
-                ...form,
-                kind: e.target.value as typeof form.kind,
+              patchForm({ kind: e.target.value as typeof form.kind,
               })
             }
           >
@@ -678,7 +681,7 @@ export default function ObraDetalhePage() {
           <select
             className={fieldControlClass}
             value={form.parentId}
-            onChange={(e) => setForm({ ...form, parentId: e.target.value })}
+            onChange={(e) => patchForm({ parentId: e.target.value })}
           >
             <option value="">Raiz</option>
             {nodes
@@ -693,13 +696,13 @@ export default function ObraDetalhePage() {
         <Field label="Código *">
           <Input
             value={form.codigo}
-            onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+            onChange={(e) => patchForm({ codigo: e.target.value })}
           />
         </Field>
         <Field label="Descrição *">
           <Input
             value={form.descricao}
-            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            onChange={(e) => patchForm({ descricao: e.target.value })}
           />
         </Field>
         {form.kind === "item" ? (
@@ -709,9 +712,7 @@ export default function ObraDetalhePage() {
                 className={fieldControlClass}
                 value={form.composicaoId}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    composicaoId: e.target.value,
+                  patchForm({ composicaoId: e.target.value,
                     insumoId: "",
                     descricao:
                       state.composicoes.find((c) => c.id === e.target.value)
@@ -732,9 +733,7 @@ export default function ObraDetalhePage() {
                 className={fieldControlClass}
                 value={form.insumoId}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    insumoId: e.target.value,
+                  patchForm({ insumoId: e.target.value,
                     composicaoId: "",
                     descricao:
                       state.insumos.find((i) => i.id === e.target.value)
@@ -755,9 +754,7 @@ export default function ObraDetalhePage() {
                 type="number"
                 value={form.quantidade}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    quantidade: Number(e.target.value) || 0,
+                  patchForm({ quantidade: Number(e.target.value) || 0,
                   })
                 }
               />
@@ -770,6 +767,7 @@ export default function ObraDetalhePage() {
         open={openDespesa}
         onOpenChange={setOpenDespesa}
         title="Apropriar despesa ao item"
+        dirty={despesaDirty}
         onSubmit={() => {
           if (!despesa.nodeId || despesa.valor <= 0) {
             notify("Selecione item e valor");
@@ -781,6 +779,7 @@ export default function ObraDetalhePage() {
             return;
           }
           notify("Realizado atualizado na gestão");
+          setDespesaDirty(false);
           setOpenDespesa(false);
         }}
       >
@@ -789,7 +788,7 @@ export default function ObraDetalhePage() {
             className={fieldControlClass}
             value={despesa.nodeId}
             onChange={(e) =>
-              setDespesa({ ...despesa, nodeId: e.target.value })
+              patchDespesa({ nodeId: e.target.value })
             }
           >
             <option value="">Selecione</option>
@@ -805,9 +804,7 @@ export default function ObraDetalhePage() {
             type="number"
             value={despesa.valor}
             onChange={(e) =>
-              setDespesa({
-                ...despesa,
-                valor: Number(e.target.value) || 0,
+              patchDespesa({ valor: Number(e.target.value) || 0,
               })
             }
           />

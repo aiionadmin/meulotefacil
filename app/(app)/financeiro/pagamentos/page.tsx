@@ -14,6 +14,7 @@ import {
   DetailSheet,
   Field,
   FilterBar,
+  AttachDropZone,
   FormSheet,
   fieldControlClass,
   notify,
@@ -82,6 +83,7 @@ export default function PagamentosPage() {
   const [sit, setSit] = useState<Situacao>("todos");
   const [selected, setSelected] = useState<Pagamento | null>(null);
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState({
     descricao: "",
     favorecido: "",
@@ -97,6 +99,9 @@ export default function PagamentosPage() {
     centroTipo: "obra" as "obra" | "empresa",
     obraId: "",
     centroLabel: "",
+    etapaId: "",
+    itemId: "",
+    anexos: [] as string[],
     usarRateio: false,
     rateioMode: "pct" as "pct" | "valor",
     rateios: [
@@ -115,6 +120,35 @@ export default function PagamentosPage() {
     observacoes: "",
     marcarPago: false,
   });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
+
+  const abrirEtapas = state.config.abrirEtapasItensAutomatico ?? true;
+  const nodesObra = useMemo(
+    () =>
+      form.obraId
+        ? obrasState.nodes.filter((n) => n.obraId === form.obraId)
+        : [],
+    [obrasState.nodes, form.obraId]
+  );
+  const etapasObra = useMemo(
+    () => nodesObra.filter((n) => n.kind === "etapa"),
+    [nodesObra]
+  );
+  const itensObra = useMemo(() => {
+    const itens = nodesObra.filter((n) => n.kind === "item");
+    if (!form.etapaId) return itens;
+    const under = new Set<string>([form.etapaId]);
+    for (const n of nodesObra) {
+      if (n.parentId && under.has(n.parentId)) under.add(n.id);
+    }
+    return itens.filter(
+      (i) => !i.parentId || under.has(i.parentId) || under.has(i.id)
+    );
+  }, [nodesObra, form.etapaId]);
 
   const filtered = useMemo(() => {
     let list = state.pagamentos;
@@ -174,7 +208,13 @@ export default function PagamentosPage() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/financeiro/contas">Contas</Link>
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setFormDirty(false);
+                setOpen(true);
+              }}
+            >
               Novo lançamento
             </Button>
           </>
@@ -482,6 +522,7 @@ export default function PagamentosPage() {
         title="Criar lançamento"
         submitLabel="Confirmar Lançamento"
         wide
+        dirty={formDirty}
         onSubmit={() => {
           const contaId = form.contaId || state.contas[0]?.id;
           const categoriaId =
@@ -537,11 +578,18 @@ export default function PagamentosPage() {
               notify("Informe o centro de custo");
               return;
             }
+            const etapa = etapasObra.find((e) => e.id === form.etapaId);
+            const item = itensObra.find((i) => i.id === form.itemId);
+            const labelParts = [
+              form.centroLabel || obra?.nome || "Obra",
+              etapa?.descricao,
+              item?.descricao,
+            ].filter(Boolean);
             centros = [
               {
                 tipo: "obra",
                 obraId: obra?.id,
-                label: form.centroLabel || obra?.nome || "Obra",
+                label: labelParts.join(" · "),
                 valor: form.valor,
               },
             ];
@@ -582,6 +630,7 @@ export default function PagamentosPage() {
           notify(
             `Lançamento · ${r.pagamentos?.length ?? 0} pagamento(s)`
           );
+          setFormDirty(false);
           setOpen(false);
         }}
       >
@@ -590,26 +639,26 @@ export default function PagamentosPage() {
             type="number"
             value={form.valor}
             onChange={(e) =>
-              setForm({ ...form, valor: Number(e.target.value) || 0 })
+              patchForm({ valor: Number(e.target.value) || 0 })
             }
           />
         </Field>
         <Field label="Descrição *">
           <Input
             value={form.descricao}
-            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            onChange={(e) => patchForm({ descricao: e.target.value })}
           />
         </Field>
         <Field label="Favorecido *">
           <Input
             value={form.favorecido}
-            onChange={(e) => setForm({ ...form, favorecido: e.target.value })}
+            onChange={(e) => patchForm({ favorecido: e.target.value })}
           />
         </Field>
         <Field label="Categoria *">
           <SearchSelect
             value={form.categoriaId}
-            onChange={(categoriaId) => setForm({ ...form, categoriaId })}
+            onChange={(categoriaId) => patchForm({ categoriaId })}
             placeholder="Buscar categoria…"
             options={state.categorias
               .filter((c) => c.ativo)
@@ -623,13 +672,13 @@ export default function PagamentosPage() {
         <Field label="Pagador *">
           <Input
             value={form.pagador}
-            onChange={(e) => setForm({ ...form, pagador: e.target.value })}
+            onChange={(e) => patchForm({ pagador: e.target.value })}
           />
         </Field>
         <Field label="Conta *">
           <SearchSelect
             value={form.contaId}
-            onChange={(contaId) => setForm({ ...form, contaId })}
+            onChange={(contaId) => patchForm({ contaId })}
             placeholder="Buscar conta…"
             options={state.contas
               .filter((c) => c.ativa)
@@ -646,7 +695,7 @@ export default function PagamentosPage() {
               type="date"
               value={form.competencia}
               onChange={(e) =>
-                setForm({ ...form, competencia: e.target.value })
+                patchForm({ competencia: e.target.value })
               }
             />
           </Field>
@@ -655,7 +704,7 @@ export default function PagamentosPage() {
               type="date"
               value={form.vencimento}
               onChange={(e) =>
-                setForm({ ...form, vencimento: e.target.value })
+                patchForm({ vencimento: e.target.value })
               }
             />
           </Field>
@@ -666,9 +715,7 @@ export default function PagamentosPage() {
               className={fieldControlClass}
               value={form.forma}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  forma: e.target.value as FormaPagamento,
+                patchForm({ forma: e.target.value as FormaPagamento,
                 })
               }
             >
@@ -684,9 +731,7 @@ export default function PagamentosPage() {
               className={fieldControlClass}
               value={form.condicao}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  condicao: e.target.value as CondicaoPagamento,
+                patchForm({ condicao: e.target.value as CondicaoPagamento,
                 })
               }
             >
@@ -702,9 +747,7 @@ export default function PagamentosPage() {
               type="number"
               value={form.parcelas}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  parcelas: Math.max(2, Number(e.target.value) || 2),
+                patchForm({ parcelas: Math.max(2, Number(e.target.value) || 2),
                 })
               }
             />
@@ -718,7 +761,7 @@ export default function PagamentosPage() {
               type="checkbox"
               checked={form.usarRateio}
               onChange={(e) =>
-                setForm({ ...form, usarRateio: e.target.checked })
+                patchForm({ usarRateio: e.target.checked })
               }
             />
             Adicionar obras (rateio)
@@ -730,9 +773,7 @@ export default function PagamentosPage() {
                   className={fieldControlClass}
                   value={form.centroTipo}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      centroTipo: e.target.value as "obra" | "empresa",
+                    patchForm({ centroTipo: e.target.value as "obra" | "empresa",
                     })
                   }
                 >
@@ -746,10 +787,17 @@ export default function PagamentosPage() {
                     value={form.obraId}
                     onChange={(obraId) => {
                       const o = obrasVisiveis.find((x) => x.id === obraId);
-                      setForm({
-                        ...form,
+                      const nodes = obrasState.nodes.filter(
+                        (n) => n.obraId === obraId
+                      );
+                      const firstEtapa = nodes.find((n) => n.kind === "etapa");
+                      const firstItem = nodes.find((n) => n.kind === "item");
+                      patchForm({
                         obraId,
                         centroLabel: o?.nome ?? form.centroLabel,
+                        etapaId:
+                          abrirEtapas && firstEtapa ? firstEtapa.id : "",
+                        itemId: abrirEtapas && firstItem ? firstItem.id : "",
                       });
                     }}
                     placeholder="Buscar obra…"
@@ -761,6 +809,42 @@ export default function PagamentosPage() {
                   />
                 </Field>
               ) : null}
+              {form.centroTipo === "obra" &&
+              form.obraId &&
+              (etapasObra.length > 0 || itensObra.length > 0) ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Etapa">
+                    <select
+                      className={fieldControlClass}
+                      value={form.etapaId}
+                      onChange={(e) =>
+                        patchForm({ etapaId: e.target.value, itemId: "" })
+                      }
+                    >
+                      <option value="">Todas</option>
+                      {etapasObra.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.codigo} · {e.descricao}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Item">
+                    <select
+                      className={fieldControlClass}
+                      value={form.itemId}
+                      onChange={(e) => patchForm({ itemId: e.target.value })}
+                    >
+                      <option value="">—</option>
+                      {itensObra.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.codigo} · {i.descricao}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="space-y-2">
@@ -769,9 +853,7 @@ export default function PagamentosPage() {
                   className={fieldControlClass}
                   value={form.rateioMode}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      rateioMode: e.target.value as "pct" | "valor",
+                    patchForm({ rateioMode: e.target.value as "pct" | "valor",
                     })
                   }
                 >
@@ -800,7 +882,7 @@ export default function PagamentosPage() {
                             obraId,
                             label: o?.nome ?? "",
                           };
-                          setForm({ ...form, rateios: next });
+                          patchForm({ rateios: next });
                         }}
                         placeholder="Obra…"
                         options={obrasVisiveis.map((o) => ({
@@ -823,7 +905,7 @@ export default function PagamentosPage() {
                           form.rateioMode === "pct"
                             ? { ...r, pct: n }
                             : { ...r, valor: n };
-                        setForm({ ...form, rateios: next });
+                        patchForm({ rateios: next });
                       }}
                     />
                   </Field>
@@ -833,9 +915,7 @@ export default function PagamentosPage() {
                       size="sm"
                       variant="ghost"
                       onClick={() =>
-                        setForm({
-                          ...form,
-                          rateios: form.rateios.filter((_, i) => i !== idx),
+                        patchForm({ rateios: form.rateios.filter((_, i) => i !== idx),
                         })
                       }
                     >
@@ -851,9 +931,7 @@ export default function PagamentosPage() {
                 size="sm"
                 variant="outline"
                 onClick={() =>
-                  setForm({
-                    ...form,
-                    rateios: [
+                  patchForm({ rateios: [
                       ...form.rateios.filter((x) => !x.empresa),
                       {
                         obraId: "",
@@ -877,7 +955,7 @@ export default function PagamentosPage() {
             type="checkbox"
             checked={form.usarRetencao}
             onChange={(e) =>
-              setForm({ ...form, usarRetencao: e.target.checked })
+              patchForm({ usarRetencao: e.target.checked })
             }
           />
           Retenções
@@ -889,7 +967,7 @@ export default function PagamentosPage() {
                 className={fieldControlClass}
                 value={form.retencaoTipo}
                 onChange={(e) =>
-                  setForm({ ...form, retencaoTipo: e.target.value })
+                  patchForm({ retencaoTipo: e.target.value })
                 }
               >
                 <option value="">Selecione</option>
@@ -905,9 +983,7 @@ export default function PagamentosPage() {
                 type="number"
                 value={form.retencaoValor}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    retencaoValor: Number(e.target.value) || 0,
+                  patchForm({ retencaoValor: Number(e.target.value) || 0,
                   })
                 }
               />
@@ -915,11 +991,35 @@ export default function PagamentosPage() {
           </div>
         ) : null}
 
+        <Field label="Anexos">
+          <AttachDropZone
+            onFiles={(files) => {
+              patchForm({
+                anexos: [
+                  ...form.anexos,
+                  ...files.map((f) => f.name),
+                ],
+              });
+              notify(
+                files.length === 1
+                  ? "Arquivo anexado"
+                  : `${files.length} arquivos anexados`
+              );
+            }}
+          />
+          {form.anexos.length ? (
+            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {form.anexos.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          ) : null}
+        </Field>
         <Field label="Observações">
           <Input
             value={form.observacoes}
             onChange={(e) =>
-              setForm({ ...form, observacoes: e.target.value })
+              patchForm({ observacoes: e.target.value })
             }
           />
         </Field>
@@ -928,7 +1028,7 @@ export default function PagamentosPage() {
             type="checkbox"
             checked={form.marcarPago}
             onChange={(e) =>
-              setForm({ ...form, marcarPago: e.target.checked })
+              patchForm({ marcarPago: e.target.checked })
             }
           />
           Marcar como pago

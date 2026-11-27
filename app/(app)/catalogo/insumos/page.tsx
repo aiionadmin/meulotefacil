@@ -22,6 +22,7 @@ export default function InsumosPage() {
   const [q, setQ] = useState("");
   const [grupo, setGrupo] = useState("todos");
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState({
     codigo: "",
     descricao: "",
@@ -30,6 +31,11 @@ export default function InsumosPage() {
     base: "SINAPI",
     custoUnitario: 0,
   });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
 
   const filtered = useMemo(() => {
     let list = state.insumos.filter((i) => i.ativo);
@@ -52,7 +58,7 @@ export default function InsumosPage() {
         title="Insumos"
         description="Catálogo — material, mão de obra, equipamento e outros."
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={() => { setFormDirty(false); setOpen(true); }}>
             Novo insumo
           </Button>
         }
@@ -108,6 +114,7 @@ export default function InsumosPage() {
         open={open}
         onOpenChange={setOpen}
         title="Novo insumo"
+        dirty={formDirty}
         onSubmit={() => {
           if (!form.codigo || !form.descricao || !form.unidade) {
             notify("Código, descrição e unidade obrigatórios");
@@ -119,19 +126,20 @@ export default function InsumosPage() {
             ativo: true,
           });
           notify("Insumo criado");
+          setFormDirty(false);
           setOpen(false);
         }}
       >
         <Field label="Código *">
           <Input
             value={form.codigo}
-            onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+            onChange={(e) => patchForm({ codigo: e.target.value })}
           />
         </Field>
         <Field label="Descrição *">
           <Input
             value={form.descricao}
-            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            onChange={(e) => patchForm({ descricao: e.target.value })}
           />
         </Field>
         <Field label="Grupo">
@@ -139,7 +147,7 @@ export default function InsumosPage() {
             className={fieldControlClass}
             value={form.grupo}
             onChange={(e) =>
-              setForm({ ...form, grupo: e.target.value as InsumoGrupo })
+              patchForm({ grupo: e.target.value as InsumoGrupo })
             }
           >
             <option value="material">Material</option>
@@ -151,13 +159,13 @@ export default function InsumosPage() {
         <Field label="Unidade *">
           <Input
             value={form.unidade}
-            onChange={(e) => setForm({ ...form, unidade: e.target.value })}
+            onChange={(e) => patchForm({ unidade: e.target.value })}
           />
         </Field>
         <Field label="Base *">
           <Input
             value={form.base}
-            onChange={(e) => setForm({ ...form, base: e.target.value })}
+            onChange={(e) => patchForm({ base: e.target.value })}
           />
         </Field>
         <Field label="Custo unitário">
@@ -165,9 +173,7 @@ export default function InsumosPage() {
             type="number"
             value={form.custoUnitario}
             onChange={(e) =>
-              setForm({
-                ...form,
-                custoUnitario: Number(e.target.value) || 0,
+              patchForm({ custoUnitario: Number(e.target.value) || 0,
               })
             }
           />

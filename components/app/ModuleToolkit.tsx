@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Search } from "lucide-react";
+import { Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+const MAX_ATTACH_BYTES = 10 * 1024 * 1024;
 
 export function notify(message: string, description?: string) {
   toast.success(message, { description });
@@ -138,6 +140,7 @@ export function FormDialog({
   onSubmit,
   submitLabel = "Salvar",
   busy,
+  dirty,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -146,9 +149,26 @@ export function FormDialog({
   onSubmit: () => void;
   submitLabel?: string;
   busy?: boolean;
+  dirty?: boolean;
 }) {
+  function requestClose() {
+    if (
+      dirty &&
+      !window.confirm("Há alterações não salvas. Deseja sair sem salvar?")
+    ) {
+      return;
+    }
+    onOpenChange(false);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) requestClose();
+        else onOpenChange(true);
+      }}
+    >
       <DialogContent className="max-h-[90vh] overflow-y-auto bg-paper text-ink">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -162,11 +182,7 @@ export function FormDialog({
         >
           {children}
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={requestClose}>
               Cancelar
             </Button>
             <Button type="submit" disabled={busy}>
@@ -176,6 +192,71 @@ export function FormDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Anexo por arrastar e soltar (até 10 MB). */
+export function AttachDropZone({
+  onFiles,
+  label = "Arraste arquivos ou clique para anexar",
+  hint = "Até 10 MB por arquivo",
+  accept,
+  multiple = true,
+}: {
+  onFiles: (files: File[]) => void;
+  label?: string;
+  hint?: string;
+  accept?: string;
+  multiple?: boolean;
+}) {
+  const [dragging, setDragging] = useState(false);
+
+  function take(list: FileList | null) {
+    if (!list?.length) return;
+    const ok: File[] = [];
+    for (const f of Array.from(list)) {
+      if (f.size > MAX_ATTACH_BYTES) {
+        toast.error("Arquivo muito grande", {
+          description: `${f.name} excede 10 MB`,
+        });
+        continue;
+      }
+      ok.push(f);
+    }
+    if (ok.length) onFiles(ok);
+  }
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        take(e.dataTransfer.files);
+      }}
+      className={cn(
+        "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed px-4 py-8 text-center transition-colors",
+        dragging
+          ? "border-brand-orange bg-brand-orange/5"
+          : "border-linha bg-paper"
+      )}
+      onClick={() => {
+        const input = document.createElement("input");
+        input.type = "file";
+        if (accept) input.accept = accept;
+        input.multiple = multiple;
+        input.onchange = () => take(input.files);
+        input.click();
+      }}
+    >
+      <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
+      <p className="text-sm font-medium text-ink">{label}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+    </div>
   );
 }
 
