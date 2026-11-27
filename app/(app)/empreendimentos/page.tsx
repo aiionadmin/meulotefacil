@@ -20,6 +20,7 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL } from "@/lib/masks/br";
 import { downloadTextTemplate } from "@/lib/export/list-export";
@@ -88,6 +89,15 @@ const EMPTY_EMP_FORM = {
   observacoes: "",
   bairro: "",
   nucleoId: "",
+  cartorioId: "",
+  cartorioNome: "",
+  cartorioCidade: "",
+  cartorioUf: "SP",
+  cartorioContato: "",
+  certidaoNumero: "",
+  certidaoData: "",
+  certidaoTipo: "",
+  certidaoObs: "",
 };
 
 export default function EmpreendimentosPage() {
@@ -187,6 +197,15 @@ export default function EmpreendimentosPage() {
       observacoes: d.observacoes ?? "",
       bairro: d.bairro ?? "",
       nucleoId: d.nucleoId ?? "",
+      cartorioId: d.cartorioId ?? "",
+      cartorioNome: d.cartorioNome ?? "",
+      cartorioCidade: d.cartorioCidade ?? "",
+      cartorioUf: d.cartorioUf ?? "SP",
+      cartorioContato: d.cartorioContato ?? "",
+      certidaoNumero: d.certidaoNumero ?? "",
+      certidaoData: d.certidaoData ?? "",
+      certidaoTipo: d.certidaoTipo ?? "",
+      certidaoObs: d.certidaoObs ?? "",
     });
     setOpenEmp(true);
   }
@@ -290,6 +309,7 @@ export default function EmpreendimentosPage() {
             { key: "codigo", label: "Código" },
             { key: "nome", label: "Nome" },
             { key: "bairro", label: "Bairro/núcleo" },
+            { key: "cartorio", label: "Cartório" },
             { key: "tipo", label: "Tipo" },
             { key: "modalidade", label: "Modalidade" },
             { key: "cidade", label: "Cidade" },
@@ -301,6 +321,9 @@ export default function EmpreendimentosPage() {
             codigo: d.codigo,
             nome: d.nome,
             bairro: d.bairro || "—",
+            cartorio: d.cartorioNome
+              ? `${d.cartorioNome}${d.certidaoNumero ? ` · ${d.certidaoNumero}` : ""}`
+              : "—",
             tipo: d.tipo,
             modalidade: (d.modalidade ?? "loteamento").replace(/_/g, " "),
             cidade: `${d.cidade}/${d.uf}`,
@@ -645,6 +668,15 @@ export default function EmpreendimentosPage() {
             ...empForm,
             bairro: empForm.bairro.trim() || undefined,
             nucleoId: empForm.nucleoId.trim() || undefined,
+            cartorioId: empForm.cartorioId.trim() || undefined,
+            cartorioNome: empForm.cartorioNome.trim() || undefined,
+            cartorioCidade: empForm.cartorioCidade.trim() || undefined,
+            cartorioUf: empForm.cartorioUf.trim() || undefined,
+            cartorioContato: empForm.cartorioContato.trim() || undefined,
+            certidaoNumero: empForm.certidaoNumero.trim() || undefined,
+            certidaoData: empForm.certidaoData.trim() || undefined,
+            certidaoTipo: empForm.certidaoTipo.trim() || undefined,
+            certidaoObs: empForm.certidaoObs.trim() || undefined,
           };
           if (editingEmpId) {
             updateDevelopment(editingEmpId, patch);
@@ -782,6 +814,99 @@ export default function EmpreendimentosPage() {
             }
           />
         </Field>
+
+        <p className="col-span-full mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Cartório e certidão
+        </p>
+        <Field label="Cartório cadastrado">
+          <SearchSelect
+            value={empForm.cartorioId}
+            onChange={(id) => {
+              const c = state.cartorios.find((x) => x.id === id);
+              setEmpForm({
+                ...empForm,
+                cartorioId: id,
+                cartorioNome: c?.nome ?? empForm.cartorioNome,
+                cartorioCidade: c?.cidade ?? empForm.cartorioCidade,
+                cartorioUf: c?.uf ?? empForm.cartorioUf,
+                cartorioContato: c?.contato ?? empForm.cartorioContato,
+              });
+            }}
+            placeholder="Buscar cartório (H25)…"
+            options={state.cartorios.map((c) => ({
+              value: c.id,
+              label: `${c.nome} · ${c.cidade}/${c.uf}`,
+            }))}
+          />
+        </Field>
+        <Field label="Cartório (nome)">
+          <Input
+            value={empForm.cartorioNome}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, cartorioNome: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Cartório (cidade)">
+          <Input
+            value={empForm.cartorioCidade}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, cartorioCidade: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Cartório (UF)">
+          <Input
+            value={empForm.cartorioUf}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, cartorioUf: e.target.value })
+            }
+            maxLength={2}
+          />
+        </Field>
+        <Field label="Cartório (contato)">
+          <Input
+            value={empForm.cartorioContato}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, cartorioContato: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Certidão (número)">
+          <Input
+            value={empForm.certidaoNumero}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, certidaoNumero: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Certidão (tipo)">
+          <Input
+            value={empForm.certidaoTipo}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, certidaoTipo: e.target.value })
+            }
+            placeholder="Ex.: ônus, inteiro teor, CRF"
+          />
+        </Field>
+        <Field label="Certidão (data)">
+          <Input
+            type="date"
+            value={empForm.certidaoData}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, certidaoData: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Certidão (observações)">
+          <Input
+            value={empForm.certidaoObs}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, certidaoObs: e.target.value })
+            }
+          />
+        </Field>
+
         <Field label="Administradora (razão)">
           <Input
             value={empForm.adminRazao}
