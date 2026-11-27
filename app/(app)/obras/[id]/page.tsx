@@ -430,7 +430,31 @@ export default function ObraDetalhePage() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => printList(`Físico-financeiro · ${obra.nome}`)}
+                onClick={() => {
+                  void printList(
+                    `Físico-financeiro · ${obra.nome}`,
+                    [
+                      "Período",
+                      "Atividades",
+                      "Físico plan. %",
+                      "Físico real. %",
+                      "Fin. plan.",
+                      "Fin. real.",
+                      "Saldo fin.",
+                    ],
+                    fisicoFin.map((r) => [
+                      r.periodo,
+                      r.atividades,
+                      r.fisicoPlanPct,
+                      r.fisicoRealPct,
+                      r.finPlan,
+                      r.finReal,
+                      r.saldoFin,
+                    ]),
+                    { filename: `fisico-financeiro-${obra.codigo}` }
+                  );
+                  notify("Impressão gerada");
+                }}
               >
                 Imprimir
               </Button>
@@ -594,7 +618,14 @@ export default function ObraDetalhePage() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  printList(`${r} · ${obra.nome}`);
+                  void printList(
+                    `${r} · ${obra.nome}`,
+                    ["Obra", "Código", "Relatório"],
+                    [[obra.nome, obra.codigo, r]],
+                    {
+                      filename: `${r.toLowerCase().replace(/\s+/g, "-")}-${obra.codigo}`,
+                    }
+                  );
                   notify(r);
                 }}
               >

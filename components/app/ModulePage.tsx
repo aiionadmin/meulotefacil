@@ -12,9 +12,9 @@ import {
   downloadListPdf,
   exportFileSlug,
   exportTitleFromName,
-  printList,
   reactNodeText,
 } from "@/lib/export/list-export";
+import { useEmpresa } from "@/lib/empresa/context";
 import { usePageTitle } from "@/lib/ui/use-page-title";
 import { paginate } from "@/lib/ui/pagination";
 
@@ -97,6 +97,7 @@ export function DataTable({
 }) {
   const [page, setPage] = useState(1);
   const pathname = usePathname();
+  const { selectedCnpj, selected: empresaSel } = useEmpresa();
   const routeSlug = useMemo(() => {
     const parts = (pathname || "")
       .split("/")
@@ -105,6 +106,27 @@ export function DataTable({
   }, [pathname]);
   const fileName = exportFileSlug(exportName?.trim() || routeSlug);
   const pdfTitle = exportTitleFromName(fileName);
+  const printOpts = useMemo(
+    () => ({
+      filename: fileName,
+      cnpj: selectedCnpj,
+      empresa: empresaSel
+        ? {
+            razaoSocial: empresaSel.razaoSocial,
+            nomeFantasia: empresaSel.nome,
+            cnpj: empresaSel.cnpj,
+            telefone: empresaSel.telefone,
+            email: empresaSel.email,
+            endereco: empresaSel.endereco,
+            bairro: empresaSel.bairro,
+            cidade: empresaSel.cidade,
+            uf: empresaSel.uf,
+            cep: empresaSel.cep,
+          }
+        : undefined,
+    }),
+    [fileName, selectedCnpj, empresaSel]
+  );
 
   const pageData = useMemo(() => {
     if (!enablePaginate) {
@@ -161,7 +183,7 @@ export function DataTable({
                 pdfTitle,
                 exportMatrix.headers,
                 exportMatrix.data,
-                { filename: fileName }
+                printOpts
               )
             }
           >
@@ -171,7 +193,14 @@ export function DataTable({
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => printList(pdfTitle)}
+            onClick={() =>
+              void downloadListPdf(
+                pdfTitle,
+                exportMatrix.headers,
+                exportMatrix.data,
+                printOpts
+              )
+            }
           >
             Imprimir
           </Button>

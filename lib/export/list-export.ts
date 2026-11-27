@@ -74,11 +74,21 @@ export function downloadExcel(
   downloadCsv(filename, headers, rows);
 }
 
-export function printList(title: string) {
-  const prev = document.title;
-  document.title = exportTitleFromName(title);
-  window.print();
-  document.title = prev;
+/**
+ * Impressão = mesmo documento formal do PDF (logo + empresa + tabela).
+ * Nunca usa `window.print()` na tela do sistema.
+ */
+export async function printList(
+  title: string,
+  headers: string[] = ["Informação"],
+  rows: (string | number | null | undefined)[][] = [["Sem dados para impressão"]],
+  opts?: {
+    cnpj?: string;
+    empresa?: Partial<PrintEmpresa>;
+    filename?: string;
+  }
+) {
+  await downloadListPdf(title, headers, rows, opts);
 }
 
 function esc(s: string) {

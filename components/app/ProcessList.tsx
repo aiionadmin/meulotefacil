@@ -11,8 +11,8 @@ import {
   downloadExcel,
   downloadListPdf,
   exportTitleFromName,
-  printList,
 } from "@/lib/export/list-export";
+import { useEmpresa } from "@/lib/empresa/context";
 import { paginate } from "@/lib/ui/pagination";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +72,28 @@ export function ProcessList<T extends { id: string }>({
 }: ProcessListProps<T>) {
   const fileName = exportName?.trim() || storageKey || "lista";
   const pdfTitle = exportTitleFromName(fileName);
+  const { selectedCnpj, selected: empresaSel } = useEmpresa();
+  const printOpts = useMemo(
+    () => ({
+      filename: fileName,
+      cnpj: selectedCnpj,
+      empresa: empresaSel
+        ? {
+            razaoSocial: empresaSel.razaoSocial,
+            nomeFantasia: empresaSel.nome,
+            cnpj: empresaSel.cnpj,
+            telefone: empresaSel.telefone,
+            email: empresaSel.email,
+            endereco: empresaSel.endereco,
+            bairro: empresaSel.bairro,
+            cidade: empresaSel.cidade,
+            uf: empresaSel.uf,
+            cep: empresaSel.cep,
+          }
+        : undefined,
+    }),
+    [fileName, selectedCnpj, empresaSel]
+  );
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -338,7 +360,7 @@ export function ProcessList<T extends { id: string }>({
                 pdfTitle,
                 visibleCols.map((c) => c.label),
                 exportRows(),
-                { filename: fileName }
+                printOpts
               );
               notify("PDF gerado", pdfTitle);
             }}
@@ -348,7 +370,15 @@ export function ProcessList<T extends { id: string }>({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => printList(pdfTitle)}
+            onClick={() => {
+              void downloadListPdf(
+                pdfTitle,
+                visibleCols.map((c) => c.label),
+                exportRows(),
+                printOpts
+              );
+              notify("Impressão gerada", pdfTitle);
+            }}
           >
             Imprimir
           </Button>

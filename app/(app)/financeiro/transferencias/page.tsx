@@ -101,7 +101,22 @@ export default function TransferenciasPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => printList("Transferências")}
+              onClick={() => {
+                void printList(
+                  "Transferências",
+                  ["Data", "Descrição", "Origem", "Destino", "Valor", "Pago"],
+                  filtered.map((t) => [
+                    t.data,
+                    t.descricao,
+                    nome(t.deContaId),
+                    nome(t.paraContaId),
+                    t.valor,
+                    t.pago ? "sim" : "não",
+                  ]),
+                  { filename: "transferencias" }
+                );
+                notify("Impressão gerada");
+              }}
             >
               Imprimir
             </Button>

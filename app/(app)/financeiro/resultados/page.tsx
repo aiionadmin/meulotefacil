@@ -69,7 +69,19 @@ export default function ResultadosPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => printList("Resultados")}
+              onClick={() => {
+                void printList(
+                  "Resultados",
+                  ["Grupo", ...mensal.meses, "Total"],
+                  mensal.linhas.map((l) => [
+                    l.grupo,
+                    ...mensal.meses.map((m) => l.porMes[m] ?? 0),
+                    l.total,
+                  ]),
+                  { filename: "resultados" }
+                );
+                notify("Impressão gerada");
+              }}
             >
               Imprimir
             </Button>
