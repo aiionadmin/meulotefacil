@@ -10,21 +10,34 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
+import { Input } from "@/components/ui/input";
 import {
   DetailRow,
   DetailSheet,
+  Field,
   FilterBar,
+  fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
+import { parseCotacaoPdf } from "@/lib/compras/cotacao-pdf";
 import type { Cotacao } from "@/lib/domain/compras-types";
 
 export default function CotacoesPage() {
-  const { state, setVencedor, gerarOrdensDaCotacao } = useCompras();
+  const {
+    state,
+    setVencedor,
+    setPrecoCotacao,
+    addArquivoCotacao,
+    gerarOrdensDaCotacao,
+  } = useCompras();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Cotacao | null>(null);
-  const [aba, setAba] = useState<"itens" | "fornecedores" | "mapa">("mapa");
+  const [aba, setAba] = useState<
+    "itens" | "fornecedores" | "mapa" | "arquivos"
+  >("mapa");
+  const [pdfFornecedor, setPdfFornecedor] = useState("");
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -154,6 +167,7 @@ export default function CotacoesPage() {
                   ["itens", "Itens"],
                   ["fornecedores", "Fornecedores"],
                   ["mapa", "Mapa"],
+                  ["arquivos", "Arquivos"],
                 ] as const
               ).map(([id, label]) => (
                 <button
@@ -236,28 +250,45 @@ export default function CotacoesPage() {
                           const isBest = p.precoUnitario === best;
                           return (
                             <td key={f.id} className="py-2 px-1">
-                              <button
-                                type="button"
-                                className={`block w-full rounded px-1.5 py-1 text-left ${
+                              <div
+                                className={`rounded px-1.5 py-1 ${
                                   p.vencedor
                                     ? "bg-brand-green/15 ring-1 ring-brand-green"
                                     : isBest
                                       ? "bg-amber-50"
-                                      : "hover:bg-muted"
+                                      : ""
                                 }`}
-                                onClick={() => {
-                                  setVencedor(live.id, it.id, f.id);
-                                  notify(
-                                    `Vencedor: ${f.fornecedor} · ${it.descricao}`
-                                  );
-                                }}
                               >
-                                {formatBRL(p.precoUnitario)}
-                                {p.vencedor ? " ★" : isBest ? " · melhor" : ""}
-                                <div className="text-[10px] text-muted-foreground">
-                                  qtd {p.quantidadeCotada} · {p.prazoDias}d
-                                </div>
-                              </button>
+                                <Input
+                                  type="number"
+                                  className="h-8 text-xs"
+                                  value={p.precoUnitario}
+                                  onChange={(e) => {
+                                    setPrecoCotacao(
+                                      live.id,
+                                      it.id,
+                                      f.id,
+                                      Number(e.target.value) || 0
+                                    );
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  className="mt-1 text-[10px] text-brand-orange hover:underline"
+                                  onClick={() => {
+                                    setVencedor(live.id, it.id, f.id);
+                                    notify(
+                                      `Vencedor: ${f.fornecedor} · ${it.descricao}`
+                                    );
+                                  }}
+                                >
+                                  {p.vencedor
+                                    ? "★ Vencedor"
+                                    : isBest
+                                      ? "Melhor · escolher"
+                                      : "Escolher"}
+                                </button>
+                              </div>
                             </td>
                           );
                         })}
@@ -282,6 +313,73 @@ export default function CotacoesPage() {
                 >
                   Gerar ordens de compra
                 </Button>
+              </div>
+            ) : null}
+
+            {aba === "arquivos" ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Upload do orçamento do fornecedor em PDF. Preços são
+                  preenchidos manualmente no mapa (parser/IA preparado).
+                </p>
+                <Field label="Fornecedor do PDF">
+                  <select
+                    className={fieldControlClass}
+                    value={pdfFornecedor}
+                    onChange={(e) => setPdfFornecedor(e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {live.fornecedores.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.fornecedor}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const parsed = await parseCotacaoPdf(f, {
+                        fornecedor: live.fornecedores.find(
+                          (x) => x.id === pdfFornecedor
+                        )?.fornecedor,
+                      });
+                      addArquivoCotacao(
+                        live.id,
+                        f.name,
+                        pdfFornecedor || undefined
+                      );
+                      notify("PDF anexado", parsed.aviso);
+                      e.target.value = "";
+                    }}
+                  />
+                  <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
+                    Enviar PDF do fornecedor
+                  </span>
+                </label>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {(live.arquivos ?? []).length === 0 ? (
+                    <li>Nenhum arquivo.</li>
+                  ) : (
+                    (live.arquivos ?? []).map((a) => (
+                      <li key={a.id}>
+                        {a.nome} · {formatDateBR(a.quando)}
+                        {a.supplierId
+                          ? ` · ${
+                              live.fornecedores.find(
+                                (f) => f.id === a.supplierId
+                              )?.fornecedor ?? ""
+                            }`
+                          : ""}
+                      </li>
+                    ))
+                  )}
+                </ul>
               </div>
             ) : null}
           </div>

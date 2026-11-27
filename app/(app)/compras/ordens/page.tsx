@@ -284,6 +284,7 @@ export default function OrdensCompraPage() {
                           live.impostos -
                           live.desconto,
                         perfilNome,
+                        centroTipo: live.centro.tipo,
                       });
                       if (!gate.ok) {
                         notify("Alçada insuficiente", gate.reason);

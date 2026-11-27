@@ -117,6 +117,14 @@ export type CotacaoPreco = {
   vencedor: boolean;
 };
 
+export type CotacaoArquivo = {
+  id: string;
+  nome: string;
+  quando: string;
+  supplierId?: string;
+  origem: "upload" | "email";
+};
+
 export type Cotacao = {
   id: string;
   numero: string;
@@ -132,6 +140,7 @@ export type Cotacao = {
   fornecedores: CotacaoFornecedor[];
   precos: CotacaoPreco[];
   ordemIds: string[];
+  arquivos?: CotacaoArquivo[];
 };
 
 export type OcItem = {
