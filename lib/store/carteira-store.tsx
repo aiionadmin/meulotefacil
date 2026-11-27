@@ -172,6 +172,13 @@ type CarteiraApi = {
     lotId: string,
     pontos: { x: number; y: number }[]
   ) => boolean;
+  /** Trava lote durante venda em andamento (mostra vendedor). */
+  lockLotForSale: (
+    lotId: string,
+    vendedor: { userId: string; nome: string }
+  ) => { ok: boolean; reason?: string };
+  unlockLotForSale: (lotId: string) => boolean;
+  unlockLotsForSale: (lotIds: string[]) => number;
 };
 
 const Ctx = createContext<CarteiraApi | null>(null);
@@ -441,6 +448,11 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
               motivo,
               quando: todayIso(),
             });
+            const clearTrava =
+              status === "vendido" ||
+              status === "quitado" ||
+              status === "escritura" ||
+              status === "disponivel";
             return {
               ...l,
               status,
@@ -458,6 +470,14 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
                 status === "caucionado" ||
                 status === "invadido" ||
                 status === "juridico",
+              ...(clearTrava
+                ? {
+                    vendaEmAndamento: undefined,
+                    vendedorUserId: undefined,
+                    vendedorNome: undefined,
+                    vendaTravadaEm: undefined,
+                  }
+                : {}),
             };
           });
           return { ...s, lots, lotHistory: history.slice(0, 80) };
@@ -826,9 +846,13 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
       }) => {
         const emp = state.developments.find((d) => d.id === developmentId);
         const lot = state.lots.find((l) => l.id === lotId);
-        if (!emp || !lot || lot.bloqueiaVenda || lot.status !== "disponivel") {
-          return null;
-        }
+        if (!emp || !lot) return null;
+        const livre =
+          lot.status === "disponivel" && !lot.bloqueiaVenda;
+        const minhaTrava =
+          lot.vendaEmAndamento &&
+          (lot.status === "reservado" || lot.status === "disponivel");
+        if (!livre && !minhaTrava) return null;
         const numero = String(
           1000 + state.contracts.length + 1
         );
@@ -1199,6 +1223,91 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return ok;
+      },
+      lockLotForSale: (lotId, vendedor) => {
+        const lot = state.lots.find((l) => l.id === lotId);
+        if (!lot) return { ok: false, reason: "Lote não encontrado" };
+        if (
+          lot.vendaEmAndamento &&
+          lot.vendedorUserId &&
+          lot.vendedorUserId !== vendedor.userId
+        ) {
+          return {
+            ok: false,
+            reason: `Em venda por ${lot.vendedorNome ?? "outro usuário"}`,
+          };
+        }
+        if (
+          lot.status !== "disponivel" &&
+          !(lot.status === "reservado" && lot.vendaEmAndamento)
+        ) {
+          return { ok: false, reason: `Lote ${lot.status}` };
+        }
+        setState((s) => ({
+          ...s,
+          lots: s.lots.map((l) =>
+            l.id === lotId
+              ? {
+                  ...l,
+                  status: "reservado" as const,
+                  bloqueiaVenda: true,
+                  vendaEmAndamento: true,
+                  vendedorUserId: vendedor.userId,
+                  vendedorNome: vendedor.nome,
+                  vendaTravadaEm: new Date().toISOString(),
+                }
+              : l
+          ),
+        }));
+        return { ok: true };
+      },
+      unlockLotForSale: (lotId) => {
+        let ok = false;
+        setState((s) => {
+          const lot = s.lots.find((l) => l.id === lotId);
+          if (!lot?.vendaEmAndamento) return s;
+          ok = true;
+          return {
+            ...s,
+            lots: s.lots.map((l) =>
+              l.id === lotId
+                ? {
+                    ...l,
+                    status: "disponivel" as const,
+                    bloqueiaVenda: false,
+                    vendaEmAndamento: undefined,
+                    vendedorUserId: undefined,
+                    vendedorNome: undefined,
+                    vendaTravadaEm: undefined,
+                  }
+                : l
+            ),
+          };
+        });
+        return ok;
+      },
+      unlockLotsForSale: (lotIds) => {
+        let n = 0;
+        setState((s) => {
+          const set = new Set(lotIds);
+          return {
+            ...s,
+            lots: s.lots.map((l) => {
+              if (!set.has(l.id) || !l.vendaEmAndamento) return l;
+              n += 1;
+              return {
+                ...l,
+                status: "disponivel" as const,
+                bloqueiaVenda: false,
+                vendaEmAndamento: undefined,
+                vendedorUserId: undefined,
+                vendedorNome: undefined,
+                vendaTravadaEm: undefined,
+              };
+            }),
+          };
+        });
+        return n;
       },
     };
   }, [state, ready, saldoDevedor]);
