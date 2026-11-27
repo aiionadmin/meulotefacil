@@ -4,12 +4,13 @@ import { useEffect, useRef } from "react";
 import { isDevSeedAllowed } from "@/lib/runtime/demo-mode";
 import { DEMO_ORG_ID, type StoreKey } from "./store-keys";
 import { loadSnapshot, saveSnapshot } from "./snapshots";
+import { mergeTableOverlay } from "./load-from-tables";
 
 /**
- * Hidrata o store a partir do Supabase (ou memória) e persiste alterações.
- * Sem localStorage (A01). Seed unificado só quando permitido (A06).
+ * Hidrata o store: tabelas D/E/G (se houver linhas) por cima do snapshot;
+ * snapshot/memória como fallback. Sem localStorage (A01).
  */
-export function useStorePersist<T>(opts: {
+export function useStorePersist<T extends object>(opts: {
   storeKey: StoreKey;
   ready: boolean;
   setReady: (v: boolean) => void;
@@ -18,6 +19,8 @@ export function useStorePersist<T>(opts: {
   seed: () => T;
   orgId?: string;
   merge?: (seed: T, saved: T) => T;
+  /** Leitura preferencial das tabelas relacionais (overlay parcial). */
+  loadTables?: (orgId: string) => Promise<Partial<T> | null>;
 }) {
   const {
     storeKey,
@@ -28,6 +31,7 @@ export function useStorePersist<T>(opts: {
     seed,
     orgId = DEMO_ORG_ID,
     merge = (_s, saved) => saved,
+    loadTables,
   } = opts;
 
   const bootstrapped = useRef(false);
@@ -36,18 +40,35 @@ export function useStorePersist<T>(opts: {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const seedState = seed();
       const saved = await loadSnapshot<T>(storeKey, orgId);
-      if (cancelled) return;
+      let next: T;
       if (saved) {
-        setState(merge(seed(), saved));
+        next = merge(seedState, saved);
       } else if (isDevSeedAllowed()) {
-        const next = seed();
-        setState(next);
+        next = seedState;
         await saveSnapshot(storeKey, next, orgId);
       } else {
-        // Produção sem snapshot: estado vazio do seed estrutural (sem dados demo)
-        setState(seed());
+        next = seedState;
       }
+
+      if (loadTables) {
+        try {
+          const fromTables = await loadTables(orgId);
+          if (fromTables) {
+            next = mergeTableOverlay(next, fromTables);
+          }
+        } catch (e) {
+          console.warn(
+            "[persist] loadTables falhou",
+            storeKey,
+            e instanceof Error ? e.message : e
+          );
+        }
+      }
+
+      if (cancelled) return;
+      setState(next);
       skipNextSave.current = true;
       bootstrapped.current = true;
       setReady(true);

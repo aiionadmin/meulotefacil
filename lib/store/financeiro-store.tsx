@@ -22,6 +22,7 @@ import {
   dualWritePlano,
   dualWriteRecebimento,
 } from "@/lib/persist/dual-write";
+import { loadFinanceiroFromTables } from "@/lib/persist/load-from-tables";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
@@ -196,6 +197,7 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
     state,
     setState,
     seed: seedFinanceiro,
+    loadTables: loadFinanceiroFromTables,
   });
 
   const api = useMemo<FinanceiroApi>(
