@@ -15,10 +15,12 @@ import {
 import {
   dualWriteCategoria,
   dualWriteConta,
+  dualWriteFaturamento,
   dualWriteLancamento,
   dualWriteNatureza,
   dualWritePagamento,
   dualWritePlano,
+  dualWriteRecebimento,
 } from "@/lib/persist/dual-write";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
@@ -557,6 +559,8 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
             contas,
           };
         });
+        void dualWriteFaturamento(fat);
+        void dualWriteRecebimento(rec);
         return { ok: true, faturamento: fat };
       },
       baixarRecebimento: (id, valor) => {
@@ -565,49 +569,49 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
         if (!rec || rec.status === "recebido") return false;
         const resto = Math.round((rec.valor - rec.valorRecebido) * 100) / 100;
         const baixa = Math.min(valor, resto);
+        const valorRecebido =
+          Math.round((rec.valorRecebido + baixa) * 100) / 100;
+        const next: Recebimento = {
+          ...rec,
+          valorRecebido,
+          status:
+            valorRecebido >= rec.valor
+              ? "recebido"
+              : valorRecebido > 0
+                ? "parcial"
+                : rec.status,
+          recebidoEm:
+            valorRecebido >= rec.valor ? todayIso() : rec.recebidoEm,
+        };
         setState((s) => ({
           ...s,
-          recebimentos: s.recebimentos.map((r) => {
-            if (r.id !== id) return r;
-            const valorRecebido =
-              Math.round((r.valorRecebido + baixa) * 100) / 100;
-            return {
-              ...r,
-              valorRecebido,
-              status:
-                valorRecebido >= r.valor
-                  ? ("recebido" as const)
-                  : valorRecebido > 0
-                    ? ("parcial" as const)
-                    : r.status,
-              recebidoEm:
-                valorRecebido >= r.valor ? todayIso() : r.recebidoEm,
-            };
-          }),
+          recebimentos: s.recebimentos.map((r) =>
+            r.id === id ? next : r
+          ),
           contas: s.contas.map((c) =>
             c.id === rec.contaId
               ? { ...c, saldo: Math.round((c.saldo + baixa) * 100) / 100 }
               : c
           ),
         }));
+        void dualWriteRecebimento(next);
         return true;
       },
       estornarRecebimento: (id) => {
         const rec = state.recebimentos.find((r) => r.id === id);
         if (!rec || rec.valorRecebido <= 0) return false;
         const estorno = rec.valorRecebido;
+        const next: Recebimento = {
+          ...rec,
+          valorRecebido: 0,
+          status: "em_aberto",
+          recebidoEm: undefined,
+          conciliado: false,
+        };
         setState((s) => ({
           ...s,
           recebimentos: s.recebimentos.map((r) =>
-            r.id === id
-              ? {
-                  ...r,
-                  valorRecebido: 0,
-                  status: "em_aberto" as const,
-                  recebidoEm: undefined,
-                  conciliado: false,
-                }
-              : r
+            r.id === id ? next : r
           ),
           contas: s.contas.map((c) =>
             c.id === rec.contaId
@@ -615,6 +619,7 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
               : c
           ),
         }));
+        void dualWriteRecebimento(next);
         return true;
       },
       baixarRecebimentosLote: (ids) => {
