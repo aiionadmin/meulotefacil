@@ -7,6 +7,7 @@ import type {
   Lot,
 } from "@/lib/domain/carteira-types";
 import { formatBRL } from "@/lib/masks/br";
+import { openPrintHtml } from "@/lib/export/print-document";
 
 export type EmpReportSections = {
   empresa: boolean;
@@ -68,7 +69,10 @@ export type EmpReportInput = {
   contracts: Contract[];
   socios?: EmpSocio[];
   sections: EmpReportSections;
-  /** URL absoluta da logomarca (ex.: origin + /brand/mlf/logo-full-orange.png). */
+  /**
+   * Logo do emitente. Preferir data URL (`fetchAsDataUrl`) —
+   * blob:print não carrega `/brand/...` a tempo.
+   */
   logoUrl?: string;
   geradoEm?: string;
 };
@@ -128,14 +132,33 @@ th{background:var(--paper);font-size:.72rem;text-transform:uppercase;letter-spac
 @media (max-width:640px){.grid{grid-template-columns:1fr}}
 </style></head><body><div class="page">`);
 
+  const enderHeader = [
+    empresa.endereco,
+    empresa.bairro,
+    empresa.cidade && empresa.uf
+      ? `${empresa.cidade}/${empresa.uf}`
+      : empresa.cidade || empresa.uf,
+    empresa.cep ? `CEP ${empresa.cep}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   parts.push(`<header class="header"><div>`);
   if (sections.logo && logoUrl) {
     parts.push(
-      `<img src="${esc(logoUrl)}" alt="Meu Lote Fácil" />`
+      `<img src="${esc(logoUrl)}" alt="${esc(empresa.nomeFantasia || empresa.razaoSocial)}" />`
     );
   } else {
-    parts.push(`<div style="font-weight:700;color:var(--brand);font-size:1.1rem">Meu Lote Fácil</div>`);
+    parts.push(
+      `<div style="font-weight:700;color:var(--brand);font-size:1.1rem">${esc(empresa.nomeFantasia || empresa.razaoSocial || "Meu Lote Fácil")}</div>`
+    );
   }
+  // Dados da empresa sempre no cabeçalho (mesmo se a seção detalhada estiver off)
+  parts.push(`<div style="margin-top:.45rem;font-size:.78rem;color:var(--mut);line-height:1.35">
+<strong>${esc(empresa.razaoSocial)}</strong><br/>
+CNPJ ${esc(empresa.cnpj)}${enderHeader ? `<br/>${esc(enderHeader)}` : ""}
+${empresa.telefone || empresa.email ? `<br/>${esc([empresa.telefone, empresa.email].filter(Boolean).join(" · "))}` : ""}
+</div>`);
   parts.push(`</div><div style="text-align:right">
 <h1>Relatório do empreendimento</h1>
 <div class="sub">${esc(d.nome)} · ${esc(d.codigo)}</div>
@@ -143,22 +166,12 @@ th{background:var(--paper);font-size:.72rem;text-transform:uppercase;letter-spac
 </div></header>`);
 
   if (sections.empresa) {
-    const ender = [
-      empresa.endereco,
-      empresa.bairro,
-      empresa.cidade && empresa.uf
-        ? `${empresa.cidade}/${empresa.uf}`
-        : empresa.cidade || empresa.uf,
-      empresa.cep ? `CEP ${empresa.cep}` : "",
-    ]
-      .filter(Boolean)
-      .join(" · ");
     parts.push(`<section class="section"><h2>Empresa emitente</h2><div class="grid">
 <div><div class="k">Razão social</div><div class="v">${esc(empresa.razaoSocial)}</div></div>
 <div><div class="k">Nome fantasia</div><div class="v">${esc(empresa.nomeFantasia ?? "—")}</div></div>
 <div><div class="k">CNPJ</div><div class="v">${esc(empresa.cnpj)}</div></div>
 <div><div class="k">Inscrição estadual</div><div class="v">${esc(empresa.inscricaoEstadual ?? "—")}</div></div>
-<div style="grid-column:1/-1"><div class="k">Endereço</div><div class="v">${esc(ender || "—")}</div></div>
+<div style="grid-column:1/-1"><div class="k">Endereço</div><div class="v">${esc(enderHeader || "—")}</div></div>
 <div><div class="k">Telefone</div><div class="v">${esc(empresa.telefone ?? "—")}</div></div>
 <div><div class="k">E-mail</div><div class="v">${esc(empresa.email ?? "—")}</div></div>
 </div></section>`);
@@ -259,24 +272,14 @@ ${d.observacoes ? `<p style="margin:.75rem 0 0;font-size:.9rem"><strong>Obs.:</s
 <tbody>${rows || "<tr><td colspan=3>—</td></tr>"}</tbody></table></section>`);
   }
 
-  parts.push(`<footer class="foot">Meu Lote Fácil · relatório configurável do empreendimento · documento interno</footer>
-<script>window.onload=function(){window.print()}</script>
+  parts.push(`<footer class="foot">${esc(empresa.razaoSocial)} · relatório configurável do empreendimento · documento interno</footer>
 </div></body></html>`);
 
   return parts.join("");
 }
 
 export function openEmpreendimentoReport(html: string, filename: string) {
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank");
-  if (!w) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename.endsWith(".html") ? filename : `${filename}.html`;
-    a.click();
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  openPrintHtml(html, filename);
 }
 
 /** @deprecated Prefira resolveEmitenteLogoPath(cnpj) — logo por emitente. */

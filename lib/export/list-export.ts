@@ -1,5 +1,15 @@
 /** Exportação CSV / Excel-compatível / impressão (C16). Sem dependência xlsx. */
 
+import {
+  PRINT_DOC_CSS,
+  buildPrintHeaderHtml,
+  empresaFromEmitente,
+  openPrintHtml,
+  resolveEmitenteLogoDataUrl,
+  type PrintEmpresa,
+} from "@/lib/export/print-document";
+import { resolveEmitente } from "@/lib/export/emitentes";
+
 function escapeCsv(value: unknown): string {
   const s = value == null ? "" : String(value);
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -43,17 +53,24 @@ export function printList(title: string) {
   document.title = prev;
 }
 
-/** C16 — PDF via HTML imprimível (sem dependência nativa). */
-export function downloadListPdf(
+function esc(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** C16 — PDF via HTML imprimível com logo + dados da empresa. */
+export async function downloadListPdf(
   title: string,
   headers: string[],
-  rows: (string | number | null | undefined)[][]
+  rows: (string | number | null | undefined)[][],
+  opts?: { cnpj?: string; empresa?: Partial<PrintEmpresa> }
 ) {
-  const esc = (s: string) =>
-    s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  const { emitente, logoDataUrl } = await resolveEmitenteLogoDataUrl(
+    opts?.cnpj
+  );
+  const empresa = empresaFromEmitente(emitente, opts?.empresa);
   const th = headers.map((h) => `<th>${esc(h)}</th>`).join("");
   const body = rows
     .map(
@@ -61,29 +78,24 @@ export function downloadListPdf(
         `<tr>${r.map((c) => `<td>${esc(c == null ? "" : String(c))}</td>`).join("")}</tr>`
     )
     .join("");
+  const header = buildPrintHeaderHtml({
+    empresa,
+    logoDataUrl,
+    titulo: title,
+    subtitulo: `Emitente · ${emitente.nomeFantasia}`,
+  });
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${esc(title)}</title>
 <style>
-body{font-family:Georgia,serif;margin:1.5rem;color:#1a1a1a}
-h1{font-size:1.2rem;margin:0 0 1rem}
-table{width:100%;border-collapse:collapse;font-size:.85rem}
-th,td{border:1px solid #ccc;padding:.35rem .5rem;text-align:left}
-th{background:#f4f4f0}
-@media print{body{margin:0}}
-</style></head><body>
-<h1>${esc(title)}</h1>
+${PRINT_DOC_CSS}
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:.5rem}
+th,td{border:1px solid var(--line);padding:.35rem .5rem;text-align:left}
+th{background:var(--paper);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+</style></head><body><div class="page">
+${header}
 <table><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table>
-<script>window.onload=function(){window.print()}</script>
-</body></html>`;
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank");
-  if (!w) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${title.replace(/\s+/g, "-").toLowerCase()}.html`;
-    a.click();
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+<footer class="foot">${esc(empresa.razaoSocial)} · documento gerado pelo sistema</footer>
+</div></body></html>`;
+  openPrintHtml(html, title.replace(/\s+/g, "-").toLowerCase());
 }
 
 /** Extrai texto de nós React simples (string/número/StatusPill). */
@@ -107,3 +119,5 @@ export function downloadTextTemplate(filename: string, content: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export { resolveEmitente };

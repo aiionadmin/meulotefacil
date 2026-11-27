@@ -181,8 +181,10 @@ const minimal = buildEmpreendimentoReportHtml({
     dadosEmp: true,
   },
 });
-assert(!minimal.includes("Empresa</h2>"), "sem empresa");
+assert(!minimal.includes("Empresa emitente</h2>"), "sem seção empresa");
 assert(!minimal.includes("<img"), "sem logo");
+// Cabeçalho sempre leva razão/CNPJ mesmo com seção empresa desligada.
+assert(minimal.includes(">X</strong>") || minimal.includes("CNPJ 1"), "header empresa");
 assert(minimal.includes("Empreendimento</h2>"), "só dados emp");
 assert(!minimal.includes("Cartório e certidão"), "sem cartorio");
 

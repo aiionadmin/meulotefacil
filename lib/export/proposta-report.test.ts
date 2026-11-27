@@ -18,8 +18,18 @@ const p: Proposal = {
   responsavel: "Comercial",
 };
 
-const html = buildPropostaHtml(p);
-assert(html.includes("Ana Souza"), "cliente");
-assert(html.includes("Residencial Horizonte"), "emp");
-assert(html.includes("Proposta comercial"), "titulo");
-console.log("ok: proposta-report");
+async function main() {
+  // Sem window/fetch: logo data URL fica null; cabeçalho textual ainda sai.
+  const html = await buildPropostaHtml(p);
+  assert(html.includes("Ana Souza"), "cliente");
+  assert(html.includes("Residencial Horizonte"), "emp");
+  assert(html.includes("Proposta comercial"), "titulo");
+  assert(html.includes("Meu Lote Fácil Ltda"), "empresa razao no cabeçalho");
+  assert(html.includes("47.435.336/0001-40"), "cnpj emitente");
+  console.log("ok: proposta-report");
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

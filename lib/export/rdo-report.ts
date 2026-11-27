@@ -1,6 +1,14 @@
 /** D21 — relatório RDO em texto/HTML para download e impressão. */
 
 import type { Rdo } from "@/lib/domain/obras-types";
+import {
+  PRINT_DOC_CSS,
+  buildPrintHeaderHtml,
+  empresaFromEmitente,
+  openPrintHtml,
+  resolveEmitenteLogoDataUrl,
+  type PrintEmpresa,
+} from "@/lib/export/print-document";
 
 export function buildRdoText(rdo: Rdo, obraNome: string): string {
   const lines: string[] = [
@@ -61,37 +69,47 @@ export function buildRdoText(rdo: Rdo, obraNome: string): string {
   return lines.filter((l) => l !== undefined).join("\n");
 }
 
-export function buildRdoHtml(rdo: Rdo, obraNome: string): string {
-  const esc = (s: string) =>
-    s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  const text = buildRdoText(rdo, obraNome);
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>RDO ${rdo.numero}</title>
-<style>
-body{font-family:Georgia,serif;max-width:720px;margin:2rem auto;color:#1a1a1a;line-height:1.45}
-h1{font-size:1.35rem;margin-bottom:.25rem}
-pre{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:.85rem;background:#f6f6f4;padding:1rem;border-radius:4px}
-@media print{body{margin:0} pre{background:none}}
-</style></head><body>
-<h1>RDO nº ${rdo.numero} — ${esc(obraNome)}</h1>
-<p>${esc(rdo.data)} · ${esc(rdo.responsavel)} · ${esc(rdo.status)}</p>
-<pre>${esc(text)}</pre>
-<script>window.onload=function(){window.print()}</script>
-</body></html>`;
+function esc(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
-export function downloadRdoPdfProxy(rdo: Rdo, obraNome: string) {
-  const html = buildRdoHtml(rdo, obraNome);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank");
-  if (!w) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rdo-${rdo.numero}-${rdo.data}.html`;
-    a.click();
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+export async function buildRdoHtml(
+  rdo: Rdo,
+  obraNome: string,
+  opts?: { cnpj?: string; empresa?: Partial<PrintEmpresa> }
+): Promise<string> {
+  const { emitente, logoDataUrl } = await resolveEmitenteLogoDataUrl(
+    opts?.cnpj
+  );
+  const empresa = empresaFromEmitente(emitente, opts?.empresa);
+  const text = buildRdoText(rdo, obraNome);
+  const header = buildPrintHeaderHtml({
+    empresa,
+    logoDataUrl,
+    titulo: `RDO nº ${rdo.numero}`,
+    subtitulo: `${obraNome} · ${rdo.data} · ${rdo.status}`,
+  });
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>RDO ${rdo.numero}</title>
+<style>
+${PRINT_DOC_CSS}
+pre{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:.85rem;background:var(--paper);padding:1rem;border:1px solid var(--line)}
+@media print{pre{background:none}}
+</style></head><body><div class="page">
+${header}
+<p style="font-size:.9rem;color:var(--mut)">${esc(rdo.responsavel)}</p>
+<pre>${esc(text)}</pre>
+<footer class="foot">${esc(empresa.razaoSocial)} · RDO gerado pelo sistema</footer>
+</div></body></html>`;
+}
+
+export async function downloadRdoPdfProxy(
+  rdo: Rdo,
+  obraNome: string,
+  opts?: { cnpj?: string; empresa?: Partial<PrintEmpresa> }
+) {
+  const html = await buildRdoHtml(rdo, obraNome, opts);
+  openPrintHtml(html, `rdo-${rdo.numero}-${rdo.data}`);
 }

@@ -1,5 +1,14 @@
 /** H14 — modelos de documento do contrato (contrato, promissórias, mala direta). */
 
+import {
+  PRINT_DOC_CSS,
+  buildPrintHeaderHtml,
+  empresaFromEmitente,
+  openPrintHtml,
+  resolveEmitenteLogoDataUrl,
+  type PrintEmpresa,
+} from "@/lib/export/print-document";
+
 export type ContratoDocInput = {
   numero: string;
   compradorNome: string;
@@ -23,7 +32,8 @@ function esc(s: string) {
 
 export function buildContratoDocText(
   tipo: ContratoDocTipo,
-  c: ContratoDocInput
+  c: ContratoDocInput,
+  beneficiario = "Meu Lote Fácil"
 ): string {
   if (tipo === "contrato") {
     return [
@@ -35,7 +45,7 @@ export function buildContratoDocText(
       `Lote: ${c.quadra}/${c.lote}`,
       `Preço: R$ ${c.preco.toFixed(2).replace(".", ",")}`,
       "",
-      "Cláusulas padrão Meu Lote Fácil.",
+      `Cláusulas padrão ${beneficiario}.`,
       "1. Objeto: o lote acima identificado.",
       "2. Preço e forma de pagamento conforme plano.",
       "3. Foro da comarca do imóvel.",
@@ -51,7 +61,7 @@ export function buildContratoDocText(
       "NOTAS PROMISSÓRIAS",
       `Contrato ${c.numero}`,
       `Emitente: ${c.compradorNome}`,
-      `Beneficiário: Meu Lote Fácil`,
+      `Beneficiário: ${beneficiario}`,
       "",
       ...series,
     ].join("\n");
@@ -66,49 +76,51 @@ export function buildContratoDocText(
       : "Segue posição financeira atualizada.",
     "",
     "Atenciosamente,",
-    "Meu Lote Fácil",
+    beneficiario,
   ].join("\n");
 }
 
-export function buildContratoDocHtml(
+export async function buildContratoDocHtml(
   tipo: ContratoDocTipo,
-  c: ContratoDocInput
-): string {
+  c: ContratoDocInput,
+  opts?: { cnpj?: string; empresa?: Partial<PrintEmpresa> }
+): Promise<string> {
   const titles: Record<ContratoDocTipo, string> = {
     contrato: "Contrato de compra e venda",
     promissoria: "Notas promissórias",
     mala_direta: "Mala direta",
   };
-  const body = buildContratoDocText(tipo, c)
+  const { emitente, logoDataUrl } = await resolveEmitenteLogoDataUrl(
+    opts?.cnpj
+  );
+  const empresa = empresaFromEmitente(emitente, opts?.empresa);
+  const body = buildContratoDocText(tipo, c, empresa.razaoSocial)
     .split("\n")
     .map((l) => (l ? `<p>${esc(l)}</p>` : "<br/>"))
     .join("");
+  const header = buildPrintHeaderHtml({
+    empresa,
+    logoDataUrl,
+    titulo: titles[tipo],
+    subtitulo: `Contrato ${c.numero}`,
+  });
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/>
 <title>${titles[tipo]} ${esc(c.numero)}</title>
 <style>
-body{font-family:Georgia,serif;max-width:720px;margin:2rem auto;color:#1a1a1a;line-height:1.5}
-h1{font-size:1.3rem}
-@media print{body{margin:0}}
-</style></head><body>
-<h1>${titles[tipo]}</h1>
+${PRINT_DOC_CSS}
+p{margin:.35rem 0;font-size:.95rem}
+</style></head><body><div class="page">
+${header}
 ${body}
-<script>window.onload=function(){window.print()}</script>
-</body></html>`;
+<footer class="foot">${esc(empresa.razaoSocial)} · documento gerado pelo sistema</footer>
+</div></body></html>`;
 }
 
-export function downloadContratoDocPdf(
+export async function downloadContratoDocPdf(
   tipo: ContratoDocTipo,
-  c: ContratoDocInput
+  c: ContratoDocInput,
+  opts?: { cnpj?: string; empresa?: Partial<PrintEmpresa> }
 ) {
-  const html = buildContratoDocHtml(tipo, c);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank");
-  if (!w) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${tipo}-${c.numero}.html`;
-    a.click();
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  const html = await buildContratoDocHtml(tipo, c, opts);
+  openPrintHtml(html, `${tipo}-${c.numero}`);
 }
