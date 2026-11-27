@@ -46,7 +46,7 @@ export default function ResultadosPage() {
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/financeiro/fluxo">Fluxo de caixa</Link>
+              <Link href="/financeiro/fluxo-de-caixa">Fluxo de caixa</Link>
             </Button>
             <Button
               size="sm"

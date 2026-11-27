@@ -96,7 +96,7 @@ export default function RecebimentosPage() {
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/financeiro">Pagamentos</Link>
+              <Link href="/financeiro/pagamentos">Pagamentos</Link>
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               Novo faturamento

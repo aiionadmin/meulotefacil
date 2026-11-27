@@ -213,7 +213,7 @@ export default function DashboardOperacionalPage() {
           Demandas
         </Link>
         {" · "}
-        <Link className="underline" href="/financeiro">
+        <Link className="underline" href="/financeiro/pagamentos">
           Pagamentos
         </Link>
         {" · "}
@@ -225,7 +225,7 @@ export default function DashboardOperacionalPage() {
           Obras
         </Link>
         {" · "}
-        <Link className="underline" href="/compras">
+        <Link className="underline" href="/compras/solicitacoes">
           Compras
         </Link>
       </p>

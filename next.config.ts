@@ -35,6 +35,44 @@ const nextConfig: NextConfig = {
         destination: "/regularizacao",
         permanent: false,
       },
+      // Réplica Mais Controle — rotas canônicas
+      {
+        source: "/obras/orcamentos",
+        destination: "/orcamentos",
+        permanent: true,
+      },
+      { source: "/obras/gestao", destination: "/gestao", permanent: true },
+      { source: "/obras/rdo", destination: "/rdo", permanent: true },
+      {
+        source: "/obras/insumos",
+        destination: "/catalogo/insumos",
+        permanent: true,
+      },
+      {
+        source: "/obras/composicoes",
+        destination: "/catalogo/composicoes",
+        permanent: true,
+      },
+      {
+        source: "/compras",
+        destination: "/compras/solicitacoes",
+        permanent: false,
+      },
+      {
+        source: "/financeiro",
+        destination: "/financeiro/pagamentos",
+        permanent: false,
+      },
+      {
+        source: "/financeiro/notas",
+        destination: "/financeiro/notas-fiscais",
+        permanent: true,
+      },
+      {
+        source: "/financeiro/fluxo",
+        destination: "/financeiro/fluxo-de-caixa",
+        permanent: true,
+      },
     ];
   },
   async headers() {

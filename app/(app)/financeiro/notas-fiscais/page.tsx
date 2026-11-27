@@ -46,7 +46,7 @@ export default function NotasFiscaisPage() {
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/financeiro">Pagamentos</Link>
+              <Link href="/financeiro/pagamentos">Pagamentos</Link>
             </Button>
             <label className="inline-flex cursor-pointer">
               <input
