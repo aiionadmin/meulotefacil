@@ -21,7 +21,9 @@ import {
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { canApprove } from "@/lib/alcadas/check";
 import { useEmpresa } from "@/lib/empresa/context";
+import { useFase1 } from "@/lib/store/fase1-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { ContaBancaria } from "@/lib/domain/financeiro-types";
 import { parseOfxBytes, type OfxTxn } from "@/lib/import/ofx-parse";
@@ -43,6 +45,7 @@ function txnKey(tx: OfxTxn, idx: number) {
 export default function ContasPage() {
   const { state, addConta, conciliarPagamento, desconciliarPagamento } =
     useFinanceiro();
+  const { state: f1, currentProfileName: perfilNome } = useFase1();
   const { empresas, selectedId, filterByEmpresa } = useEmpresa();
   const contas = useMemo(
     () => filterByEmpresa(state.contas),
@@ -361,6 +364,19 @@ export default function ContasPage() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => {
+                                        const gate = canApprove({
+                                          rules: f1.approvalRules,
+                                          tipo: "Conciliação bancária",
+                                          perfilNome,
+                                          valor: match.valor,
+                                        });
+                                        if (!gate.ok) {
+                                          notify(
+                                            "Alçada insuficiente",
+                                            gate.reason
+                                          );
+                                          return;
+                                        }
                                         conciliarPagamento(match.id);
                                         setLinhas((prev) =>
                                           prev.map((l) =>
@@ -409,6 +425,18 @@ export default function ContasPage() {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => {
+                                        const gate = canApprove({
+                                          rules: f1.approvalRules,
+                                          tipo: "Desconciliar",
+                                          perfilNome,
+                                        });
+                                        if (!gate.ok) {
+                                          notify(
+                                            "Alçada insuficiente",
+                                            gate.reason
+                                          );
+                                          return;
+                                        }
                                         desconciliarPagamento(tx.pagamentoId!);
                                         setLinhas((prev) =>
                                           prev.map((l) =>

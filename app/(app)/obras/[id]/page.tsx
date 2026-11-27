@@ -23,6 +23,8 @@ import { formatBRL } from "@/lib/masks/br";
 import { buildFisicoFinanceiro } from "@/lib/obras/fisico-financeiro";
 import { computeGanttCritico } from "@/lib/obras/gantt-critico";
 import { downloadPropostaObra } from "@/lib/obras/proposta-obra-html";
+import { canSeeObra } from "@/lib/obras/visibilidade";
+import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
 import { precoComBdi } from "@/lib/money/orcamento";
 import type { PropostaStatus } from "@/lib/domain/obras-types";
@@ -67,7 +69,10 @@ export default function ObraDetalhePage() {
     gerarCurvaS,
     updateObra,
   } = useObras();
-  const obra = state.obras.find((o) => o.id === id);
+  const { currentUser, currentProfileName: perfilNome } = useFase1();
+  const obraRaw = state.obras.find((o) => o.id === id);
+  const obra =
+    obraRaw && canSeeObra(obraRaw, currentUser, perfilNome) ? obraRaw : undefined;
   const nodes = nodesDaObra(id);
   const tot = totaisDaObra(id);
   const [aba, setAba] = useState<AbaObra>("orcamento");

@@ -27,6 +27,7 @@ import {
   orcamentoSintetico,
 } from "@/lib/obras/relatorios-d17";
 import { statusLabel } from "@/lib/status/labels";
+import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
 import { useObras } from "@/lib/store/obras-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { custoPorGrupo } from "@/lib/money/orcamento";
@@ -51,15 +52,16 @@ function GestaoObrasInner() {
   );
 
   const filtered = useMemo(() => {
+    const base = filterObrasVisiveis(state.obras, currentUser, perfilNome);
     const term = q.trim().toLowerCase();
-    if (!term) return state.obras;
-    return state.obras.filter((o) =>
+    if (!term) return base;
+    return base.filter((o) =>
       [o.codigo, o.nome, o.clienteNome, o.status]
         .join(" ")
         .toLowerCase()
         .includes(term)
     );
-  }, [state.obras, q]);
+  }, [state.obras, q, currentUser, perfilNome]);
 
   const obra = state.obras.find((o) => o.id === obraId) ?? filtered[0];
   const nodes = obra ? nodesDaObra(obra.id) : [];

@@ -220,6 +220,7 @@ export function seedFinanceiro(): FinanceiroState {
       mesesProvisionamento: 12,
       numeroDocObrigatorioLancamento: false,
       numeroDocObrigatorioPagamento: false,
+      abrirEtapasItensAutomatico: true,
     },
     planos,
     categorias,
