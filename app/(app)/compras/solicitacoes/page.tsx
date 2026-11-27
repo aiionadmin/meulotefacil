@@ -133,18 +133,18 @@ export default function ComprasSolicitacoesPage() {
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Solicitações de compra"
-        description="Parte 3 — centro de custo obrigatório; fluxo SC → Cotação → OC."
+        title="Solicitação"
+        description="Centro de custo obrigatório (Obra ou Empresa). Fluxo: Solicitação → Cotação → Ordem de Compra."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/compras/cotacoes">Cotações</Link>
+              <Link href="/compras/cotacoes">Cotação</Link>
             </Button>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/compras/ordens">Ordens</Link>
+              <Link href="/compras/ordens">Ordem de Compra</Link>
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
-              Nova solicitação
+              Nova Solicitação
             </Button>
           </>
         }
