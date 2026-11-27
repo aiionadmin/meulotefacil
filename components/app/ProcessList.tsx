@@ -10,6 +10,7 @@ import {
   downloadCsv,
   downloadExcel,
   downloadListPdf,
+  exportTitleFromName,
   printList,
 } from "@/lib/export/list-export";
 import { paginate } from "@/lib/ui/pagination";
@@ -67,8 +68,10 @@ export function ProcessList<T extends { id: string }>({
   storageKey = "default",
   onRowClick,
   bulkActions,
-  exportName = "lista",
+  exportName,
 }: ProcessListProps<T>) {
+  const fileName = exportName?.trim() || storageKey || "lista";
+  const pdfTitle = exportTitleFromName(fileName);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -304,11 +307,11 @@ export function ProcessList<T extends { id: string }>({
             variant="outline"
             onClick={() => {
               downloadCsv(
-                `${exportName}.csv`,
+                fileName,
                 visibleCols.map((c) => c.label),
                 exportRows()
               );
-              notify("CSV exportado");
+              notify("CSV exportado", `${fileName}.csv`);
             }}
           >
             CSV
@@ -318,11 +321,11 @@ export function ProcessList<T extends { id: string }>({
             variant="outline"
             onClick={() => {
               downloadExcel(
-                `${exportName}.xlsx`,
+                fileName,
                 visibleCols.map((c) => c.label),
                 exportRows()
               );
-              notify("Excel exportado");
+              notify("Excel exportado", `${fileName}.csv`);
             }}
           >
             Excel
@@ -331,12 +334,13 @@ export function ProcessList<T extends { id: string }>({
             size="sm"
             variant="outline"
             onClick={() => {
-              downloadListPdf(
-                exportName,
+              void downloadListPdf(
+                pdfTitle,
                 visibleCols.map((c) => c.label),
-                exportRows()
+                exportRows(),
+                { filename: fileName }
               );
-              notify("PDF gerado");
+              notify("PDF gerado", pdfTitle);
             }}
           >
             PDF
@@ -344,7 +348,7 @@ export function ProcessList<T extends { id: string }>({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => printList(exportName)}
+            onClick={() => printList(pdfTitle)}
           >
             Imprimir
           </Button>
@@ -380,6 +384,8 @@ export function ProcessList<T extends { id: string }>({
       <DataTable
         empty={empty}
         paginate={false}
+        exportable={false}
+        exportName={fileName}
         columns={[
           {
             key: "_sel",

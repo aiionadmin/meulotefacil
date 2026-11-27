@@ -134,13 +134,17 @@ body{font-family:"Montserrat",system-ui,sans-serif;margin:0;color:var(--ink);bac
  * Aguarda imagens antes de print (evita página sem logo).
  */
 export function openPrintHtml(html: string, filename = "documento"): void {
+  const safeName = filename
+    .replace(/\.(html|pdf)$/i, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "documento";
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const w = window.open(url, "_blank");
   if (!w) {
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename.endsWith(".html") ? filename : `${filename}.html`;
+    a.download = `${safeName}.html`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
     return;
@@ -148,6 +152,12 @@ export function openPrintHtml(html: string, filename = "documento"): void {
 
   const tryPrint = () => {
     try {
+      // Título da janela = nome sugerido ao salvar PDF (empreendimentos, leads…)
+      try {
+        w.document.title = safeName;
+      } catch {
+        /* cross-origin / not ready */
+      }
       const imgs = Array.from(w.document.images || []);
       const pending = imgs.filter((img) => !img.complete);
       if (pending.length === 0) {

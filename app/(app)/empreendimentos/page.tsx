@@ -347,6 +347,7 @@ export default function EmpreendimentosPage() {
           Clique na linha para editar · use Excluir na ficha do formulário.
         </p>
         <DataTable
+          exportName="empreendimentos"
           onRowClick={(i) => {
             const d = developments[i];
             if (d) openEditEmp(d);

@@ -190,6 +190,7 @@ export function PeopleModule({
         </select>
       </FilterBar>
       <DataTable
+        exportName={papelFilter ? `pessoas-${papelFilter}` : "pessoas"}
         onRowClick={(i) => setSelected(rows[i])}
         columns={[
           { key: "nome", label: "Nome" },

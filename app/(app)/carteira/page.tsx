@@ -407,6 +407,7 @@ function CarteiraInner() {
       ) : null}
 
       <DataTable
+        exportName="ficha-financeira"
         paginate={false}
         columns={[
           { key: "tipo", label: "Tipo" },

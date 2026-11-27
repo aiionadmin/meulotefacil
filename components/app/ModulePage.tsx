@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   downloadExcel,
   downloadListPdf,
+  exportFileSlug,
+  exportTitleFromName,
   printList,
   reactNodeText,
 } from "@/lib/export/list-export";
@@ -93,7 +96,15 @@ export function DataTable({
   exportRows?: Record<string, React.ReactNode>[];
 }) {
   const [page, setPage] = useState(1);
-  const title = exportName ?? "lista";
+  const pathname = usePathname();
+  const routeSlug = useMemo(() => {
+    const parts = (pathname || "")
+      .split("/")
+      .filter((p) => p && p !== "(app)");
+    return parts[parts.length - 1] || "lista";
+  }, [pathname]);
+  const fileName = exportFileSlug(exportName?.trim() || routeSlug);
+  const pdfTitle = exportTitleFromName(fileName);
 
   const pageData = useMemo(() => {
     if (!enablePaginate) {
@@ -136,7 +147,7 @@ export function DataTable({
             size="sm"
             variant="outline"
             onClick={() =>
-              downloadExcel(title, exportMatrix.headers, exportMatrix.data)
+              downloadExcel(fileName, exportMatrix.headers, exportMatrix.data)
             }
           >
             Excel
@@ -146,7 +157,12 @@ export function DataTable({
             size="sm"
             variant="outline"
             onClick={() =>
-              downloadListPdf(title, exportMatrix.headers, exportMatrix.data)
+              void downloadListPdf(
+                pdfTitle,
+                exportMatrix.headers,
+                exportMatrix.data,
+                { filename: fileName }
+              )
             }
           >
             PDF
@@ -155,7 +171,7 @@ export function DataTable({
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => printList(title)}
+            onClick={() => printList(pdfTitle)}
           >
             Imprimir
           </Button>

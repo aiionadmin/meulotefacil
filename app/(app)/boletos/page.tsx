@@ -289,6 +289,7 @@ export default function BoletosPage() {
 
       <ModuleSection title="Arquivos de remessa">
         <DataTable
+          exportName="remessas-cnab"
           columns={[
             { key: "nome", label: "Arquivo" },
             { key: "quando", label: "Criado" },
