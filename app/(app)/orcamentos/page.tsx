@@ -39,8 +39,8 @@ export default function OrcamentosPage() {
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Orçamentos"
-        description="Lista e funil por status da obra — custo, BDI e preço."
+        title="Orçamento"
+        description="Lista de Orçamentos e Funil de Vendas — custo, BDI e preço por obra."
         actions={
           <div className="flex gap-2">
             <Button
@@ -48,20 +48,23 @@ export default function OrcamentosPage() {
               variant={view === "lista" ? "default" : "outline"}
               onClick={() => setView("lista")}
             >
-              Lista
+              Lista de Orçamentos
             </Button>
             <Button
               size="sm"
               variant={view === "funil" ? "default" : "outline"}
               onClick={() => setView("funil")}
             >
-              Funil
+              Funil de Vendas
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/obras">Minhas Obras</Link>
             </Button>
           </div>
         }
       />
 
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar obra…" />
+      <FilterBar value={q} onChange={setQ} placeholder="Pesquisar obra ou cliente…" />
 
       {view === "lista" ? (
         <PaginatedTable
