@@ -13,6 +13,7 @@ import type {
   AppFile,
   AppTask,
   AppUser,
+  ApprovalRule,
   Fase1State,
   Organization,
   Person,
@@ -51,6 +52,8 @@ type Fase1Api = {
   markAllNotificationsRead: () => void;
   toggleLookupItem: (listId: string, codigo: string) => void;
   toggleApprovalRule: (id: string) => void;
+  addApprovalRule: (data: Omit<ApprovalRule, "id">) => ApprovalRule;
+  updateApprovalRule: (id: string, patch: Partial<ApprovalRule>) => void;
   setProfilePermission: (
     profileId: string,
     rotina: string,
@@ -317,6 +320,34 @@ export function Fase1StoreProvider({ children }: { children: ReactNode }) {
           registroId: id,
           antes,
           depois: { ...antes, ativo: !antes?.ativo },
+        });
+      },
+      addApprovalRule: (data) => {
+        const rule: ApprovalRule = { ...data, id: uid("ar") };
+        setState((s) => ({
+          ...s,
+          approvalRules: [rule, ...s.approvalRules],
+        }));
+        pushAudit("Configurações > Alçadas", "criar", {
+          registroTipo: "approval_rule",
+          registroId: rule.id,
+          depois: rule,
+        });
+        return rule;
+      },
+      updateApprovalRule: (id, patch) => {
+        const antes = state.approvalRules.find((r) => r.id === id);
+        setState((s) => ({
+          ...s,
+          approvalRules: s.approvalRules.map((r) =>
+            r.id === id ? { ...r, ...patch } : r
+          ),
+        }));
+        pushAudit("Configurações > Alçadas", "alterar", {
+          registroTipo: "approval_rule",
+          registroId: id,
+          antes,
+          depois: { ...antes, ...patch },
         });
       },
       setProfilePermission: (profileId, rotina, flags) => {

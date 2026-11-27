@@ -66,6 +66,17 @@ type ComprasApi = {
     fornecedores: { fornecedor: string; email?: string; telefone?: string }[]
   ) => Cotacao | null;
   setVencedor: (cotacaoId: string, itemId: string, supplierId: string) => boolean;
+  setPrecoCotacao: (
+    cotacaoId: string,
+    itemId: string,
+    supplierId: string,
+    precoUnitario: number
+  ) => boolean;
+  addArquivoCotacao: (
+    cotacaoId: string,
+    nome: string,
+    supplierId?: string
+  ) => boolean;
   gerarOrdensDaCotacao: (cotacaoId: string) => OrdemCompra[];
   aprovarOrdem: (id: string) => { ok: boolean; payable?: { id: string; valor: number; favorecido: string; descricao: string; centro: string } };
   negarOrdem: (id: string) => boolean;
@@ -396,6 +407,80 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
           }),
         }));
         return true;
+      },
+      setPrecoCotacao: (cotacaoId, itemId, supplierId, precoUnitario) => {
+        if (precoUnitario < 0) return false;
+        let ok = false;
+        setState((s) => {
+          const cot = s.cotacoes.find((c) => c.id === cotacaoId);
+          if (!cot) return s;
+          ok = true;
+          const exists = cot.precos.some(
+            (p) => p.itemId === itemId && p.supplierId === supplierId
+          );
+          return {
+            ...s,
+            cotacoes: s.cotacoes.map((c) => {
+              if (c.id !== cotacaoId) return c;
+              if (exists) {
+                return {
+                  ...c,
+                  precos: c.precos.map((p) =>
+                    p.itemId === itemId && p.supplierId === supplierId
+                      ? { ...p, precoUnitario }
+                      : p
+                  ),
+                };
+              }
+              const item = c.itens.find((i) => i.id === itemId);
+              return {
+                ...c,
+                precos: [
+                  ...c.precos,
+                  {
+                    id: uid("pr"),
+                    itemId,
+                    supplierId,
+                    precoUnitario,
+                    quantidadeCotada: item?.quantidade ?? 1,
+                    vencedor: false,
+                  },
+                ],
+              };
+            }),
+          };
+        });
+        return ok;
+      },
+      addArquivoCotacao: (cotacaoId, nome, supplierId) => {
+        const n = nome.trim();
+        if (!n) return false;
+        let ok = false;
+        setState((s) => {
+          if (!s.cotacoes.some((c) => c.id === cotacaoId)) return s;
+          ok = true;
+          return {
+            ...s,
+            cotacoes: s.cotacoes.map((c) =>
+              c.id === cotacaoId
+                ? {
+                    ...c,
+                    arquivos: [
+                      {
+                        id: uid("carq"),
+                        nome: n,
+                        quando: todayIso(),
+                        supplierId,
+                        origem: "upload" as const,
+                      },
+                      ...(c.arquivos ?? []),
+                    ],
+                  }
+                : c
+            ),
+          };
+        });
+        return ok;
       },
       gerarOrdensDaCotacao: (cotacaoId) => {
         const cot = state.cotacoes.find((c) => c.id === cotacaoId);

@@ -156,6 +156,10 @@ export type ApprovalRule = {
   tipo: string;
   perfilNome: string;
   valorMinimo?: number;
+  /** Faixa superior (inclusive). Sem valor = sem teto. */
+  valorMaximo?: number;
+  /** Centro de custo da regra (compras). */
+  centroTipo?: "obra" | "empresa" | "qualquer";
   ativo: boolean;
 };
 

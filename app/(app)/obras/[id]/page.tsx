@@ -22,8 +22,38 @@ import { downloadExcel, printList } from "@/lib/export/list-export";
 import { formatBRL } from "@/lib/masks/br";
 import { buildFisicoFinanceiro } from "@/lib/obras/fisico-financeiro";
 import { computeGanttCritico } from "@/lib/obras/gantt-critico";
+import { downloadPropostaObra } from "@/lib/obras/proposta-obra-html";
 import { useObras } from "@/lib/store/obras-store";
 import { precoComBdi } from "@/lib/money/orcamento";
+import type { PropostaStatus } from "@/lib/domain/obras-types";
+
+type AbaObra =
+  | "orcamento"
+  | "proposta"
+  | "contrato"
+  | "cronograma"
+  | "fisico"
+  | "arquivos"
+  | "relatorios";
+
+const ABAS: { id: AbaObra; label: string }[] = [
+  { id: "orcamento", label: "Orçamento" },
+  { id: "proposta", label: "Proposta" },
+  { id: "contrato", label: "Contrato" },
+  { id: "cronograma", label: "Cronograma" },
+  { id: "fisico", label: "Físico-Financeiro" },
+  { id: "arquivos", label: "Arquivos" },
+  { id: "relatorios", label: "Relatórios" },
+];
+
+const PROPOSTA_STATUS: Record<PropostaStatus, string> = {
+  contato_inicial: "Contato Inicial",
+  em_elaboracao: "Em Elaboração",
+  em_revisao: "Em Revisão",
+  enviada: "Enviada",
+  aprovada: "Aprovada",
+  perdida: "Perdida",
+};
 
 export default function ObraDetalhePage() {
   const params = useParams();
@@ -40,6 +70,7 @@ export default function ObraDetalhePage() {
   const obra = state.obras.find((o) => o.id === id);
   const nodes = nodesDaObra(id);
   const tot = totaisDaObra(id);
+  const [aba, setAba] = useState<AbaObra>("orcamento");
   const [openItem, setOpenItem] = useState(false);
   const [openDespesa, setOpenDespesa] = useState(false);
   const [form, setForm] = useState({
@@ -150,197 +181,421 @@ export default function ObraDetalhePage() {
         </Button>
       </div>
 
-      <ModuleSection title="Árvore do orçamento">
-        <DataTable
-          columns={[
-            { key: "codigo", label: "Código" },
-            { key: "desc", label: "Descrição" },
-            { key: "kind", label: "Tipo" },
-            { key: "qtd", label: "Qtd" },
-            { key: "custo", label: "Custo" },
-            { key: "preco", label: "Preço" },
-            { key: "real", label: "Realizado" },
-            { key: "fis", label: "Físico" },
-          ]}
-          rows={nodes.map((n) => ({
-            codigo: n.codigo,
-            desc: n.descricao,
-            kind: <StatusPill tone="neutral">{n.kind}</StatusPill>,
-            qtd: n.kind === "item" ? `${n.quantidade} ${n.unidade}` : "—",
-            custo: formatBRL(n.orcado),
-            preco: formatBRL(precoComBdi(n.orcado, n.bdiPct)),
-            real: formatBRL(n.realizado),
-            fis: `${n.fisicoPct}%`,
-          }))}
-        />
-      </ModuleSection>
+      <div className="flex flex-wrap gap-1.5 border-b border-linha pb-2">
+        {ABAS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setAba(t.id)}
+            className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
+              aba === t.id
+                ? "bg-brand-green text-white"
+                : "bg-muted text-muted-foreground hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      <ModuleSection title="Físico-financeiro por período (D12)">
-        <div className="mb-3 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              downloadExcel(
-                `fisico-financeiro-${obra.codigo}`,
-                [
-                  "Período",
-                  "Atividades",
-                  "Físico plan. %",
-                  "Físico real. %",
-                  "Fin. plan.",
-                  "Fin. real.",
-                  "Saldo fin.",
-                ],
-                fisicoFin.map((r) => [
-                  r.periodo,
-                  r.atividades,
-                  r.fisicoPlanPct,
-                  r.fisicoRealPct,
-                  r.finPlan,
-                  r.finReal,
-                  r.saldoFin,
-                ])
-              );
-              notify("Excel exportado");
-            }}
-          >
-            Excel
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => printList(`Físico-financeiro · ${obra.nome}`)}
-          >
-            Imprimir
-          </Button>
-        </div>
-        {fisicoFin.length ? (
+      {aba === "orcamento" ? (
+        <ModuleSection title="Árvore do orçamento">
           <DataTable
             columns={[
-              { key: "p", label: "Período" },
-              { key: "at", label: "Ativ." },
-              { key: "pf", label: "Físico plan." },
-              { key: "rf", label: "Físico real." },
-              { key: "pfin", label: "Fin. plan." },
-              { key: "rfin", label: "Fin. real." },
-              { key: "sal", label: "Saldo" },
+              { key: "codigo", label: "Código" },
+              { key: "desc", label: "Descrição" },
+              { key: "kind", label: "Tipo" },
+              { key: "qtd", label: "Qtd" },
+              { key: "custo", label: "Custo" },
+              { key: "preco", label: "Preço" },
+              { key: "real", label: "Realizado" },
+              { key: "fis", label: "Físico" },
             ]}
-            rows={fisicoFin.map((r) => ({
-              p: r.periodo,
-              at: String(r.atividades),
-              pf: `${r.fisicoPlanPct}%`,
-              rf: `${r.fisicoRealPct}%`,
-              pfin: formatBRL(r.finPlan),
-              rfin: formatBRL(r.finReal),
-              sal: formatBRL(r.saldoFin),
+            rows={nodes.map((n) => ({
+              codigo: n.codigo,
+              desc: n.descricao,
+              kind: <StatusPill tone="neutral">{n.kind}</StatusPill>,
+              qtd: n.kind === "item" ? `${n.quantidade} ${n.unidade}` : "—",
+              custo: formatBRL(n.orcado),
+              preco: formatBRL(precoComBdi(n.orcado, n.bdiPct)),
+              real: formatBRL(n.realizado),
+              fis: `${n.fisicoPct}%`,
             }))}
           />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Sem períodos — gere a Curva S ou cadastre o cronograma.
-          </p>
-        )}
-      </ModuleSection>
+        </ModuleSection>
+      ) : null}
 
-      <ModuleSection title="Curva S">
-        {curva.length ? (
-          <DataTable
-            columns={[
-              { key: "p", label: "Período" },
-              { key: "pf", label: "Físico plan." },
-              { key: "rf", label: "Físico real." },
-              { key: "pfin", label: "Fin. plan." },
-              { key: "rfin", label: "Fin. real." },
-            ]}
-            rows={curva.map((c) => ({
-              p: c.periodo,
-              pf: `${c.planejadoFisico}%`,
-              rf: `${c.realizadoFisico}%`,
-              pfin: formatBRL(c.planejadoFinanceiro),
-              rfin: formatBRL(c.realizadoFinanceiro),
-            }))}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Gere a Curva S a partir do orçamento.
-          </p>
-        )}
-      </ModuleSection>
-
-      <ModuleSection title="Cronograma / Gantt (caminho crítico)">
-        {(() => {
-          const raw = state.cronograma.filter((c) => c.obraId === obra.id);
-          const itens = computeGanttCritico(
-            raw,
-            state.expedienteHoras ?? 8
-          );
-          if (!itens.length) {
-            return (
-              <p className="text-sm text-muted-foreground">
-                Sem atividades no cronograma desta obra.
-              </p>
-            );
-          }
-          const min = Math.min(
-            ...itens.map((c) => new Date(c.inicio + "T12:00:00").getTime())
-          );
-          const max = Math.max(
-            ...itens.map((c) => new Date(c.fim + "T12:00:00").getTime())
-          );
-          const span = Math.max(1, max - min);
-          return (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                D11 — expediente {state.expedienteHoras ?? 8}h/dia ·{" "}
-                {itens.filter((i) => i.caminhoCritico).length} no caminho
-                crítico
-              </p>
-              {itens.map((c) => {
-                const a = new Date(c.inicio + "T12:00:00").getTime();
-                const b = new Date(c.fim + "T12:00:00").getTime();
-                const left = ((a - min) / span) * 100;
-                const width = Math.max(4, ((b - a) / span) * 100);
-                return (
-                  <div
-                    key={c.id}
-                    className="grid grid-cols-[12rem_1fr] gap-2 text-xs"
-                  >
-                    <span
-                      className={
-                        c.caminhoCritico
-                          ? "font-semibold text-destructive"
-                          : ""
-                      }
-                    >
-                      {c.label}
-                      {c.caminhoCritico ? " ★" : ""}
-                      <span className="ml-1 text-muted-foreground">
-                        folga {c.folgaDias}d
-                      </span>
-                    </span>
-                    <div className="relative h-6 rounded bg-muted">
-                      <div
-                        className={`absolute top-0.5 h-5 rounded ${
-                          c.caminhoCritico
-                            ? "bg-destructive/80"
-                            : "bg-brand-orange/80"
-                        }`}
-                        style={{ left: `${left}%`, width: `${width}%` }}
-                        title={`${c.inicio} → ${c.fim} · ${c.duracaoDias}d · folga ${c.folgaDias}d`}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              <p className="text-xs text-muted-foreground">
-                ★ caminho crítico (folga 0) · datas recalculadas por
-                predecessores
-              </p>
+      {aba === "proposta" ? (
+        <ModuleSection title="Proposta">
+          <div className="grid max-w-xl gap-3">
+            <Field label="Status da proposta">
+              <select
+                className={fieldControlClass}
+                value={obra.propostaStatus}
+                onChange={(e) =>
+                  updateObra(obra.id, {
+                    propostaStatus: e.target.value as PropostaStatus,
+                  })
+                }
+              >
+                {(Object.keys(PROPOSTA_STATUS) as PropostaStatus[]).map(
+                  (s) => (
+                    <option key={s} value={s}>
+                      {PROPOSTA_STATUS[s]}
+                    </option>
+                  )
+                )}
+              </select>
+            </Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Data de criação">
+                <Input
+                  type="date"
+                  value={obra.proposta?.dataCriacao ?? ""}
+                  onChange={(e) =>
+                    updateObra(obra.id, {
+                      proposta: {
+                        ...obra.proposta,
+                        dataCriacao: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Data de entrega">
+                <Input
+                  type="date"
+                  value={obra.proposta?.dataEntrega ?? ""}
+                  onChange={(e) =>
+                    updateObra(obra.id, {
+                      proposta: {
+                        ...obra.proposta,
+                        dataEntrega: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </Field>
             </div>
-          );
-        })()}
-      </ModuleSection>
+            <Field label="Responsável">
+              <Input
+                value={obra.proposta?.responsavel ?? ""}
+                onChange={(e) =>
+                  updateObra(obra.id, {
+                    proposta: {
+                      ...obra.proposta,
+                      responsavel: e.target.value,
+                    },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Condição de pagamento">
+              <Input
+                value={obra.proposta?.condicaoPagamento ?? ""}
+                onChange={(e) =>
+                  updateObra(obra.id, {
+                    proposta: {
+                      ...obra.proposta,
+                      condicaoPagamento: e.target.value,
+                    },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Desconto (%)">
+              <Input
+                type="number"
+                value={obra.proposta?.descontoPct ?? 0}
+                onChange={(e) =>
+                  updateObra(obra.id, {
+                    proposta: {
+                      ...obra.proposta,
+                      descontoPct: Number(e.target.value) || 0,
+                    },
+                  })
+                }
+              />
+            </Field>
+            <p className="text-sm">
+              Preço total:{" "}
+              <strong>
+                {formatBRL(
+                  Math.round(
+                    tot.preco *
+                      (1 - (obra.proposta?.descontoPct ?? 0) / 100) *
+                      100
+                  ) / 100
+                )}
+              </strong>
+            </p>
+            <Button
+              size="sm"
+              onClick={() => {
+                downloadPropostaObra({
+                  obra,
+                  nodes,
+                  custo: tot.custo,
+                  preco: tot.preco,
+                });
+                notify("Proposta gerada (HTML/PDF)");
+              }}
+            >
+              Gerar proposta (PDF)
+            </Button>
+          </div>
+        </ModuleSection>
+      ) : null}
+
+      {aba === "contrato" ? (
+        <ModuleSection title="Contrato">
+          <p className="mb-3 text-sm text-muted-foreground">
+            Documentos a partir de modelos. Gerenciar Modelos em Ajustes.
+          </p>
+          <ul className="space-y-2 text-sm">
+            {[
+              "Contrato de empreitada padrão",
+              "Aditivo de prazo",
+              "Termo de recebimento",
+            ].map((m) => (
+              <li
+                key={m}
+                className="flex items-center justify-between rounded-md border border-linha px-3 py-2"
+              >
+                <span>{m}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => notify("Modelo aplicado (stub)", m)}
+                >
+                  Usar modelo
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </ModuleSection>
+      ) : null}
+
+      {aba === "fisico" ? (
+        <>
+          <ModuleSection title="Físico-financeiro por período">
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  downloadExcel(
+                    `fisico-financeiro-${obra.codigo}`,
+                    [
+                      "Período",
+                      "Atividades",
+                      "Físico plan. %",
+                      "Físico real. %",
+                      "Fin. plan.",
+                      "Fin. real.",
+                      "Saldo fin.",
+                    ],
+                    fisicoFin.map((r) => [
+                      r.periodo,
+                      r.atividades,
+                      r.fisicoPlanPct,
+                      r.fisicoRealPct,
+                      r.finPlan,
+                      r.finReal,
+                      r.saldoFin,
+                    ])
+                  );
+                  notify("Excel exportado");
+                }}
+              >
+                Excel
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => printList(`Físico-financeiro · ${obra.nome}`)}
+              >
+                Imprimir
+              </Button>
+            </div>
+            {fisicoFin.length ? (
+              <DataTable
+                columns={[
+                  { key: "p", label: "Período" },
+                  { key: "at", label: "Ativ." },
+                  { key: "pf", label: "Físico plan." },
+                  { key: "rf", label: "Físico real." },
+                  { key: "pfin", label: "Fin. plan." },
+                  { key: "rfin", label: "Fin. real." },
+                  { key: "sal", label: "Saldo" },
+                ]}
+                rows={fisicoFin.map((r) => ({
+                  p: r.periodo,
+                  at: String(r.atividades),
+                  pf: `${r.fisicoPlanPct}%`,
+                  rf: `${r.fisicoRealPct}%`,
+                  pfin: formatBRL(r.finPlan),
+                  rfin: formatBRL(r.finReal),
+                  sal: formatBRL(r.saldoFin),
+                }))}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Sem períodos — gere a Curva S ou cadastre o cronograma.
+              </p>
+            )}
+          </ModuleSection>
+          <ModuleSection title="Curva S">
+            {curva.length ? (
+              <DataTable
+                columns={[
+                  { key: "p", label: "Período" },
+                  { key: "pf", label: "Físico plan." },
+                  { key: "rf", label: "Físico real." },
+                  { key: "pfin", label: "Fin. plan." },
+                  { key: "rfin", label: "Fin. real." },
+                ]}
+                rows={curva.map((c) => ({
+                  p: c.periodo,
+                  pf: `${c.planejadoFisico}%`,
+                  rf: `${c.realizadoFisico}%`,
+                  pfin: formatBRL(c.planejadoFinanceiro),
+                  rfin: formatBRL(c.realizadoFinanceiro),
+                }))}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Gere a Curva S a partir do orçamento.
+              </p>
+            )}
+          </ModuleSection>
+        </>
+      ) : null}
+
+      {aba === "cronograma" ? (
+        <ModuleSection title="Cronograma / Gantt (caminho crítico)">
+          {(() => {
+            const raw = state.cronograma.filter((c) => c.obraId === obra.id);
+            const itensG = computeGanttCritico(
+              raw,
+              state.expedienteHoras ?? 8
+            );
+            if (!itensG.length) {
+              return (
+                <p className="text-sm text-muted-foreground">
+                  Sem atividades no cronograma desta obra.
+                </p>
+              );
+            }
+            const min = Math.min(
+              ...itensG.map((c) => new Date(c.inicio + "T12:00:00").getTime())
+            );
+            const max = Math.max(
+              ...itensG.map((c) => new Date(c.fim + "T12:00:00").getTime())
+            );
+            const span = Math.max(1, max - min);
+            return (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Expediente {state.expedienteHoras ?? 8}h/dia ·{" "}
+                  {itensG.filter((i) => i.caminhoCritico).length} no caminho
+                  crítico
+                </p>
+                {itensG.map((c) => {
+                  const a = new Date(c.inicio + "T12:00:00").getTime();
+                  const b = new Date(c.fim + "T12:00:00").getTime();
+                  const left = ((a - min) / span) * 100;
+                  const width = Math.max(4, ((b - a) / span) * 100);
+                  return (
+                    <div
+                      key={c.id}
+                      className="grid grid-cols-[12rem_1fr] gap-2 text-xs"
+                    >
+                      <span
+                        className={
+                          c.caminhoCritico
+                            ? "font-semibold text-destructive"
+                            : ""
+                        }
+                      >
+                        {c.label}
+                        {c.caminhoCritico ? " ★" : ""}
+                        <span className="ml-1 text-muted-foreground">
+                          folga {c.folgaDias}d
+                        </span>
+                      </span>
+                      <div className="relative h-6 rounded bg-muted">
+                        <div
+                          className={`absolute top-0.5 h-5 rounded ${
+                            c.caminhoCritico
+                              ? "bg-destructive/80"
+                              : "bg-brand-orange/80"
+                          }`}
+                          style={{ left: `${left}%`, width: `${width}%` }}
+                          title={`${c.inicio} → ${c.fim} · ${c.duracaoDias}d · folga ${c.folgaDias}d`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </ModuleSection>
+      ) : null}
+
+      {aba === "arquivos" ? (
+        <ModuleSection title="Arquivos do orçamento">
+          <p className="text-sm text-muted-foreground">
+            Anexos por arrastar e soltar (até 10 MB) — integração de storage
+            preparada.
+          </p>
+          <label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                if (f.size > 10 * 1024 * 1024) {
+                  notify("Arquivo acima de 10 MB");
+                  return;
+                }
+                notify("Arquivo registrado", f.name);
+                e.target.value = "";
+              }}
+            />
+            <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
+              Enviar arquivo
+            </span>
+          </label>
+        </ModuleSection>
+      ) : null}
+
+      {aba === "relatorios" ? (
+        <ModuleSection title="Relatórios">
+          <div className="flex flex-wrap gap-2">
+            {[
+              "Orçamento Sintético",
+              "Orçamento Analítico",
+              "Por Etapa",
+              "Curva ABC",
+            ].map((r) => (
+              <Button
+                key={r}
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  printList(`${r} · ${obra.nome}`);
+                  notify(r);
+                }}
+              >
+                {r}
+              </Button>
+            ))}
+          </div>
+        </ModuleSection>
+      ) : null}
 
       <FormDialog
         open={openItem}

@@ -420,6 +420,7 @@ export default function ComprasSolicitacoesPage() {
                         tipo: "Solicitação de compra",
                         valor: valorSc,
                         perfilNome,
+                        centroTipo: live.centro.tipo,
                       });
                       if (!gate.ok) {
                         notify("Alçada insuficiente", gate.reason);
