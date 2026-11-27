@@ -112,6 +112,9 @@ type CarteiraApi = {
     entrada: number;
     qtdParcelas: number;
     valorParcela: number;
+    formaPagamento?: string;
+    permutaDescricao?: string;
+    paymentPlanId?: string;
   }) => Contract | null;
   updateInstallment: (
     id: string,
@@ -843,6 +846,9 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         entrada,
         qtdParcelas,
         valorParcela,
+        formaPagamento,
+        permutaDescricao,
+        paymentPlanId,
       }) => {
         const emp = state.developments.find((d) => d.id === developmentId);
         const lot = state.lots.find((l) => l.id === lotId);
@@ -853,6 +859,12 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           lot.vendaEmAndamento &&
           (lot.status === "reservado" || lot.status === "disponivel");
         if (!livre && !minhaTrava) return null;
+        if (
+          formaPagamento === "permuta" &&
+          !(permutaDescricao && permutaDescricao.trim())
+        ) {
+          return null;
+        }
         const numero = String(
           1000 + state.contracts.length + 1
         );
@@ -876,9 +888,15 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           diasTolerancia: emp.diasMora,
           descontoPontualidadePct: 0,
           diaLimiteDesconto: 5,
-          emiteBoleto: true,
+          emiteBoleto: formaPagamento !== "permuta",
           tipoReajuste: "IGPM",
           mesBase: new Date().getMonth() + 1,
+          formaPagamento: formaPagamento || "plano",
+          permutaDescricao:
+            formaPagamento === "permuta"
+              ? permutaDescricao?.trim()
+              : undefined,
+          paymentPlanId,
         };
         const pars: Installment[] = [];
         if (entrada > 0) {

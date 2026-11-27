@@ -10,8 +10,14 @@ import {
   ModuleSection,
   StatusPill,
 } from "@/components/app/ModulePage";
-import { Field, notify } from "@/components/app/ModuleToolkit";
+import { Field, fieldControlClass, notify } from "@/components/app/ModuleToolkit";
 import { SearchSelect } from "@/components/app/SearchSelect";
+import {
+  FORMAS_PAGAMENTO_VENDA,
+  labelFormaPagamentoVenda,
+  validatePermutaDescricao,
+  type FormaPagamentoVenda,
+} from "@/lib/domain/venda-pagamento";
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
@@ -54,11 +60,15 @@ export default function NovaVendaPage() {
   const [promitenteDraft, setPromitenteDraft] = useState("");
   const [planId, setPlanId] = useState("");
   const [copyFromContractId, setCopyFromContractId] = useState("");
+  const [formaPagamento, setFormaPagamento] =
+    useState<FormaPagamentoVenda>("plano");
+  const [permutaDescricao, setPermutaDescricao] = useState("");
   const [entradaPct, setEntradaPct] = useState(20);
   const [comissaoPct, setComissaoPct] = useState(3);
   const [corretor, setCorretor] = useState("Carla Corretora");
   const [recado, setRecado] = useState("");
   const [obsLote, setObsLote] = useState("");
+  const precisaPlano = formaPagamento === "plano";
   const lotIdsRef = useRef<string[]>([]);
   lotIdsRef.current = lotIds;
   const unlockRef = useRef(unlockLotsForSale);
@@ -137,23 +147,42 @@ export default function NovaVendaPage() {
       return;
     }
     if (step === 4) {
-      if (!planId || !plan) {
-        notify(
-          "Plano de pagamento obrigatório",
-          "Cadastre/selecione um plano ativo antes de continuar"
-        );
+      const permutaErr = validatePermutaDescricao(
+        formaPagamento,
+        permutaDescricao
+      );
+      if (permutaErr) {
+        notify("Permuta", permutaErr);
         return;
       }
-      if (!plan.ativo) {
-        notify("Plano inativo", "Escolha um plano ativo");
-        return;
+      if (precisaPlano) {
+        if (!planId || !plan) {
+          notify(
+            "Plano de pagamento obrigatório",
+            "Cadastre/selecione um plano ativo antes de continuar"
+          );
+          return;
+        }
+        if (!plan.ativo) {
+          notify("Plano inativo", "Escolha um plano ativo");
+          return;
+        }
       }
     }
     setStep((s) => Math.min(STEPS.length - 1, s + 1));
   };
 
   const finalizar = () => {
-    if (!planId || !plan?.ativo) {
+    const permutaErr = validatePermutaDescricao(
+      formaPagamento,
+      permutaDescricao
+    );
+    if (permutaErr) {
+      notify("Permuta", permutaErr);
+      setStep(4);
+      return;
+    }
+    if (precisaPlano && (!planId || !plan?.ativo)) {
       notify(
         "Plano de pagamento obrigatório",
         "Não é possível gerar venda sem plano cadastrado/ativo"
@@ -165,11 +194,16 @@ export default function NovaVendaPage() {
       notify("Selecione ao menos um lote");
       return;
     }
-    const prestacoes = plan.prestacoes;
-    const entrada = Math.round(total * (entradaPct / 100) * 100) / 100;
+    const isPermuta = formaPagamento === "permuta";
+    const prestacoes = isPermuta ? 0 : plan?.prestacoes ?? 0;
+    const entrada = isPermuta
+      ? 0
+      : Math.round(total * (entradaPct / 100) * 100) / 100;
     const resto = total - entrada;
     const valorParcela =
-      Math.round((resto / Math.max(1, prestacoes)) * 100) / 100;
+      prestacoes > 0
+        ? Math.round((resto / Math.max(1, prestacoes)) * 100) / 100
+        : 0;
     const numeros: string[] = [];
     let ok = 0;
     for (const lot of selectedLots) {
@@ -181,18 +215,34 @@ export default function NovaVendaPage() {
             ? `${compradorNome} (+${promitentes.length})`
             : compradorNome,
         preco: lot.valor,
-        entrada: Math.round((lot.valor / total) * entrada * 100) / 100,
+        entrada: isPermuta
+          ? 0
+          : Math.round((lot.valor / total) * entrada * 100) / 100,
         qtdParcelas: prestacoes,
-        valorParcela: Math.round((lot.valor / total) * valorParcela * 100) / 100,
+        valorParcela: isPermuta
+          ? 0
+          : Math.round((lot.valor / total) * valorParcela * 100) / 100,
+        formaPagamento,
+        permutaDescricao: isPermuta ? permutaDescricao.trim() : undefined,
+        paymentPlanId: planId || undefined,
       });
       if (ct) {
-        changeLotStatus([lot.id], "vendido", `Venda ${ct.numero}`);
+        changeLotStatus(
+          [lot.id],
+          "vendido",
+          isPermuta ? `Permuta ${ct.numero}` : `Venda ${ct.numero}`
+        );
         numeros.push(ct.numero);
         ok += 1;
       }
     }
     if (!ok) {
-      notify("Nenhum contrato gerado", "Verifique disponibilidade dos lotes");
+      notify(
+        "Nenhum contrato gerado",
+        formaPagamento === "permuta"
+          ? "Informe a descrição da permuta e verifique os lotes"
+          : "Verifique disponibilidade dos lotes"
+      );
       return;
     }
     // limpa lista local para o unmount não “destravar” lotes já vendidos
@@ -205,7 +255,9 @@ export default function NovaVendaPage() {
     });
     notify(
       `${ok} contrato(s)`,
-      `Vendedor ${vendedor.nome} · plano ${plan.nome} · comissão ${comissaoPct}%`
+      `Vendedor ${vendedor.nome} · ${labelFormaPagamentoVenda(formaPagamento)}${
+        plan ? ` · plano ${plan.nome}` : ""
+      } · comissão ${comissaoPct}%`
     );
     router.push("/contratos");
   };
@@ -214,7 +266,7 @@ export default function NovaVendaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Nova venda"
-        description="H10 — lote travado ao selecionar (mostra vendedor). Plano de pagamento obrigatório antes de gerar a venda."
+        description="Lote travado ao selecionar. Forma de pagamento (inclui Permuta com descrição obrigatória). Plano obrigatório quando a forma for plano."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/vendas">Voltar</Link>
@@ -411,8 +463,38 @@ export default function NovaVendaPage() {
       ) : null}
 
       {step === 4 ? (
-        <ModuleSection title="Plano de pagamento (obrigatório)">
-          {planosAtivos.length === 0 ? (
+        <ModuleSection title="Forma e plano de pagamento">
+          <Field label="Forma de pagamento *">
+            <select
+              className={fieldControlClass}
+              value={formaPagamento}
+              onChange={(e) =>
+                setFormaPagamento(e.target.value as FormaPagamentoVenda)
+              }
+            >
+              {FORMAS_PAGAMENTO_VENDA.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {formaPagamento === "permuta" ? (
+            <Field label="Como foi a permuta *">
+              <textarea
+                className={fieldControlClass + " min-h-[88px]"}
+                value={permutaDescricao}
+                onChange={(e) => setPermutaDescricao(e.target.value)}
+                placeholder="Descreva o bem/serviço entregue, valores, partes e condições da permuta"
+                required
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Obrigatório para forma Permuta. Sem descrição a venda não
+                finaliza.
+              </p>
+            </Field>
+          ) : null}
+          {precisaPlano && planosAtivos.length === 0 ? (
             <p className="mb-3 text-sm text-amber-800">
               Não há plano ativo para este empreendimento.{" "}
               <Link className="underline" href="/planos-pagamento">
@@ -421,46 +503,56 @@ export default function NovaVendaPage() {
               antes de gerar a venda.
             </p>
           ) : null}
-          <Field label="Copiar plano de contrato existente">
-            <SearchSelect
-              value={copyFromContractId}
-              onChange={(id) => {
-                setCopyFromContractId(id);
-                const c = state.contracts.find((x) => x.id === id);
-                if (!c) return;
-                const match = planosAtivos.find(
-                  (p) =>
-                    p.developmentId === c.developmentId ||
-                    p.nome.toLowerCase().includes(c.tipoReajuste.toLowerCase())
-                );
-                if (match) setPlanId(match.id);
-                notify("Plano copiado", c.numero);
-              }}
-              placeholder="Buscar contrato modelo…"
-              options={state.contracts.map((c) => ({
-                value: c.id,
-                label: `${c.numero} · ${c.compradorNome}`,
-              }))}
-            />
-          </Field>
-          <Field label="Plano *">
-            <SearchSelect
-              value={planId}
-              onChange={setPlanId}
-              placeholder="Buscar plano ativo…"
-              options={planosAtivos.map((p) => ({
-                value: p.id,
-                label: `${p.nome} · ${p.prestacoes}x · ${p.moedaRef}`,
-              }))}
-            />
-          </Field>
-          <Field label="% entrada">
-            <Input
-              type="number"
-              value={entradaPct}
-              onChange={(e) => setEntradaPct(Number(e.target.value) || 0)}
-            />
-          </Field>
+          {precisaPlano ? (
+            <>
+              <Field label="Copiar plano de contrato existente">
+                <SearchSelect
+                  value={copyFromContractId}
+                  onChange={(id) => {
+                    setCopyFromContractId(id);
+                    const c = state.contracts.find((x) => x.id === id);
+                    if (!c) return;
+                    const match = planosAtivos.find(
+                      (p) =>
+                        p.developmentId === c.developmentId ||
+                        p.nome
+                          .toLowerCase()
+                          .includes(c.tipoReajuste.toLowerCase())
+                    );
+                    if (match) setPlanId(match.id);
+                    if (c.formaPagamento === "permuta" && c.permutaDescricao) {
+                      setFormaPagamento("permuta");
+                      setPermutaDescricao(c.permutaDescricao);
+                    }
+                    notify("Plano copiado", c.numero);
+                  }}
+                  placeholder="Buscar contrato modelo…"
+                  options={state.contracts.map((c) => ({
+                    value: c.id,
+                    label: `${c.numero} · ${c.compradorNome}`,
+                  }))}
+                />
+              </Field>
+              <Field label="Plano *">
+                <SearchSelect
+                  value={planId}
+                  onChange={setPlanId}
+                  placeholder="Buscar plano ativo…"
+                  options={planosAtivos.map((p) => ({
+                    value: p.id,
+                    label: `${p.nome} · ${p.prestacoes}x · ${p.moedaRef}`,
+                  }))}
+                />
+              </Field>
+              <Field label="% entrada">
+                <Input
+                  type="number"
+                  value={entradaPct}
+                  onChange={(e) => setEntradaPct(Number(e.target.value) || 0)}
+                />
+              </Field>
+            </>
+          ) : null}
           <Field label="Recado / adicionais">
             <Input
               value={recado}
@@ -518,9 +610,19 @@ export default function NovaVendaPage() {
             <p className="text-sm">Promitentes: {promitentes.join(", ")}</p>
           ) : null}
           <p className="text-sm">
-            Plano: {plan?.nome ?? "— (obrigatório)"} · entrada {entradaPct}% ·
+            Forma:{" "}
+            <strong>{labelFormaPagamentoVenda(formaPagamento)}</strong>
+            {precisaPlano
+              ? ` · plano ${plan?.nome ?? "— (obrigatório)"} · entrada ${entradaPct}%`
+              : ""}
+            {" · "}
             comissão {comissaoPct}% ({corretor})
           </p>
+          {formaPagamento === "permuta" && permutaDescricao.trim() ? (
+            <p className="text-sm text-muted-foreground">
+              Permuta: {permutaDescricao.trim()}
+            </p>
+          ) : null}
           {obsLote ? (
             <p className="text-sm text-muted-foreground">Obs.: {obsLote}</p>
           ) : null}
@@ -549,7 +651,14 @@ export default function NovaVendaPage() {
             Continuar
           </Button>
         ) : (
-          <Button size="sm" onClick={finalizar} disabled={!planId || !plan}>
+          <Button
+            size="sm"
+            onClick={finalizar}
+            disabled={
+              (precisaPlano && (!planId || !plan)) ||
+              (formaPagamento === "permuta" && !permutaDescricao.trim())
+            }
+          >
             Finalizar venda
           </Button>
         )}

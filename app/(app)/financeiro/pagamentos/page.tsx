@@ -551,6 +551,13 @@ export default function PagamentosPage() {
             notify("Preencha os campos obrigatórios");
             return;
           }
+          if (form.forma === "permuta" && !form.observacoes.trim()) {
+            notify(
+              "Permuta",
+              "Descreva como foi a permuta nas observações (obrigatório)"
+            );
+            return;
+          }
           let centros: CentroFin[];
           if (form.usarRateio) {
             const sumPct = form.rateios.reduce((a, r) => a + (r.pct || 0), 0);
@@ -1033,12 +1040,24 @@ export default function PagamentosPage() {
             </ul>
           ) : null}
         </Field>
-        <Field label="Observações">
+        <Field
+          label={
+            form.forma === "permuta"
+              ? "Como foi a permuta *"
+              : "Observações"
+          }
+        >
           <Input
             value={form.observacoes}
             onChange={(e) =>
               patchForm({ observacoes: e.target.value })
             }
+            placeholder={
+              form.forma === "permuta"
+                ? "Descreva o bem/serviço e condições da permuta"
+                : undefined
+            }
+            required={form.forma === "permuta"}
           />
         </Field>
         <label className="flex items-center gap-2 text-sm">
