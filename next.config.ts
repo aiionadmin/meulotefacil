@@ -73,6 +73,11 @@ const nextConfig: NextConfig = {
         destination: "/financeiro/fluxo-de-caixa",
         permanent: true,
       },
+      {
+        source: "/exportar",
+        destination: "/relatorios",
+        permanent: true,
+      },
     ];
   },
   async headers() {

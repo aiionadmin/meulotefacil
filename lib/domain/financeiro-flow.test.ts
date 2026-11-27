@@ -11,7 +11,12 @@ function assert(cond: boolean, msg: string) {
 const seed = seedFinanceiro();
 assert(seed.planos.length >= 16, "planos de despesa carregados");
 assert(seed.categorias.length >= 40, "categorias carregadas");
-assert(seed.naturezas.length === 11, "naturezas de receita");
+assert(seed.naturezas.length === 15, "naturezas de receita");
+assert(
+  seed.planos.some((p) => p.nome === "Receita Operacional Bruta"),
+  "plano receita canônico"
+);
+assert((seed.meusCnpjs?.length ?? 0) >= 1, "meus CNPJs");
 
 const mat = seed.categorias.find((c) => c.nome === "Materiais");
 assert(!!mat, "categoria Materiais");

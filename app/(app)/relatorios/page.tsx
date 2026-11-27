@@ -11,9 +11,10 @@ import {
   ModuleSection,
 } from "@/components/app/ModulePage";
 import { FilterBar, notify } from "@/components/app/ModuleToolkit";
-import { downloadCsv } from "@/lib/export/list-export";
+import { downloadCsv, downloadListPdf } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useCompras } from "@/lib/store/compras-store";
+import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { cn } from "@/lib/utils";
 
@@ -21,8 +22,10 @@ export default function RelatoriosPage() {
   const { state, toggleReportFavorite, runReport } = useFluxo();
   const { state: cart, saldoDevedor } = useCarteira();
   const { state: compras } = useCompras();
+  const { state: fin, categoriaNome } = useFinanceiro();
   const [q, setQ] = useState("");
   const [grupo, setGrupo] = useState("todos");
+  const [centroFin, setCentroFin] = useState("");
 
   const grupos = useMemo(
     () => ["todos", ...new Set(state.reports.map((r) => r.grupo))],
@@ -290,6 +293,136 @@ export default function RelatoriosPage() {
             }}
           >
             Hist. inadimplência
+          </Button>
+        </div>
+      </ModuleSection>
+
+      <ModuleSection title="Relatórios financeiros (réplica)">
+        <div className="mb-3 flex flex-wrap gap-2">
+          <input
+            className="h-9 max-w-xs rounded-md border border-input bg-white px-3 text-sm"
+            placeholder="Filtrar centro de custo…"
+            value={centroFin}
+            onChange={(e) => setCentroFin(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const term = centroFin.trim().toLowerCase();
+              const rows = fin.pagamentos.filter(
+                (p) =>
+                  !term || p.centroLabel.toLowerCase().includes(term)
+              );
+              const headers = [
+                "vencimento",
+                "status",
+                "valor",
+                "favorecido",
+                "descricao",
+                "categoria",
+                "centro",
+                "conta",
+              ];
+              const data = rows.map((p) => [
+                p.vencimento,
+                p.status,
+                p.valor,
+                p.favorecido,
+                p.descricao,
+                categoriaNome(p.categoriaId),
+                p.centroLabel,
+                p.contaId,
+              ]);
+              downloadCsv("pagamentos.csv", headers, data);
+              downloadListPdf(
+                "Pagamentos",
+                headers,
+                data.map((r) => r.map(String))
+              );
+              notify("Pagamentos exportados", `${rows.length} linhas`);
+            }}
+          >
+            Pagamentos
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const term = centroFin.trim().toLowerCase();
+              const rows = fin.recebimentos.filter(
+                (r) =>
+                  !term || r.centroLabel.toLowerCase().includes(term)
+              );
+              const headers = [
+                "vencimento",
+                "status",
+                "valor",
+                "cliente",
+                "descricao",
+                "centro",
+                "origem",
+              ];
+              const data = rows.map((r) => [
+                r.vencimento,
+                r.status,
+                r.valor,
+                r.cliente,
+                r.descricao,
+                r.centroLabel,
+                r.origem,
+              ]);
+              downloadCsv("recebimentos.csv", headers, data);
+              downloadListPdf(
+                "Recebimentos",
+                headers,
+                data.map((x) => x.map(String))
+              );
+              notify("Recebimentos exportados", `${rows.length} linhas`);
+            }}
+          >
+            Recebimentos
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const term = centroFin.trim().toLowerCase();
+              const rows = fin.lancamentos.filter(
+                (l) =>
+                  !term ||
+                  l.centros.some((c) =>
+                    c.label.toLowerCase().includes(term)
+                  )
+              );
+              const headers = [
+                "criado",
+                "descricao",
+                "favorecido",
+                "valor",
+                "vencimento",
+                "centros",
+              ];
+              const data = rows.map((l) => [
+                l.criadoEm,
+                l.descricao,
+                l.favorecido,
+                l.valor,
+                l.vencimento,
+                l.centros.map((c) => c.label).join(" · "),
+              ]);
+              downloadCsv("lancamentos.csv", headers, data);
+              downloadListPdf(
+                "Lançamentos",
+                headers,
+                data.map((x) => x.map(String))
+              );
+              notify("Lançamentos exportados", `${rows.length} linhas`);
+            }}
+          >
+            Lançamentos
           </Button>
         </div>
       </ModuleSection>

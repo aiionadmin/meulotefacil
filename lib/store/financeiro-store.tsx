@@ -25,6 +25,8 @@ import type {
   FinanceiroState,
   FormaPagamento,
   Lancamento,
+  MeuCnpj,
+  NotaFiscal,
   Pagamento,
   PagamentoStatus,
   PreLancamento,
@@ -129,6 +131,21 @@ type FinanceiroApi = {
   };
   /** G20 — parâmetros financeiros. */
   updateConfig: (patch: Partial<FinanceiroConfig>) => void;
+  addNota: (input: Omit<NotaFiscal, "id">) => NotaFiscal;
+  vincularNota: (notaId: string, lancamentoId: string) => boolean;
+  desvincularNota: (notaId: string) => boolean;
+  updateMeuCnpj: (
+    id: string,
+    patch: Partial<
+      Pick<
+        MeuCnpj,
+        | "certificadoNome"
+        | "certificadoValidade"
+        | "emissaoNfse"
+        | "capturaAutomatica"
+      >
+    >
+  ) => boolean;
 };
 
 const Ctx = createContext<FinanceiroApi | null>(null);
@@ -934,6 +951,62 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
             ),
           },
         }));
+      },
+      addNota: (input) => {
+        const nota: NotaFiscal = { ...input, id: uid("nf") };
+        setState((s) => ({
+          ...s,
+          notas: [nota, ...(s.notas ?? [])],
+        }));
+        return nota;
+      },
+      vincularNota: (notaId, lancamentoId) => {
+        if (!state.lancamentos.some((l) => l.id === lancamentoId)) return false;
+        let ok = false;
+        setState((s) => {
+          if (!s.notas.some((n) => n.id === notaId)) return s;
+          ok = true;
+          return {
+            ...s,
+            notas: s.notas.map((n) =>
+              n.id === notaId
+                ? { ...n, lancada: true, lancamentoId }
+                : n
+            ),
+          };
+        });
+        return ok;
+      },
+      desvincularNota: (notaId) => {
+        let ok = false;
+        setState((s) => {
+          if (!s.notas.some((n) => n.id === notaId)) return s;
+          ok = true;
+          return {
+            ...s,
+            notas: s.notas.map((n) =>
+              n.id === notaId
+                ? { ...n, lancada: false, lancamentoId: undefined }
+                : n
+            ),
+          };
+        });
+        return ok;
+      },
+      updateMeuCnpj: (id, patch) => {
+        let ok = false;
+        setState((s) => {
+          const list = s.meusCnpjs ?? [];
+          if (!list.some((c) => c.id === id)) return s;
+          ok = true;
+          return {
+            ...s,
+            meusCnpjs: list.map((c) =>
+              c.id === id ? { ...c, ...patch } : c
+            ),
+          };
+        });
+        return ok;
       },
     }),
     [state, ready]
