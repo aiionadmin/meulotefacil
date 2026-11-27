@@ -11,8 +11,9 @@ Carregar: `/dxf/viewer.html?arquivo=PARQUE_UNIS.dxf`
 
 ## Upload no app
 
-Em `/empreendimentos/planta` (aba DXF): somente `.dxf`, **sem limite de MB**.
-O arquivo sobe no navegador e abre no viewer via `postMessage` (`mlf-dxf-load`).
+Em `/empreendimentos/planta` (aba DXF): use **Abrir DXF…** na toolbar do viewer
+(somente `.dxf`, **sem limite de MB**). Sem dropzone externo — o canvas/toolbar
+do viewer concentram o fluxo.
 
 ## Controles
 
