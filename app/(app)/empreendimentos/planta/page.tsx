@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ModuleHeader, StatusPill } from "@/components/app/ModulePage";
+import { ModuleHeader, ModuleSection, StatusPill } from "@/components/app/ModulePage";
 import {
   DetailRow,
   DetailSheet,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
+import { DxfViewer } from "@/components/dxf/DxfViewer";
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Lot, LotStatus } from "@/lib/domain/carteira-types";
@@ -27,6 +28,8 @@ const COLORS: Record<LotStatus, string> = {
   juridico: "bg-orange-800/90 hover:bg-orange-800",
 };
 
+type PlantaModo = "grade" | "dxf";
+
 export default function PlantaPage() {
   const { state, changeLotStatus, setLotPlantaPoligono } = useCarteira();
   const [devId, setDevId] = useState(state.developments[0]?.id ?? "");
@@ -36,6 +39,7 @@ export default function PlantaPage() {
   const [zoom, setZoom] = useState(1);
   const [editMode, setEditMode] = useState(false);
   const [polyDraft, setPolyDraft] = useState<{ x: number; y: number }[]>([]);
+  const [modo, setModo] = useState<PlantaModo>("dxf");
 
   const lots = useMemo(
     () => state.lots.filter((l) => l.developmentId === devId),
@@ -61,14 +65,46 @@ export default function PlantaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Planta do loteamento"
-        description="C05 — PDF com zoom, grade colorida por status e ficha ao clicar."
+        description="DXF interativo (zoom, pan, camadas, medir) e grade colorida por status."
         actions={
-          <Button size="sm" variant="outline" asChild>
-            <Link href="/empreendimentos">Voltar à grade</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <div className="inline-flex rounded-sm border border-linha p-0.5">
+              <Button
+                size="sm"
+                variant={modo === "dxf" ? "default" : "ghost"}
+                className="h-8"
+                onClick={() => setModo("dxf")}
+              >
+                DXF
+              </Button>
+              <Button
+                size="sm"
+                variant={modo === "grade" ? "default" : "ghost"}
+                className="h-8"
+                onClick={() => setModo("grade")}
+              >
+                Grade / PDF
+              </Button>
+            </div>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/empreendimentos">Voltar à grade</Link>
+            </Button>
+          </div>
         }
       />
 
+      {modo === "dxf" ? (
+        <ModuleSection title={emp?.nome ? `DXF · ${emp.nome}` : "Visualizador DXF"}>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Amostra Mirassol carrega automaticamente. Use Abrir DXF… ou arraste
+            outro arquivo. Controles: roda = zoom, arrastar = mover, F =
+            enquadrar, Medir, painel Camadas. Nada é enviado à internet.
+          </p>
+          <DxfViewer arquivo="MIRASSOL.dxf" height="72vh" />
+        </ModuleSection>
+      ) : null}
+
+      {modo === "grade" ? (
       <div className="flex flex-wrap items-center gap-3">
         <select
           className={fieldControlClass + " max-w-xs"}
@@ -141,7 +177,10 @@ export default function PlantaPage() {
           ))}
         </div>
       </div>
+      ) : null}
 
+      {modo === "grade" ? (
+      <>
       {pdfUrl ? (
         <div className="overflow-auto rounded-sm border border-border bg-muted/30 p-2">
           <p className="mb-2 text-xs text-muted-foreground">
@@ -312,6 +351,8 @@ export default function PlantaPage() {
           </div>
         ) : null}
       </DetailSheet>
+      </>
+      ) : null}
     </div>
   );
 }

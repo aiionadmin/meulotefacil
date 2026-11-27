@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meu Lote Fácil · Visualizador DXF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Visual MLF: Montserrat + laranja #ED8600 — canvas DXF intacto */
+:root{--bg:#f7f4ef;--panel:#fff;--line:#e2ddd4;--tx:#1b1e24;--mut:#6a7180;--acc:#ED8600}
+body.dark-bg{--bg:#16181d;--panel:#1e2128;--line:#2e323c;--tx:#e6e8ec;--mut:#8b92a1;--acc:#ED8600}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:1fr 280px;font:13px/1.45 Montserrat,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--tx);background:var(--bg);overflow:hidden}
+body.nopanel{grid-template-columns:1fr 0}body.nopanel aside{display:none}
+header{grid-column:1/-1;display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header b{margin:0 10px 0 4px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw}
+button{font:inherit;color:var(--tx);background:transparent;border:1px solid var(--line);border-radius:4px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--acc)}button.on,button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.sp{flex:1}
+#stage{position:relative;min-width:0;min-height:0}
+canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}canvas:active{cursor:grabbing}
+aside{display:flex;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid var(--line)}
+aside .top{padding:10px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0;width:100%}
+#q{flex:1 1 100%;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 8px}
+#layers{overflow:auto;flex:1;padding:4px 0}
+.lay{display:flex;align-items:center;gap:8px;padding:4px 10px;cursor:pointer}.lay:hover{background:rgba(127,127,127,.12)}.lay[hidden]{display:none}
+.lay i{width:12px;height:12px;border-radius:3px;border:1px solid rgba(127,127,127,.5);flex:none}
+.lay span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lay em{font-style:normal;color:var(--mut);font-variant-numeric:tabular-nums;font-size:11px}
+footer{grid-column:1/-1;display:flex;gap:16px;padding:5px 10px;background:var(--panel);border-top:1px solid var(--line);color:var(--mut);font-variant-numeric:tabular-nums;white-space:pre}
+#drop{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px}
+#drop[hidden],#busy[hidden]{display:none}
+#drop div{border:2px dashed var(--line);border-radius:6px;padding:40px 48px;max-width:460px}
+#drop h1{font-size:18px;margin:0 0 6px}#drop p{color:var(--mut);margin:0 0 16px}
+body.drag #stage::after{content:"Solte o arquivo DXF aqui";position:absolute;inset:8px;display:grid;place-items:center;font-size:18px;border:2px dashed var(--acc);border-radius:6px;background:rgba(237,134,0,.12);pointer-events:none}
+#busy{position:absolute;left:50%;top:16px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 14px;box-shadow:0 4px 18px rgba(0,0,0,.3);max-width:90%}
+@media(max-width:700px){body{grid-template-columns:1fr 0}aside{position:fixed;right:0;top:46px;bottom:28px;width:260px;z-index:2}}
+</style>
+</head>
+<body>
+<header>
+  <b id="fname">Meu Lote Fácil · DXF</b>
+  <button id="open" class="pri">Abrir DXF…</button>
+  <button id="fit" title="Enquadrar (F ou duplo clique)">Enquadrar</button>
+  <button id="zin" title="Aproximar" aria-label="Aproximar">+</button>
+  <button id="zout" title="Afastar" aria-label="Afastar">−</button>
+  <button id="measure" title="Clique em dois pontos para medir a distância">Medir</button>
+  <span class="sp"></span>
+  <button id="bg">Fundo claro/escuro</button>
+  <button id="toggle">Camadas</button>
+  <input id="file" type="file" accept=".dxf,.DXF" hidden>
+</header>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="drop"><div><h1>Abra um arquivo DXF</h1><p>Arraste o arquivo para cá ou escolha no computador. Nada é enviado para a internet — o desenho é lido aqui mesmo no navegador.</p><button id="open2" class="pri">Escolher arquivo…</button></div></div>
+  <div id="busy" hidden></div>
+</div>
+<aside>
+  <div class="top"><h2>Camadas</h2><input id="q" type="search" placeholder="Filtrar camadas…" aria-label="Filtrar camadas"><button id="all">Mostrar todas</button><button id="none">Ocultar todas</button></div>
+  <div id="layers"></div>
+</aside>
+<footer><span id="coord">E —   N —</span><span class="sp"></span><span id="info">Roda do mouse: zoom · Arrastar: mover</span></footer>
+<script>
+// ---- DXF core: parser + scene builder (no dependencies) ----
+const DXF = (() => {
+  const D2R = Math.PI / 180;
+  function aci(i) {
+    const base = [[0,0,0],[255,0,0],[255,255,0],[0,255,0],[0,255,255],[0,0,255],[255,0,255],[255,255,255],[128,128,128],[192,192,192]];
+    if (i < 10) return base[i];
+    if (i >= 250) { const g = [51,91,132,173,214,255][i - 250]; return [g,g,g]; }
+    const hue = Math.floor((i - 10) / 10) * 15, d = i % 10;
+    const v = [1,0.8,0.6,0.5,0.3][d >> 1], s = d % 2 ? 0.5 : 1;
+    const f = n => { const k = (n + hue / 60) % 6; return Math.round(255 * (v - v * s * Math.max(0, Math.min(k, 4 - k, 1)))); };
+    return [f(5), f(3), f(1)];
+  }
+  const css = c => 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+  const aciCss = i => (i === 7 || i === 0) ? 'fg' : css(aci(i));
+  const tcCss = v => (v === 0xFFFFFF || v === 0) ? 'fg' : css([(v >> 16) & 255, (v >> 8) & 255, v & 255]);
+
+  function decodeText(s) {
+    return s.replace(/\\U\+([0-9A-Fa-f]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/%%[cC]/g, 'Ø').replace(/%%[dD]/g, '°').replace(/%%[pP]/g, '±').replace(/%%[uUoO]/g, '');
+  }
+  function cleanMText(s) {
+    return decodeText(s).replace(/\\[Pp]/g, '\n').replace(/\\~/g, ' ')
+      .replace(/\\S([^;]*);/g, (_, a) => a.replace(/[#^]/g, '/'))
+      .replace(/\\[fFHhCcTtQqWwAap][^;]*;/g, '').replace(/\\[LlOoKk]/g, '')
+      .replace(/\\([\\{}])/g, '\u0001$1').replace(/[{}]/g, '').replace(/\u0001/g, '');
+  }
+
+  const WCS = { LINE: 1, POINT: 1, ELLIPSE: 1, SPLINE: 1, MTEXT: 1, '3DFACE': 1, DIMENSION: 1 };
+  function norm(type, tags) {
+    let cut = tags.length;
+    for (let i = 0; i < tags.length; i++) if (tags[i][0] === 101) { cut = i; break; }
+    const g = (c, d) => { for (let i = 0; i < cut; i++) if (tags[i][0] === c) return tags[i][1]; return d; };
+    const n = (c, d) => { const v = g(c); return v === undefined ? d : parseFloat(v); };
+    const e = { type, layer: g(8, '0'), color: n(62, 256), paper: n(67, 0) === 1 || n(60, 0) === 1, };
+    { const nx = n(210, 0), ny = n(220, 0), nz = n(230, 1);
+      if ((nx || ny || nz !== 1) && !WCS[type]) { const len = Math.hypot(nx, ny, nz) || 1, X = nx / len, Y = ny / len, Z = nz / len;
+        let ax, ay, az; if (Math.abs(X) < 1 / 64 && Math.abs(Y) < 1 / 64) { ax = Z; ay = 0; az = -X; } else { ax = -Y; ay = X; az = 0; }
+        const al = Math.hypot(ax, ay, az); ax /= al; ay /= al; az /= al;
+        const z = type === 'LWPOLYLINE' ? n(38, 0) : n(30, 0);
+        e.ocs = [ax, ay, Y * az - Z * ay, Z * ax - X * az, X * z, Y * z]; } }
+    const tc = g(420); if (tc !== undefined) e.tc = parseInt(tc);
+    switch (type) {
+      case 'LINE': e.p = [n(10,0), n(20,0), n(11,0), n(21,0)]; break;
+      case 'CIRCLE': e.x = n(10,0); e.y = n(20,0); e.r = n(40,0); break;
+      case 'ARC': e.x = n(10,0); e.y = n(20,0); e.r = n(40,0); e.a0 = n(50,0); e.a1 = n(51,360); break;
+      case 'ELLIPSE': e.x = n(10,0); e.y = n(20,0); e.mx = n(11,1); e.my = n(21,0); e.ratio = n(40,1); e.t0 = n(41,0); e.t1 = n(42,Math.PI*2); break;
+      case 'POINT': e.x = n(10,0); e.y = n(20,0); break;
+      case 'LWPOLYLINE': {
+        const v = []; let cur = null;
+        for (let i = 0; i < cut; i++) { const [c, val] = tags[i];
+          if (c === 10) { cur = [parseFloat(val), 0, 0]; v.push(cur); }
+          else if (c === 20 && cur) cur[1] = parseFloat(val);
+          else if (c === 42 && cur) cur[2] = parseFloat(val); }
+        e.v = v; e.closed = (n(70,0) & 1) === 1; e.w = n(43,0); break; }
+      case 'POLYLINE': e.v = []; e.closed = (n(70,0) & 1) === 1; e.mesh = (n(70,0) & 80) !== 0; e.w = 0; break;
+      case 'VERTEX': e.x = n(10,0); e.y = n(20,0); e.b = n(42,0); e.vf = n(70,0); break;
+      case 'SPLINE': {
+        const cp = [], fp = [], k = []; let cx = null, fx = null;
+        for (let i = 0; i < cut; i++) { const [c, val] = tags[i]; const f = parseFloat(val);
+          if (c === 10) cx = f; else if (c === 20 && cx !== null) { cp.push([cx, f]); cx = null; }
+          else if (c === 11) fx = f; else if (c === 21 && fx !== null) { fp.push([fx, f]); fx = null; }
+          else if (c === 40) k.push(f); }
+        e.cp = cp; e.fp = fp; e.k = k; e.deg = n(71,3); e.closed = (n(70,0) & 1) === 1; break; }
+      case 'TEXT': case 'ATTRIB': case 'ATTDEF':
+        e.x = n(10,0); e.y = n(20,0); e.h = n(40,1); e.s = decodeText(g(1,'')); e.rot = n(50,0);
+        e.ha = n(72,0); e.va = type === 'TEXT' ? n(73,0) : n(74,0);
+        if (g(11) !== undefined) { e.ax = n(11,0); e.ay = n(21,0); }
+        if (type !== 'TEXT' && (n(70,0) & 1)) e.paper = true;
+        break;
+      case 'MTEXT': {
+        let s = ''; for (let i = 0; i < cut; i++) if (tags[i][0] === 3) s += tags[i][1]; s += g(1,'');
+        e.x = n(10,0); e.y = n(20,0); e.h = n(40,1); e.s = cleanMText(s); e.at = n(71,1);
+        e.rot = g(11) !== undefined ? Math.atan2(n(21,0), n(11,1)) / D2R : n(50,0); break; }
+      case 'INSERT': case 'DIMENSION':
+        e.name = g(2,''); e.x = type === 'INSERT' ? n(10,0) : 0; e.y = type === 'INSERT' ? n(20,0) : 0;
+        e.sx = type === 'INSERT' ? n(41,1) : 1; e.sy = type === 'INSERT' ? n(42,1) : 1; e.rot = type === 'INSERT' ? n(50,0) : 0;
+        if (type === 'DIMENSION') break;
+      case 'SOLID': case 'TRACE': case '3DFACE':
+        e.p = [n(10,0), n(20,0), n(11,0), n(21,0), n(13, n(12,0)), n(23, n(22,0)), n(12,0), n(22,0)];
+        if (type === '3DFACE') { e.p = [n(10,0), n(20,0), n(11,0), n(21,0), n(12,0), n(22,0), n(13,n(12,0)), n(23,n(22,0))]; e.wire = true; }
+        break;
+      case 'HATCH': e.solid = n(70,0) === 1; e.rings = hatchRings(tags); break;
+      default: return null;
+    }
+    return e;
+  }
+
+  function arcPts(cx, cy, r, a0, a1, out) { // radians, a0->a1 either direction
+    const sweep = a1 - a0, nseg = Math.max(2, Math.ceil(Math.abs(sweep) / (Math.PI * 2) * 72));
+    for (let i = 0; i <= nseg; i++) { const a = a0 + sweep * i / nseg; out.push(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
+  }
+  function bulgePts(x1, y1, x2, y2, b, out) { // appends points after (x1,y1) up to (x2,y2)
+    if (!b) { out.push(x2, y2); return; }
+    const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy); if (d === 0) return;
+    const ang = 4 * Math.atan(b), r = d / (2 * Math.sin(ang / 2));
+    const cx = (x1 + x2) / 2 - dy * (1 - b * b) / (4 * b), cy = (y1 + y2) / 2 + dx * (1 - b * b) / (4 * b);
+    const a0 = Math.atan2(y1 - cy, x1 - cx), nseg = Math.max(2, Math.ceil(Math.abs(ang) / (Math.PI * 2) * 72)), R = Math.abs(r);
+    for (let i = 1; i <= nseg; i++) { const a = a0 + ang * i / nseg; out.push(cx + R * Math.cos(a), cy + R * Math.sin(a)); }
+    out[out.length - 2] = x2; out[out.length - 1] = y2;
+  }
+  function polyPts(v, closed) {
+    const out = []; if (!v.length) return out;
+    out.push(v[0][0], v[0][1]);
+    for (let i = 1; i < v.length; i++) bulgePts(v[i-1][0], v[i-1][1], v[i][0], v[i][1], v[i-1][2], out);
+    if (closed) { const l = v[v.length - 1]; bulgePts(l[0], l[1], v[0][0], v[0][1], l[2], out); }
+    return out;
+  }
+  function hatchRings(tags) {
+    const rings = []; let i = 0;
+    while (i < tags.length && tags[i][0] !== 91) i++;
+    if (i >= tags.length) return rings;
+    const np = parseInt(tags[i++][1]);
+    const num = c => { while (i < tags.length && tags[i][0] !== c) i++; return parseFloat(tags[i++][1]); };
+    const opt = c => (i < tags.length && tags[i][0] === c) ? parseFloat(tags[i++][1]) : undefined;
+    try {
+      for (let p = 0; p < np; p++) {
+        const flag = num(92);
+        if (flag & 2) {
+          const hasB = num(72), closed = num(73), nv = num(93), v = [];
+          for (let k = 0; k < nv; k++) { const x = num(10), y = num(20); let b = 0; if (hasB) b = opt(42) || 0; v.push([x, y, b]); }
+          rings.push(polyPts(v, !!closed));
+        } else {
+          const ne = num(93), out = [];
+          for (let k = 0; k < ne; k++) {
+            const t = num(72);
+            if (t === 1) { const x1 = num(10), y1 = num(20), x2 = num(11), y2 = num(21); out.push(x1, y1, x2, y2); }
+            else if (t === 2) { const cx = num(10), cy = num(20), r = num(40); let s = num(50), en = num(51); const ccw = num(73);
+              if (ccw) { if (en <= s) en += 360; } else { s = -s; en = -en; if (en >= s) en -= 360; }
+              arcPts(cx, cy, r, s * D2R, en * D2R, out); }
+            else if (t === 3) { const cx = num(10), cy = num(20), mx = num(11), my = num(21), ratio = num(40); let s = num(50), en = num(51); const ccw = num(73);
+              if (ccw) { if (en <= s) en += 360; } else { s = -s; en = -en; if (en >= s) en -= 360; }
+              const ns = 48; for (let q = 0; q <= ns; q++) { const a = (s + (en - s) * q / ns) * D2R; out.push(cx + mx * Math.cos(a) - my * ratio * Math.sin(a), cy + my * Math.cos(a) + mx * ratio * Math.sin(a)); } }
+            else if (t === 4) { num(94); num(73); num(74); const nk = num(95), nc = num(96);
+              for (let q = 0; q < nk; q++) num(40);
+              for (let q = 0; q < nc; q++) { const x = num(10), y = num(20); opt(42); out.push(x, y); }
+              const nf = opt(97) || 0; for (let q = 0; q < nf; q++) { num(11); num(21); }
+              opt(12); opt(22); opt(13); opt(23); }
+          }
+          rings.push(out);
+        }
+        const ns = opt(97) || 0; for (let q = 0; q < ns; q++) if (i < tags.length && tags[i][0] === 330) i++;
+      }
+    } catch (err) { /* keep what was parsed */ }
+    return rings;
+  }
+  function splinePts(e) {
+    const cp = e.cp, k = e.k, p = e.deg, out = [];
+    if (cp.length < 2 || k.length < cp.length + p + 1) { const src = e.fp.length > 1 ? e.fp : cp; for (const q of src) out.push(q[0], q[1]); return out; }
+    const n = cp.length - 1, t0 = k[p], t1 = k[n + 1], N = Math.max(16, cp.length * 8);
+    for (let s = 0; s <= N; s++) {
+      let t = t0 + (t1 - t0) * s / N; if (s === N) t = t1 - 1e-9 * (t1 - t0);
+      let j = p; while (j < n && k[j + 1] <= t) j++;
+      const d = []; for (let q = 0; q <= p; q++) d.push([cp[j - p + q][0], cp[j - p + q][1]]);
+      for (let r = 1; r <= p; r++) for (let q = p; q >= r; q--) {
+        const den = k[j + 1 + q - r] - k[j - p + q], a = den ? (t - k[j - p + q]) / den : 0;
+        d[q][0] = (1 - a) * d[q - 1][0] + a * d[q][0]; d[q][1] = (1 - a) * d[q - 1][1] + a * d[q][1]; }
+      out.push(d[p][0], d[p][1]);
+    }
+    return out;
+  }
+
+  function parse(text) {
+    const lines = text.split('\n'), N = lines.length - 1;
+    const doc = { layers: new Map(), blocks: new Map(), ents: [] };
+    let section = '', type = null, tags = null, block = null, poly = null, skip = false, expectName = false;
+    const flush = () => {
+      if (!type) return;
+      if (section === 'TABLES') {
+        if (type === 'LAYER') { let name = '0', col = 7, tc, fl = 0;
+          for (const [c, v] of tags) { if (c === 2) name = v; else if (c === 62) col = parseInt(v); else if (c === 420) tc = parseInt(v); else if (c === 70) fl = parseInt(v); }
+          doc.layers.set(name, { name, aci: Math.abs(col), tc, off: col < 0 || (fl & 1) === 1 }); }
+      } else if (section === 'BLOCKS' || section === 'ENTITIES') {
+        if (type === 'BLOCK') { let name = '', bx = 0, by = 0;
+          for (const [c, v] of tags) { if (c === 2) name = v; else if (c === 10) bx = parseFloat(v); else if (c === 20) by = parseFloat(v); }
+          block = { name, bx, by, ents: [] }; doc.blocks.set(name, block);
+        } else if (type === 'ENDBLK') block = null;
+        else if (type === 'SEQEND') poly = null;
+        else { const e = norm(type, tags);
+          if (e) { if (e.type === 'VERTEX') { if (poly && !(e.vf & 128 && !(e.vf & 64)) && !(e.vf & 16)) poly.v.push([e.x, e.y, e.b]); }
+            else { if (e.type === 'POLYLINE') poly = e; else if (e.type !== 'ATTRIB') poly = null;
+              if (e.type !== 'ATTDEF') (section === 'BLOCKS' ? (block ? block.ents : []) : doc.ents).push(e); } } }
+      }
+      type = null; tags = null;
+    };
+    for (let i = 0; i < N; i += 2) {
+      const code = parseInt(lines[i]); let val = lines[i + 1];
+      if (code === 0) {
+        val = val.trim(); flush();
+        if (val === 'SECTION') { expectName = true; continue; }
+        if (val === 'ENDSEC') { section = ''; skip = false; continue; }
+        if (val === 'EOF') break;
+        if (!skip) { type = val; tags = []; }
+      } else if (expectName && code === 2) { section = val.trim(); expectName = false; skip = !(section === 'TABLES' || section === 'BLOCKS' || section === 'ENTITIES'); }
+      else if (tags && code < 1000) tags.push([code, (code === 1 || code === 3) ? val.replace(/\r$/, '') : val.trim()]);
+    }
+    flush();
+    return doc;
+  }
+
+  const mul = (m, n) => [m[0]*n[0] + m[2]*n[1], m[1]*n[0] + m[3]*n[1], m[0]*n[2] + m[2]*n[3], m[1]*n[2] + m[3]*n[3], m[0]*n[4] + m[2]*n[5] + m[4], m[1]*n[4] + m[3]*n[5] + m[5]];
+
+  function build(doc) {
+    const layers = new Map();
+    const L = name => { let l = layers.get(name); if (!l) { const d = doc.layers.get(name) || { aci: 7, off: false };
+      l = { name, color: d.tc !== undefined ? tcCss(d.tc) : aciCss(d.aci), visible: !d.off, strokes: new Map(), fills: [], texts: [], count: 0 }; layers.set(name, l); } return l; };
+    for (const name of doc.layers.keys()) L(name);
+    let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity, ox = 0, oy = 0, first = true, total = 0;
+    const tp = (m, pts) => { const o = new Array(pts.length);
+      for (let i = 0; i < pts.length; i += 2) { const x = pts[i], y = pts[i+1];
+        if (first) { ox = m[0]*x + m[2]*y + m[4]; oy = m[1]*x + m[3]*y + m[5]; first = false; }
+        const X = m[0]*x + m[2]*y + m[4] - ox, Y = m[1]*x + m[3]*y + m[5] - oy; o[i] = X; o[i+1] = Y;
+        if (X < minx) minx = X; if (X > maxx) maxx = X; if (Y < miny) miny = Y; if (Y > maxy) maxy = Y; }
+      return o; };
+    const stroke = (l, col, m, pts, w) => { if (pts.length < 4) return; const key = col + '|' + (w || 0); let a = l.strokes.get(key); if (!a) l.strokes.set(key, a = []); a.push(tp(m, pts)); l.count++; total++; };
+    const walk = (ents, m, ctx, depth) => {
+      for (const e of ents) {
+        if (e.paper) continue;
+        const lname = (e.layer === '0' && ctx.layer) ? ctx.layer : e.layer, l = L(lname);
+        let col;
+        if (e.tc !== undefined) col = tcCss(e.tc);
+        else if (e.color === 256) col = l.color;
+        else if (e.color === 0) col = ctx.color || 'fg';
+        else col = aciCss(e.color);
+        const M = e.ocs ? mul(m, e.ocs) : m;
+        switch (e.type) {
+          case 'LINE': stroke(l, col, M, e.p); break;
+          case 'CIRCLE': { const o = []; arcPts(e.x, e.y, e.r, 0, Math.PI * 2, o); stroke(l, col, M, o); break; }
+          case 'ARC': { const o = []; let a1 = e.a1; if (a1 <= e.a0) a1 += 360; arcPts(e.x, e.y, e.r, e.a0 * D2R, a1 * D2R, o); stroke(l, col, M, o); break; }
+          case 'ELLIPSE': { const o = []; let t1 = e.t1; if (t1 <= e.t0) t1 += Math.PI * 2; const ns = 72;
+            for (let q = 0; q <= ns; q++) { const a = e.t0 + (t1 - e.t0) * q / ns; o.push(e.x + e.mx * Math.cos(a) - e.my * e.ratio * Math.sin(a), e.y + e.my * Math.cos(a) + e.mx * e.ratio * Math.sin(a)); }
+            stroke(l, col, M, o); break; }
+          case 'LWPOLYLINE': case 'POLYLINE': if (!e.mesh) stroke(l, col, M, polyPts(e.v, e.closed), e.w * Math.sqrt(Math.abs(M[0]*M[3] - M[1]*M[2]))); break;
+          case 'SPLINE': stroke(l, col, M, splinePts(e)); break;
+          case 'POINT': { const o = tp(M, [e.x, e.y]); l.texts.push({ x: o[0], y: o[1], pt: true, color: col }); l.count++; break; }
+          case 'SOLID': case 'TRACE': case '3DFACE': if (e.wire) stroke(l, col, M, e.p.concat(e.p.slice(0, 2))); else { l.fills.push({ color: col, rings: [tp(M, e.p)], alpha: 1 }); l.count++; total++; } break;
+          case 'HATCH': { const rings = e.rings.filter(r => r.length >= 6).map(r => tp(M, r)); if (rings.length) { l.fills.push({ color: col, rings, alpha: e.solid ? 0.55 : 0.18 }); l.count++; total++; } break; }
+          case 'TEXT': case 'ATTRIB': case 'MTEXT': {
+            if (!e.s) break;
+            let x = e.x, y = e.y, ha = 0, va = 0;
+            if (e.type === 'MTEXT') { ha = (e.at - 1) % 3; va = 3 - Math.floor((e.at - 1) / 3); }
+            else { ha = e.ha; va = e.va;
+              if (ha === 3 || ha === 5) { ha = 0; va = 0; } else if (ha === 4) { ha = 1; va = 2; if (e.ax !== undefined) { x = e.ax; y = e.ay; } }
+              else if ((ha || va) && e.ax !== undefined) { x = e.ax; y = e.ay; } }
+            const r = e.rot * D2R, c = Math.cos(r), s = Math.sin(r), o = tp(M, [x, y]);
+            const dx = M[0]*c + M[2]*s, dy = M[1]*c + M[3]*s, ux = -M[0]*s + M[2]*c, uy = -M[1]*s + M[3]*c;
+            l.texts.push({ x: o[0], y: o[1], h: e.h * Math.hypot(ux, uy), rot: Math.atan2(dy, dx), s: e.s.split('\n'), ha, va, color: col });
+            l.count++; total++; break; }
+          case 'INSERT': case 'DIMENSION': {
+            const b = doc.blocks.get(e.name); if (!b || depth > 12) break;
+            const r = e.rot * D2R, c = Math.cos(r), s = Math.sin(r);
+            const im = mul(M, mul([c * e.sx, s * e.sx, -s * e.sy, c * e.sy, e.x, e.y], [1, 0, 0, 1, -b.bx, -b.by]));
+            walk(b.ents, im, { layer: lname, color: col }, depth + 1); break; }
+        }
+      }
+    };
+    walk(doc.ents, [1,0,0,1,0,0], {}, 0);
+    const list = [...layers.values()].filter(l => l.count > 0).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    for (const l of list) { const bb = [Infinity, Infinity, -Infinity, -Infinity];
+      const add = p => { for (let i = 0; i < p.length; i += 2) { if (p[i] < bb[0]) bb[0] = p[i]; if (p[i] > bb[2]) bb[2] = p[i]; if (p[i+1] < bb[1]) bb[1] = p[i+1]; if (p[i+1] > bb[3]) bb[3] = p[i+1]; } };
+      for (const a of l.strokes.values()) a.forEach(add); for (const f of l.fills) f.rings.forEach(add); for (const t of l.texts) add([t.x, t.y]);
+      l.bb = bb; }
+    return { layers: list, bbox: [minx, miny, maxx, maxy], ox, oy, total };
+  }
+  return { parse, build };
+})();
+if (typeof module !== 'undefined') module.exports = DXF;
+
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d'), wrap = $('stage');
+  let scene = null, paths = [], s = 1, tx = 0, ty = 0, dark = false, raf = 0, dpr = 1, W = 0, H = 0;
+  let measuring = false, mpts = [], mouse = null;
+
+  const fg = () => dark ? '#f2f2f2' : '#111';
+  const col = c => c === 'fg' ? fg() : (!dark && lum(c) > 200 ? darken(c) : c);
+  const rgb = c => c.slice(4, -1).split(',').map(Number);
+  const lum = c => { const [r, g, b] = rgb(c); return 0.299 * r + 0.587 * g + 0.114 * b; };
+  const darken = c => { const [r, g, b] = rgb(c); return `rgb(${r >> 1},${g >> 1},${b >> 1})`; };
+
+  function resize() { dpr = window.devicePixelRatio || 1; W = wrap.clientWidth; H = wrap.clientHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); redraw(); }
+  function redraw() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); }
+
+  function fit() {
+    if (!scene) return;
+    let b = [Infinity, Infinity, -Infinity, -Infinity], use = scene.layers.filter(l => l.visible);
+    if (!use.length) use = scene.layers;
+    for (const l of use) { if (l.bb[0] > l.bb[2]) continue; b = [Math.min(b[0], l.bb[0]), Math.min(b[1], l.bb[1]), Math.max(b[2], l.bb[2]), Math.max(b[3], l.bb[3])]; }
+    if (b[0] > b[2]) return;
+    const w = Math.max(b[2] - b[0], 1e-6), h = Math.max(b[3] - b[1], 1e-6);
+    s = Math.min(W / w, H / h) * 0.94; tx = W / 2 - (b[0] + w / 2) * s; ty = H / 2 + (b[1] + h / 2) * s; redraw();
+  }
+
+  function draw() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = dark ? '#16181d' : '#f7f4ef'; ctx.fillRect(0, 0, cv.width, cv.height);
+    if (!scene) return;
+    const T = () => ctx.setTransform(s * dpr, 0, 0, -s * dpr, tx * dpr, ty * dpr);
+    T();
+    for (const p of paths) if (p.layer.visible && p.fill) { ctx.globalAlpha = p.alpha; ctx.fillStyle = col(p.color); ctx.fill(p.path, 'evenodd'); }
+    ctx.globalAlpha = 1; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (const p of paths) if (p.layer.visible && !p.fill) { ctx.strokeStyle = col(p.color); ctx.lineWidth = Math.max(1 / s, p.w); ctx.stroke(p.path); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const x0 = -tx / s, x1 = (W - tx) / s, y1 = ty / s, y0 = (ty - H) / s;
+    for (const l of scene.layers) { if (!l.visible) continue;
+      for (const t of l.texts) {
+        const pad = t.pt ? 0 : t.h * 40; if (t.x < x0 - pad || t.x > x1 + pad || t.y < y0 - pad || t.y > y1 + pad) continue;
+        const sx = t.x * s + tx, sy = -t.y * s + ty; ctx.fillStyle = col(t.color);
+        if (t.pt) { ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3); continue; }
+        const px = t.h * s * 1.35; if (px < 3.2) continue;
+        ctx.save(); ctx.translate(sx, sy); ctx.rotate(-t.rot); ctx.font = px + 'px Arial, Helvetica, sans-serif';
+        ctx.textAlign = ['left', 'center', 'right'][t.ha] || 'left'; ctx.textBaseline = ['alphabetic', 'bottom', 'middle', 'top'][t.va] || 'alphabetic';
+        const lh = t.h * s * 1.6, n = t.s.length, off = t.va === 3 ? 0 : t.va === 2 ? -(n - 1) * lh / 2 : -(n - 1) * lh;
+        for (let i = 0; i < n; i++) ctx.fillText(t.s[i], 0, off + i * lh);
+        ctx.restore(); } }
+    if (mpts.length) { const a = mpts[0], b = mpts[1] || mouse; if (b) {
+      const ax = a[0] * s + tx, ay = -a[1] * s + ty, bx = b[0] * s + tx, by = -b[1] * s + ty;
+      ctx.strokeStyle = '#ff5a3c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      const d = Math.hypot(b[0] - a[0], b[1] - a[1]), label = d.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+      ctx.font = '600 13px system-ui, sans-serif'; const tw = ctx.measureText(label).width + 12, mx = (ax + bx) / 2, my = (ay + by) / 2;
+      ctx.fillStyle = '#ff5a3c'; ctx.fillRect(mx - tw / 2, my - 11, tw, 22); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, mx, my); } }
+  }
+
+  function setScene(sc, name) {
+    scene = sc; paths = [];
+    for (const l of sc.layers) {
+      for (const f of l.fills) { const p = new Path2D(); for (const r of f.rings) { p.moveTo(r[0], r[1]); for (let i = 2; i < r.length; i += 2) p.lineTo(r[i], r[i + 1]); p.closePath(); } paths.push({ layer: l, fill: true, color: f.color, alpha: f.alpha, path: p }); }
+      for (const [key, polys] of l.strokes) { const p = new Path2D(), k = key.lastIndexOf('|');
+        for (const r of polys) { p.moveTo(r[0], r[1]); for (let i = 2; i < r.length; i += 2) p.lineTo(r[i], r[i + 1]); }
+        paths.push({ layer: l, fill: false, color: key.slice(0, k), w: parseFloat(key.slice(k + 1)) || 0, path: p }); }
+      l.strokes = null; l.fills = null;
+    }
+    $('fname').textContent = name; $('drop').hidden = true; mpts = []; buildLayers(); fit();
+    $('info').textContent = sc.total.toLocaleString('pt-BR') + ' objetos · ' + sc.layers.length + ' camadas';
+  }
+
+  function buildLayers() {
+    const box = $('layers'); box.textContent = '';
+    for (const l of scene.layers) {
+      const row = document.createElement('label'); row.className = 'lay'; row.dataset.name = l.name.toLowerCase();
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = l.visible; cb.onchange = () => { l.visible = cb.checked; redraw(); }; l.cb = cb;
+      const sw = document.createElement('i'); sw.style.background = l.color === 'fg' ? 'linear-gradient(135deg,#fff 50%,#222 50%)' : l.color;
+      const nm = document.createElement('span'); nm.textContent = l.name; nm.title = l.name;
+      const ct = document.createElement('em'); ct.textContent = l.count;
+      row.append(cb, sw, nm, ct); box.append(row);
+    }
+  }
+  const setAll = v => { if (!scene) return; const q = $('q').value.trim().toLowerCase(); for (const l of scene.layers) if (!q || l.name.toLowerCase().includes(q)) { l.visible = v; l.cb.checked = v; } redraw(); };
+
+  async function loadBuffer(buf, name) {
+    $('busy').hidden = false; $('busy').textContent = 'Lendo ' + name + '…';
+    await new Promise(r => setTimeout(r, 30));
+    try {
+      let text; try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { text = new TextDecoder('windows-1252').decode(buf); }
+      const doc = DXF.parse(text), sc = DXF.build(doc);
+      if (!sc.layers.length) throw new Error('nenhuma entidade desenhável encontrada');
+      setScene(sc, name);
+    } catch (err) { alertMsg('Não consegui abrir esse arquivo como DXF: ' + err.message); }
+    $('busy').hidden = true;
+  }
+  const alertMsg = m => { const b = $('busy'); b.hidden = false; b.textContent = m; setTimeout(() => { b.hidden = true; }, 5000); };
+  const loadFile = f => { if (!f) return; if (/\.dwg$/i.test(f.name)) return alertMsg('Arquivo DWG não é suportado — exporte como DXF.'); f.arrayBuffer().then(b => loadBuffer(b, f.name)); };
+
+  // ---- interaction ----
+  const world = (x, y) => [(x - tx) / s, (ty - y) / s];
+  const zoomAt = (x, y, k) => { const ns = Math.min(Math.max(s * k, 1e-7), 1e7); k = ns / s; tx = x - (x - tx) * k; ty = y - (y - ty) * k; s = ns; redraw(); };
+  cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015) * (e.deltaMode ? 30 : 1))); }, { passive: false });
+  const ptrs = new Map(); let moved = 0, pinch = 0;
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = 0;
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
+  cv.addEventListener('pointermove', e => {
+    const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    if (scene) { const w = world(x, y); mouse = w; $('coord').textContent = 'E ' + (w[0] + scene.ox).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + '   N ' + (w[1] + scene.oy).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }); if (mpts.length === 1) redraw(); }
+    const p = ptrs.get(e.pointerId); if (!p) return;
+    if (ptrs.size === 1) { const dx = e.clientX - p[0], dy = e.clientY - p[1]; moved += Math.abs(dx) + Math.abs(dy); tx += dx; ty += dy; redraw(); }
+    ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) zoomAt((a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top, d / pinch); pinch = d; moved = 99; } });
+  const up = e => { if (ptrs.delete(e.pointerId) && moved < 4 && measuring && scene && e.type === 'pointerup') { const r = cv.getBoundingClientRect(), w = world(e.clientX - r.left, e.clientY - r.top); if (mpts.length >= 2) mpts = []; mpts.push(w); redraw(); } pinch = 0; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('dblclick', () => { if (!measuring) fit(); });
+  window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'f' || e.key === 'F') fit(); if (e.key === 'Escape') { mpts = []; redraw(); } });
+
+  $('open').onclick = () => $('file').click(); $('open2').onclick = () => $('file').click();
+  $('file').onchange = e => { loadFile(e.target.files[0]); e.target.value = ''; };
+  $('fit').onclick = fit;
+  $('zin').onclick = () => zoomAt(W / 2, H / 2, 1.5); $('zout').onclick = () => zoomAt(W / 2, H / 2, 1 / 1.5);
+  $('bg').onclick = () => { dark = !dark; document.body.classList.toggle('dark-bg', dark); redraw(); };
+  $('measure').onclick = () => { measuring = !measuring; mpts = []; $('measure').classList.toggle('on', measuring); cv.style.cursor = measuring ? 'crosshair' : 'grab'; redraw(); };
+  $('all').onclick = () => setAll(true); $('none').onclick = () => setAll(false);
+  $('q').oninput = () => { const q = $('q').value.trim().toLowerCase(); for (const r of $('layers').children) r.hidden = q && !r.dataset.name.includes(q); };
+  $('toggle').onclick = () => { document.body.classList.toggle('nopanel'); resize(); };
+  ['dragenter', 'dragover'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); document.body.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); document.body.classList.remove('drag'); }));
+  window.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+  new ResizeObserver(resize).observe(wrap); resize();
+
+  // auto-load when served over http (e.g. Live Server / Live Preview in Cursor)
+  if (/^https?:$/.test(location.protocol)) {
+    const f = new URLSearchParams(location.search).get('arquivo') || 'MIRASSOL.dxf';
+    fetch(encodeURI(f)).then(r => r.ok ? r.arrayBuffer() : null).then(b => { if (b && !scene) loadBuffer(b, f.split('/').pop()); }).catch(() => {});
+  }
+})();
+
+</script>
+</body>
+</html>
