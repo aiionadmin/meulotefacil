@@ -18,6 +18,7 @@ import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL } from "@/lib/masks/br";
 import { valorMedicaoItens } from "@/lib/money/orcamento";
 import { useObras } from "@/lib/store/obras-store";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
 
 type MedicaoStatus = "em_elaboracao" | "enviada" | "aprovada" | "faturada";
 
@@ -332,10 +333,27 @@ export default function MedicaoObrasPage() {
         <div className="space-y-2 rounded-md border border-linha/70 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium">Itens do orçamento *</p>
-            <span className="text-xs text-muted-foreground">
-              {linhasSelecionadas.length} selecionado(s) ·{" "}
-              {formatBRL(valorTotal)}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <SelectAllCheckboxes
+                allIds={itensObra.map((n) => n.id)}
+                selected={selecionados}
+                onChange={(next) => {
+                  if (Array.isArray(next)) {
+                    const map: Record<string, boolean> = {};
+                    for (const id of itensObra.map((n) => n.id)) {
+                      map[id] = next.includes(id);
+                    }
+                    setSelecionados(map);
+                    return;
+                  }
+                  setSelecionados(next);
+                }}
+              />
+              <span className="text-xs text-muted-foreground">
+                {linhasSelecionadas.length} selecionado(s) ·{" "}
+                {formatBRL(valorTotal)}
+              </span>
+            </div>
           </div>
           {itensObra.length === 0 ? (
             <p className="text-sm text-muted-foreground">

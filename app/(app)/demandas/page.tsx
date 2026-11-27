@@ -28,6 +28,9 @@ import type {
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useClientCard } from "@/lib/client/client-card-context";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import { SearchSelect } from "@/components/app/SearchSelect";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { peopleOptions } from "@/lib/ui/people-options";
 
 const COLS: { id: DemandaStatus; label: string }[] = [
   { id: "aberta", label: "Aberta" },
@@ -47,9 +50,14 @@ export default function DemandasPage() {
     concluirDemandas,
   } = useParte5();
   const { state: cart } = useCarteira();
+  const { state: fase1 } = useFase1();
   const { openClient } = useClientCard();
   const [q, setQ] = useState("");
   const [open, setOpen] = useNovoParam();
+  const clienteOpts = useMemo(
+    () => peopleOptions(fase1.people, ["cliente", "comprador"]),
+    [fase1.people]
+  );
   const server = useServerPage({
     url: "/api/list/demandas",
     page: 1,
@@ -332,12 +340,20 @@ export default function DemandasPage() {
           </Field>
         </div>
         <Field label="Cliente">
-          <Input
+          <SearchSelect
             value={form.clienteNome}
-            onChange={(e) =>
-              setForm({ ...form, clienteNome: e.target.value })
-            }
+            onChange={(clienteNome) => setForm({ ...form, clienteNome })}
+            options={clienteOpts}
+            placeholder="Selecionar cliente cadastrado…"
           />
+          {clienteOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre em{" "}
+              <Link className="underline" href="/cadastros/clientes">
+                Clientes
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Descrição *">
           <Input

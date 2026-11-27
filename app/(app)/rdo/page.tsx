@@ -31,6 +31,9 @@ import { useFase1 } from "@/lib/store/fase1-store";
 import type { Rdo, RdoStatus } from "@/lib/domain/obras-types";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
 import { cn } from "@/lib/utils";
+import { SearchSelect } from "@/components/app/SearchSelect";
+import { peopleOptions } from "@/lib/ui/people-options";
+import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
 
 /** Calendário do mês corrente — destaca dias úteis sem RDO (D21). */
 function ModuleSectionCalendario({
@@ -107,13 +110,38 @@ function RdoInner() {
   const { currentUser, state: f1 } = useFase1();
   const perfilNome =
     f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
+  const obrasRdo = useMemo(() => {
+    return filterObrasVisiveis(state.obras, currentUser, perfilNome).filter(
+      (o) => !o.finalidade || o.finalidade === "rdo" || o.finalidade === "ambos"
+    );
+  }, [state.obras, currentUser, perfilNome]);
+  const obraOpts = useMemo(
+    () =>
+      obrasRdo.map((o) => ({
+        value: o.id,
+        label: `${o.codigo} · ${o.nome}`,
+      })),
+    [obrasRdo]
+  );
+  const responsavelOpts = useMemo(() => {
+    const fromPeople = peopleOptions(f1.people, "profissional");
+    const fromUsers = f1.users
+      .filter((u) => u.status === "ativo")
+      .map((u) => ({ value: u.nome, label: u.nome, meta: "usuário" }));
+    const seen = new Set<string>();
+    return [...fromPeople, ...fromUsers].filter((o) => {
+      if (seen.has(o.value)) return false;
+      seen.add(o.value);
+      return true;
+    });
+  }, [f1.people, f1.users]);
   const [q, setQ] = useState("");
   const [obraFilter, setObraFilter] = useState(obraQ || "todos");
   const [open, setOpen] = useNovoParam();
   const [form, setForm] = useState({
-    obraId: obraQ || state.obras[0]?.id || "",
+    obraId: obraQ || obrasRdo[0]?.id || "",
     data: new Date().toISOString().slice(0, 10),
-    responsavel: "Eng. Paula",
+    responsavel: "",
     nodeId: "",
     fisicoAcumulado: 50,
   });
@@ -223,8 +251,8 @@ function RdoInner() {
           value={obraFilter}
           onChange={(e) => setObraFilter(e.target.value)}
         >
-          <option value="todos">Todas obras</option>
-          {state.obras.map((o) => (
+          <option value="todos">Todas obras (RDO)</option>
+          {obrasRdo.map((o) => (
             <option key={o.id} value={o.id}>
               {o.nome}
             </option>
@@ -377,17 +405,21 @@ function RdoInner() {
         }}
       >
         <Field label="Obra *">
-          <select
-            className={fieldControlClass}
+          <SearchSelect
             value={form.obraId}
-            onChange={(e) => setForm({ ...form, obraId: e.target.value })}
-          >
-            {state.obras.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.nome}
-              </option>
-            ))}
-          </select>
+            onChange={(obraId) => setForm({ ...form, obraId, nodeId: "" })}
+            options={obraOpts}
+            placeholder="Selecionar obra de RDO…"
+          />
+          {obraOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Nenhuma obra de RDO.{" "}
+              <Link className="underline" href="/obras?novo=1">
+                Cadastrar obra
+              </Link>{" "}
+              com finalidade RDO ou Ambos.
+            </p>
+          ) : null}
         </Field>
         <Field label="Data *">
           <Input
@@ -397,11 +429,11 @@ function RdoInner() {
           />
         </Field>
         <Field label="Responsável *">
-          <Input
+          <SearchSelect
             value={form.responsavel}
-            onChange={(e) =>
-              setForm({ ...form, responsavel: e.target.value })
-            }
+            onChange={(responsavel) => setForm({ ...form, responsavel })}
+            options={responsavelOpts}
+            placeholder="Selecionar responsável cadastrado…"
           />
         </Field>
         <Field label="Atividade (item do orçamento)">

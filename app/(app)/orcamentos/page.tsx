@@ -25,6 +25,8 @@ import type {
 } from "@/lib/domain/obras-types";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
 import { custoLinha } from "@/lib/money/orcamento";
+import { SearchSelect } from "@/components/app/SearchSelect";
+import { peopleOptions } from "@/lib/ui/people-options";
 
 const FUNIL: { id: PropostaStatus; label: string }[] = [
   { id: "contato_inicial", label: "Contato inicial" },
@@ -65,20 +67,24 @@ export default function OrcamentosPage() {
     state,
     totaisDaObra,
     nodesDaObra,
-    addObra,
     updateObra,
     softRemoveObra,
     addNode,
     updateNode,
     removeNode,
   } = useObras();
-  const { currentUser, currentProfileName: perfilNome } = useFase1();
+  const {
+    currentUser,
+    currentProfileName: perfilNome,
+    state: fase1,
+  } = useFase1();
   const [q, setQ] = useState("");
   const [view, setView] = useState<"lista" | "funil">("lista");
   const [openNovo, setOpenNovo] = useNovoParam();
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formDirty, setFormDirty] = useState(false);
+  const [novaObraId, setNovaObraId] = useState("");
   const [itemDraft, setItemDraft] = useState({
     codigo: "",
     descricao: "",
@@ -92,17 +98,37 @@ export default function OrcamentosPage() {
     setForm((prev) => ({ ...prev, ...patch }));
   }
 
+  const clienteOpts = useMemo(
+    () => peopleOptions(fase1.people, ["cliente", "comprador"]),
+    [fase1.people]
+  );
+
+  const obrasFinanceiras = useMemo(() => {
+    return filterObrasVisiveis(state.obras, currentUser, perfilNome).filter(
+      (o) => !o.finalidade || o.finalidade === "financeiro" || o.finalidade === "ambos"
+    );
+  }, [state.obras, currentUser, perfilNome]);
+
+  const obraOptsNovo = useMemo(
+    () =>
+      obrasFinanceiras.map((o) => ({
+        value: o.id,
+        label: `${o.codigo} · ${o.nome}`,
+        meta: o.clienteNome,
+      })),
+    [obrasFinanceiras]
+  );
+
   const filtered = useMemo(() => {
-    const base = filterObrasVisiveis(state.obras, currentUser, perfilNome);
     const term = q.trim().toLowerCase();
-    if (!term) return base;
-    return base.filter((o) =>
+    if (!term) return obrasFinanceiras;
+    return obrasFinanceiras.filter((o) =>
       [o.codigo, o.nome, o.clienteNome, o.status]
         .join(" ")
         .toLowerCase()
         .includes(term)
     );
-  }, [state.obras, q, currentUser, perfilNome]);
+  }, [obrasFinanceiras, q]);
 
   const editing = editId
     ? state.obras.find((o) => o.id === editId) ?? null
@@ -111,6 +137,7 @@ export default function OrcamentosPage() {
 
   function openCreate() {
     setForm(EMPTY_FORM);
+    setNovaObraId(obrasFinanceiras[0]?.id ?? "");
     setFormDirty(false);
     setOpenNovo(true);
   }
@@ -146,7 +173,7 @@ export default function OrcamentosPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Orçamento"
-        description="CRUD de orçamentos por obra — custo, BDI, itens e funil de propostas."
+        description="Orçamentos das obras financeiras — selecione a obra cadastrada, itens, BDI e funil."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button
@@ -254,28 +281,15 @@ export default function OrcamentosPage() {
         onOpenChange={setOpenNovo}
         title="Novo orçamento"
         dirty={formDirty}
-        submitLabel="Criar"
+        submitLabel="Abrir orçamento"
         onSubmit={() => {
-          if (!form.codigo.trim() || !form.nome.trim() || !form.clienteNome.trim()) {
-            notify("Código, obra e cliente são obrigatórios");
+          const obra = obrasFinanceiras.find((o) => o.id === novaObraId);
+          if (!obra) {
+            notify("Selecione uma obra financeira cadastrada");
             return;
           }
-          const obra = addObra({
-            codigo: form.codigo.trim(),
-            nome: form.nome.trim(),
-            tipo: form.tipo,
-            status: form.status,
-            clienteNome: form.clienteNome.trim(),
-            unidade: "m²",
-            visivelPara: ["Administrador"],
-            bdiPct: Math.max(0, form.bdiPct) / 100,
-            responsavelObra: form.responsavelObra.trim() || undefined,
-            exibirLancamentos: true,
-            exibirFaturamentos: true,
-            exibirCompras: true,
-            propostaStatus: form.propostaStatus,
-          });
           if (form.itemDescricao.trim()) {
+            const nodes = nodesDaObra(obra.id);
             addNode({
               obraId: obra.id,
               kind: "item",
@@ -285,91 +299,42 @@ export default function OrcamentosPage() {
               quantidade: form.itemQtd || 1,
               custoUnit: form.itemCusto || 0,
               bdiPct: obra.bdiPct,
-              ordem: 1,
+              ordem: nodes.length + 1,
             });
           }
-          notify("Orçamento criado", obra.codigo);
           setFormDirty(false);
           setOpenNovo(false);
+          openEdit(obra);
+          notify("Orçamento da obra", obra.codigo);
         }}
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Código *">
-            <Input
-              value={form.codigo}
-              onChange={(e) => patchForm({ codigo: e.target.value })}
-              placeholder="OBR-010"
-            />
-          </Field>
-          <Field label="Cliente *">
-            <Input
-              value={form.clienteNome}
-              onChange={(e) => patchForm({ clienteNome: e.target.value })}
-            />
-          </Field>
-        </div>
-        <Field label="Obra / título *">
-          <Input
-            value={form.nome}
-            onChange={(e) => patchForm({ nome: e.target.value })}
+        <Field label="Obra *">
+          <SearchSelect
+            value={novaObraId}
+            onChange={(id) => {
+              setNovaObraId(id);
+              setFormDirty(true);
+            }}
+            options={obraOptsNovo}
+            placeholder="Selecionar obra financeira…"
           />
-        </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Tipo">
-            <Input
-              value={form.tipo}
-              onChange={(e) => patchForm({ tipo: e.target.value })}
-            />
-          </Field>
-          <Field label="BDI (%)">
-            <Input
-              type="number"
-              value={form.bdiPct}
-              onChange={(e) =>
-                patchForm({ bdiPct: Number(e.target.value) || 0 })
-              }
-            />
-          </Field>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Status da obra">
-            <select
-              className={fieldControlClass}
-              value={form.status}
-              onChange={(e) =>
-                patchForm({ status: e.target.value as ObraStatus })
-              }
-            >
-              {STATUS_OBRA.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Status da proposta">
-            <select
-              className={fieldControlClass}
-              value={form.propostaStatus}
-              onChange={(e) =>
-                patchForm({
-                  propostaStatus: e.target.value as PropostaStatus,
-                })
-              }
-            >
-              {FUNIL.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <Field label="Responsável">
-          <Input
-            value={form.responsavelObra}
-            onChange={(e) => patchForm({ responsavelObra: e.target.value })}
-          />
+          {obraOptsNovo.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Nenhuma obra financeira.{" "}
+              <Link className="underline" href="/obras?novo=1">
+                Cadastrar obra
+              </Link>{" "}
+              com finalidade Financeiro ou Ambos.
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre obras em{" "}
+              <Link className="underline" href="/obras">
+                Minhas Obras
+              </Link>
+              .
+            </p>
+          )}
         </Field>
         <div className="rounded-md border border-linha/70 p-3 space-y-2">
           <p className="text-xs font-medium text-muted-foreground">
@@ -457,9 +422,11 @@ export default function OrcamentosPage() {
                 />
               </Field>
               <Field label="Cliente *">
-                <Input
+                <SearchSelect
                   value={form.clienteNome}
-                  onChange={(e) => patchForm({ clienteNome: e.target.value })}
+                  onChange={(clienteNome) => patchForm({ clienteNome })}
+                  options={clienteOpts}
+                  placeholder="Selecionar cliente cadastrado…"
                 />
               </Field>
             </div>

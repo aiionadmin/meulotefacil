@@ -32,6 +32,8 @@ import {
   type GeoEmpFilterValues,
 } from "@/components/app/GeoEmpFilters";
 import { FilterBar } from "@/components/app/ModuleToolkit";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { peopleOptions } from "@/lib/ui/people-options";
 
 type LeadForm = {
   nome: string;
@@ -113,6 +115,7 @@ function leadToForm(l: Lead): LeadForm {
 export default function LeadsPage() {
   const { state, addLead, updateLead, removeLead, moveLead } = useFluxo();
   const { state: carteira } = useCarteira();
+  const { state: fase1 } = useFase1();
   const {
     selectedId,
     scopedDevelopments,
@@ -124,6 +127,10 @@ export default function LeadsPage() {
   const [q, setQ] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<LeadForm>(EMPTY_FORM);
+  const corretorOpts = useMemo(
+    () => peopleOptions(fase1.people, "corretor"),
+    [fase1.people]
+  );
   const server = useServerPage({
     url: "/api/list/leads",
     page: 1,
@@ -509,10 +516,20 @@ export default function LeadsPage() {
           />
         </Field>
         <Field label="Corretor">
-          <Input
+          <SearchSelect
             value={form.corretor}
-            onChange={(e) => setForm({ ...form, corretor: e.target.value })}
+            onChange={(corretor) => setForm({ ...form, corretor })}
+            options={corretorOpts}
+            placeholder="Selecionar corretor cadastrado…"
           />
+          {corretorOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre em{" "}
+              <Link className="underline" href="/cadastros/corretores">
+                Corretores
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Empreendimento de interesse">
           <SearchSelect

@@ -27,9 +27,12 @@ import { formatBRL } from "@/lib/masks/br";
 import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
-import type { ObraStatus } from "@/lib/domain/obras-types";
+import type { ObraFinalidade, ObraStatus } from "@/lib/domain/obras-types";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import { SearchSelect } from "@/components/app/SearchSelect";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
+import { peopleOptions } from "@/lib/ui/people-options";
 
 const STATUS_LABEL: Record<ObraStatus, string> = {
   em_orcamento: "Em orçamento",
@@ -43,6 +46,7 @@ const EMPTY_FORM = {
   nome: "",
   tipo: "infraestrutura",
   status: "em_orcamento" as ObraStatus,
+  finalidade: "ambos" as ObraFinalidade,
   clienteNome: "",
   developmentId: "",
   responsavelObra: "",
@@ -278,6 +282,10 @@ export default function ObrasPage() {
                   },
                 ]
               : undefined;
+          if (!form.clienteNome.trim()) {
+            notify("Selecione um cliente cadastrado");
+            return;
+          }
           addObra({
             codigo:
               form.codigo.trim() ||
@@ -285,7 +293,8 @@ export default function ObrasPage() {
             nome: form.nome.slice(0, 200),
             tipo: form.tipo,
             status: form.status,
-            clienteNome: form.clienteNome || "Cliente",
+            finalidade: form.finalidade,
+            clienteNome: form.clienteNome.trim(),
             developmentId: emp?.id,
             developmentNome: emp?.nome,
             areaTotal: form.areaTotal || undefined,
@@ -363,12 +372,49 @@ export default function ObrasPage() {
             ))}
           </select>
         </Field>
+        <Field label="Finalidade *">
+          <select
+            className={fieldControlClass}
+            value={form.finalidade}
+            onChange={(e) =>
+              patchForm({
+                finalidade: e.target.value as ObraFinalidade,
+              })
+            }
+          >
+            <option value="financeiro">Financeiro (orçamento)</option>
+            <option value="rdo">RDO (diário de obras)</option>
+            <option value="ambos">Ambos</option>
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Financeiro aparece em Orçamentos; RDO no diário de campo.
+          </p>
+        </Field>
         <Field label="Obra visível para *">
           <div className="space-y-3 rounded-lg border border-linha bg-white p-3">
-            <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="mb-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Perfis
               </p>
+              <SelectAllCheckboxes
+                allIds={perfisAtivos.map((p) => p.nome)}
+                selected={form.visivelPara.filter((v) =>
+                  perfisAtivos.some((p) => p.nome === v)
+                )}
+                onChange={(next) => {
+                  const perfilNames = Array.isArray(next)
+                    ? next
+                    : Object.keys(next).filter((k) => next[k]);
+                  const keepUsers = form.visivelPara.filter((v) =>
+                    usuariosAtivos.some((u) => u.nome === v)
+                  );
+                  patchForm({
+                    visivelPara: [...perfilNames, ...keepUsers],
+                  });
+                }}
+              />
+            </div>
+            <div>
               <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                 {perfisAtivos.map((p) => {
                   const checked = form.visivelPara.includes(p.nome);
@@ -394,9 +440,28 @@ export default function ObrasPage() {
               </div>
             </div>
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Usuários
-              </p>
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Usuários
+                </p>
+                <SelectAllCheckboxes
+                  allIds={usuariosAtivos.map((u) => u.nome)}
+                  selected={form.visivelPara.filter((v) =>
+                    usuariosAtivos.some((u) => u.nome === v)
+                  )}
+                  onChange={(next) => {
+                    const userNames = Array.isArray(next)
+                      ? next
+                      : Object.keys(next).filter((k) => next[k]);
+                    const keepPerfis = form.visivelPara.filter((v) =>
+                      perfisAtivos.some((p) => p.nome === v)
+                    );
+                    patchForm({
+                      visivelPara: [...keepPerfis, ...userNames],
+                    });
+                  }}
+                />
+              </div>
               <div className="flex max-h-36 flex-col gap-1.5 overflow-y-auto">
                 {usuariosAtivos.map((u) => {
                   const checked = form.visivelPara.includes(u.nome);
@@ -535,14 +600,22 @@ export default function ObrasPage() {
                 Dados do cliente
               </AccordionTrigger>
               <AccordionContent className="space-y-3">
-                <Field label="Cliente">
-                  <Input
+                <Field label="Cliente *">
+                  <SearchSelect
                     value={form.clienteNome}
-                    onChange={(e) =>
-                      patchForm({clienteNome: e.target.value })
-                    }
-                    placeholder="Busca / criação rápida"
+                    onChange={(clienteNome) => patchForm({ clienteNome })}
+                    options={peopleOptions(fase1.people, [
+                      "cliente",
+                      "comprador",
+                    ])}
+                    placeholder="Selecionar cliente cadastrado…"
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Cadastre em{" "}
+                    <Link className="underline" href="/cadastros/clientes">
+                      Clientes
+                    </Link>
+                  </p>
                 </Field>
               </AccordionContent>
             </AccordionItem>

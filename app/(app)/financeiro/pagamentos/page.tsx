@@ -35,6 +35,8 @@ import type {
   PagamentoStatus,
 } from "@/lib/domain/financeiro-types";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import { peopleOptions } from "@/lib/ui/people-options";
+import { useEmpresa } from "@/lib/empresa/context";
 
 const FICHA_MENU = [
   { href: "/financeiro/pagamentos", label: "Pagamentos" },
@@ -63,11 +65,33 @@ export default function PagamentosPage() {
     setPagamentoStatus,
   } = useFinanceiro();
   const { currentUser, state: f1, currentProfileName: perfilNome } = useFase1();
+  const { selected: empresaAtiva, empresas } = useEmpresa();
   const { state: obrasState } = useObras();
   const obrasVisiveis = useMemo(
     () => filterObrasVisiveis(obrasState.obras, currentUser, perfilNome),
     [obrasState.obras, currentUser, perfilNome]
   );
+  const favorecidoOpts = useMemo(
+    () =>
+      peopleOptions(f1.people, [
+        "fornecedor",
+        "profissional",
+        "cliente",
+        "comprador",
+      ]),
+    [f1.people]
+  );
+  const pagadorOpts = useMemo(() => {
+    const empOpts = (empresaAtiva ? [empresaAtiva] : empresas).map((e) => ({
+      value: e.razaoSocial || e.nome,
+      label: e.razaoSocial || e.nome,
+      meta: "empresa",
+    }));
+    return [
+      ...empOpts,
+      ...peopleOptions(f1.people, ["cliente", "comprador", "fornecedor"]),
+    ];
+  }, [empresaAtiva, empresas, f1.people]);
   const tiposRetencao =
     f1.lookups
       .find((l) => l.codigo === "tipos_retencao")
@@ -676,10 +700,24 @@ export default function PagamentosPage() {
           />
         </Field>
         <Field label="Favorecido *">
-          <Input
+          <SearchSelect
             value={form.favorecido}
-            onChange={(e) => patchForm({ favorecido: e.target.value })}
+            onChange={(favorecido) => patchForm({ favorecido })}
+            options={favorecidoOpts}
+            placeholder="Selecionar favorecido cadastrado…"
           />
+          {favorecidoOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre em{" "}
+              <Link className="underline" href="/cadastros/fornecedores">
+                Fornecedores
+              </Link>{" "}
+              /{" "}
+              <Link className="underline" href="/cadastros/pessoas">
+                Pessoas
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Categoria *">
           <SearchSelect
@@ -696,9 +734,11 @@ export default function PagamentosPage() {
           />
         </Field>
         <Field label="Pagador *">
-          <Input
+          <SearchSelect
             value={form.pagador}
-            onChange={(e) => patchForm({ pagador: e.target.value })}
+            onChange={(pagador) => patchForm({ pagador })}
+            options={pagadorOpts}
+            placeholder="Selecionar pagador…"
           />
         </Field>
         <Field label="Conta *">
