@@ -35,6 +35,17 @@ import type {
   PagamentoStatus,
 } from "@/lib/domain/financeiro-types";
 
+const FICHA_MENU = [
+  { href: "/financeiro/pagamentos", label: "Pagamentos" },
+  { href: "/financeiro/recebimentos", label: "Recebimentos" },
+  { href: "/financeiro/contas", label: "Contas" },
+  { href: "/financeiro/transferencias", label: "Transferências" },
+  { href: "/financeiro/pre-lancamentos", label: "Pré-lançamentos" },
+  { href: "/financeiro/notas-fiscais", label: "Notas" },
+  { href: "/financeiro/plano-contas", label: "Plano de contas" },
+  { href: "/carteira", label: "Ficha financeira" },
+] as const;
+
 type Situacao = "todos" | "em_aberto" | "vencidos" | "pagos";
 
 export default function PagamentosPage() {
@@ -407,6 +418,13 @@ export default function PagamentosPage() {
               label="Categoria"
               value={categoriaNome(live.categoriaId)}
             />
+            <div className="flex flex-wrap gap-2 border-y border-linha py-2 text-xs">
+              {FICHA_MENU.map((l) => (
+                <Link key={l.href} className="underline" href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
+            </div>
             {live.historico.length ? (
               <div>
                 <div className="text-sm font-medium">Histórico</div>

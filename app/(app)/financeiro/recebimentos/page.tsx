@@ -26,6 +26,11 @@ import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { FormaPagamento, Recebimento } from "@/lib/domain/financeiro-types";
+import {
+  carteiraContratoHref,
+  fichaFinanceiraNav,
+  resolveContract,
+} from "@/lib/financeiro/ficha-links";
 
 export default function RecebimentosPage() {
   const {
@@ -269,14 +274,28 @@ export default function RecebimentosPage() {
             {live.contratoRef ? (
               <DetailRow
                 label="Contrato"
-                value={
-                  <Link
-                    className="underline"
-                    href="/carteira"
-                  >{`${live.contratoRef} (ficha)`}</Link>
-                }
+                value={(() => {
+                  const ct = resolveContract(cart.contracts, live.contratoRef);
+                  const href = ct
+                    ? carteiraContratoHref(ct.id)
+                    : `/carteira?numero=${encodeURIComponent(live.contratoRef)}`;
+                  return (
+                    <Link className="underline" href={href}>
+                      {`${live.contratoRef} (ficha financeira)`}
+                    </Link>
+                  );
+                })()}
               />
             ) : null}
+            <div className="flex flex-wrap gap-2 border-t border-linha pt-3 text-xs">
+              {fichaFinanceiraNav(
+                resolveContract(cart.contracts, live.contratoRef)?.id
+              ).map((l) => (
+                <Link key={l.href + l.label} className="underline" href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2 pt-2">
               {live.origem === "contrato" ? (
                 <p className="text-xs text-muted-foreground">
