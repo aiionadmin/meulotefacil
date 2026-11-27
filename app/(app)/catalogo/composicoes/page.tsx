@@ -17,11 +17,12 @@ import { formatBRL } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
 import { custoPorGrupo, precoComBdi } from "@/lib/money/orcamento";
 import type { Composicao } from "@/lib/domain/obras-types";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function ComposicoesPage() {
   const { state, addComposicao } = useObras();
   const [selected, setSelected] = useState<Composicao | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState({
     codigo: "",

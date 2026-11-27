@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,10 @@ import {
 import {
   DetailRow,
   DetailSheet,
+  Field,
   FilterBar,
+  FormDialog,
+  fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
@@ -26,6 +29,7 @@ import { useCompras } from "@/lib/store/compras-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import type { OcAprovacao, OrdemCompra } from "@/lib/domain/compras-types";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 const APROV_COLS: { id: OcAprovacao; label: string }[] = [
   { id: "aguardando_aprovacao", label: "Aguardando" },
@@ -43,6 +47,7 @@ export default function OrdensCompraPage() {
     marcarOcEntregue,
     aprovarOrdensLote,
     negarOrdensLote,
+    gerarOrdensDaCotacao,
   } = useCompras();
   const { state: fin, addLancamento } = useFinanceiro();
   const { currentUser, state: f1 } = useFase1();
@@ -50,6 +55,18 @@ export default function OrdensCompraPage() {
     f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<OrdemCompra | null>(null);
+  const [open, setOpen] = useNovoParam();
+  const cotElegiveis = useMemo(
+    () =>
+      state.cotacoes.filter(
+        (c) => c.status === "cotado" || c.status === "finalizado"
+      ),
+    [state.cotacoes]
+  );
+  const [cotId, setCotId] = useState("");
+  useEffect(() => {
+    if (open && !cotId && cotElegiveis[0]) setCotId(cotElegiveis[0].id);
+  }, [open, cotId, cotElegiveis]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -102,6 +119,15 @@ export default function OrdensCompraPage() {
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/compras/cotacoes">Cotação</Link>
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setCotId(cotElegiveis[0]?.id ?? "");
+                setOpen(true);
+              }}
+            >
+              Nova OC
             </Button>
           </>
         }
@@ -445,6 +471,52 @@ export default function OrdensCompraPage() {
           </div>
         ) : null}
       </DetailSheet>
+
+      <FormDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Nova ordem de compra"
+        onSubmit={() => {
+          if (!cotId) {
+            notify("Selecione uma cotação");
+            return;
+          }
+          const ocs = gerarOrdensDaCotacao(cotId);
+          if (!ocs.length) {
+            notify(
+              "Não foi possível gerar OC",
+              "Defina vencedores na cotação ou permita OC sem cotação"
+            );
+            return;
+          }
+          notify(`${ocs.length} OC gerada(s)`, ocs.map((o) => o.numero).join(", "));
+          setOpen(false);
+          setSelected(ocs[0] ?? null);
+        }}
+      >
+        <Field label="Cotação">
+          <select
+            className={fieldControlClass}
+            value={cotId}
+            onChange={(e) => setCotId(e.target.value)}
+          >
+            <option value="">Selecione…</option>
+            {cotElegiveis.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.numero} · {c.descricao}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {cotElegiveis.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma cotação elegível.{" "}
+            <Link className="underline" href="/compras/cotacoes?novo=1">
+              Criar cotação
+            </Link>
+          </p>
+        ) : null}
+      </FormDialog>
     </div>
   );
 }

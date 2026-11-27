@@ -28,6 +28,7 @@ import { useFase1 } from "@/lib/store/fase1-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { ContaBancaria } from "@/lib/domain/financeiro-types";
 import { parseOfxBytes, type OfxTxn } from "@/lib/import/ofx-parse";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 type ConcStatus = "pendente" | "conciliado" | "arquivado";
 
@@ -54,7 +55,7 @@ export default function ContasPage() {
   );
   const [linhas, setLinhas] = useState<ConcLinha[]>([]);
   const [ofxMeta, setOfxMeta] = useState("");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [contaSel, setContaSel] = useState<ContaBancaria | null>(null);
   const [tab, setTab] = useState<ConcStatus>("pendente");

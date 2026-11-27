@@ -51,6 +51,10 @@ type Fase1Api = {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   toggleLookupItem: (listId: string, codigo: string) => void;
+  addLookupItem: (
+    listId: string,
+    item: { codigo: string; nome: string }
+  ) => boolean;
   toggleApprovalRule: (id: string) => void;
   addApprovalRule: (data: Omit<ApprovalRule, "id">) => ApprovalRule;
   updateApprovalRule: (id: string, patch: Partial<ApprovalRule>) => void;
@@ -306,6 +310,41 @@ export function Fase1StoreProvider({ children }: { children: ReactNode }) {
           registroTipo: "lookup_item",
           registroId: `${listId}:${codigo}`,
         });
+      },
+      addLookupItem: (listId, item) => {
+        const codigo = item.codigo.trim().toLowerCase().replace(/\s+/g, "_");
+        const nome = item.nome.trim();
+        if (!codigo || !nome) return false;
+        let ok = false;
+        setState((s) => {
+          const list = s.lookups.find((l) => l.id === listId);
+          if (!list) return s;
+          if (list.itens.some((i) => i.codigo === codigo)) return s;
+          ok = true;
+          const ordem =
+            Math.max(0, ...list.itens.map((i) => i.ordem)) + 1;
+          return {
+            ...s,
+            lookups: s.lookups.map((l) =>
+              l.id !== listId
+                ? l
+                : {
+                    ...l,
+                    itens: [
+                      ...l.itens,
+                      { codigo, nome, ordem, ativo: true },
+                    ],
+                  }
+            ),
+          };
+        });
+        if (ok) {
+          pushAudit("Configurações > Listas", "inserir", {
+            registroTipo: "lookup_item",
+            registroId: `${listId}:${codigo}`,
+          });
+        }
+        return ok;
       },
       toggleApprovalRule: (id) => {
         const antes = state.approvalRules.find((r) => r.id === id);

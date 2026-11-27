@@ -30,6 +30,7 @@ import { useCompras } from "@/lib/store/compras-store";
 import { useObras } from "@/lib/store/obras-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import type { CentroCusto, ScStatus, Solicitacao } from "@/lib/domain/compras-types";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 const TABS: { id: "todas" | ScStatus; label: string }[] = [
   { id: "todas", label: "Todas" },
@@ -61,7 +62,7 @@ export default function ComprasSolicitacoesPage() {
   const { currentUser, state: f1, currentProfileName: perfilNome } = useFase1();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("todas");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [selected, setSelected] = useState<Solicitacao | null>(null);
   const [motivo, setMotivo] = useState("");

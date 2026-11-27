@@ -11,6 +11,7 @@ import {
 import { Field, FormDialog, notify } from "@/components/app/ModuleToolkit";
 import { ProcessList } from "@/components/app/ProcessList";
 import { downloadCsv } from "@/lib/export/list-export";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 type Veiculo = {
   id: string;
@@ -29,7 +30,7 @@ const SEED: Veiculo[] = [
 
 export default function VeiculosComunicacaoPage() {
   const [itens, setItens] = useState(SEED);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [nome, setNome] = useState("");
 
   return (

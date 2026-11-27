@@ -34,6 +34,7 @@ import type {
   Pagamento,
   PagamentoStatus,
 } from "@/lib/domain/financeiro-types";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 const FICHA_MENU = [
   { href: "/financeiro/pagamentos", label: "Pagamentos" },
@@ -93,7 +94,7 @@ export default function PagamentosPage() {
   const [q, setQ] = useState("");
   const [sit, setSit] = useState<Situacao>("todos");
   const [selected, setSelected] = useState<Pagamento | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState({
     descricao: "",

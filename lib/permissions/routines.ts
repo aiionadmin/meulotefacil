@@ -87,12 +87,11 @@ export function defaultPermissionsForProfile(
         remover: true,
       }));
     case "direcao":
+      // Cadastro liberado em todos os menus (ver + inserir/alterar; sem remover).
       return all.map((rotina) => ({
         rotina,
         ver: true,
-        inserirAlterar: ["auditoria", "relatorios", "dashboard"].includes(
-          rotina
-        ),
+        inserirAlterar: true,
         remover: false,
       }));
     case "financeiro":

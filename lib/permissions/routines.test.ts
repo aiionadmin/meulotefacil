@@ -6,6 +6,7 @@ import { can, defaultPermissionsForProfile } from "./routines";
 const admin = defaultPermissionsForProfile("administrador");
 const corretor = defaultPermissionsForProfile("corretor");
 const financeiro = defaultPermissionsForProfile("financeiro");
+const direcao = defaultPermissionsForProfile("direcao");
 
 const checks: Array<[string, boolean]> = [
   ["admin vê auditoria", can(admin, "auditoria", "ver")],
@@ -14,6 +15,9 @@ const checks: Array<[string, boolean]> = [
   ["corretor não vê financeiro", !can(corretor, "financeiro", "ver")],
   ["financeiro altera boletos", can(financeiro, "boletos", "inserirAlterar")],
   ["financeiro não remove auditoria", !can(financeiro, "auditoria", "remover")],
+  ["direção cadastra pessoas", can(direcao, "cadastros.pessoas", "inserirAlterar")],
+  ["direção cadastra obras", can(direcao, "obras.cadastro", "inserirAlterar")],
+  ["direção não remove usuários", !can(direcao, "usuarios", "remover")],
 ];
 
 let failed = 0;

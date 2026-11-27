@@ -8,7 +8,7 @@ export function seedFase1(): Fase1State {
   const orgId = "org-demo";
   const profiles = [
     { id: "pf-admin", codigo: "administrador" as const, nome: "Administrador", descricao: "Tudo, inclusive Configurações e Auditoria" },
-    { id: "pf-dir", codigo: "direcao" as const, nome: "Direção", descricao: "Leitura; aprova alçadas; resultados" },
+    { id: "pf-dir", codigo: "direcao" as const, nome: "Direção", descricao: "Leitura e cadastro em todos os menus; aprova alçadas; resultados" },
     { id: "pf-fin", codigo: "financeiro" as const, nome: "Financeiro", descricao: "Financeiro, Fiscal, Recebimentos" },
     { id: "pf-eng", codigo: "engenharia" as const, nome: "Engenharia", descricao: "Obras, orçamentos, solicitações" },
     { id: "pf-obr", codigo: "obras" as const, nome: "Obras", descricao: "Campo: SC próprias, pré-lançamentos, tarefas" },

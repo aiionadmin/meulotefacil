@@ -19,10 +19,11 @@ import {
 import { downloadExcel, printList } from "@/lib/export/list-export";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function TransferenciasPage() {
   const { state, transferir, conciliarTransferencias } = useFinanceiro();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [situacao, setSituacao] = useState<"todas" | "pagas" | "abertas">(
     "todas"

@@ -29,6 +29,7 @@ import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
 import type { ObraStatus } from "@/lib/domain/obras-types";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 const STATUS_LABEL: Record<ObraStatus, string> = {
   em_orcamento: "Em orçamento",
@@ -89,7 +90,7 @@ export default function ObrasPage() {
   const usuariosAtivos = fase1.users.filter((u) => u.status === "ativo");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
 

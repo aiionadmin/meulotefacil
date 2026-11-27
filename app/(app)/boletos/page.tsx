@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ModuleHeader,
@@ -32,6 +32,23 @@ export default function BoletosPage() {
   } = useCarteira();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<BankSlip | null>(null);
+  const novoRan = useRef(false);
+  useEffect(() => {
+    if (novoRan.current) return;
+    try {
+      if (new URLSearchParams(window.location.search).get("novo") !== "1") {
+        return;
+      }
+    } catch {
+      return;
+    }
+    novoRan.current = true;
+    const n = gerarBoletosMes();
+    notify(
+      n ? "Boletos gerados" : "Nada a gerar",
+      n ? `${n} título(s)` : "Já emitidos ou travados"
+    );
+  }, [gerarBoletosMes]);
   const server = useServerPage({
     url: "/api/list/boletos",
     page: 1,
@@ -80,7 +97,6 @@ export default function BoletosPage() {
           <>
             <Button
               size="sm"
-              variant="outline"
               onClick={() => {
                 const n = gerarBoletosMes();
                 notify(
@@ -89,7 +105,7 @@ export default function BoletosPage() {
                 );
               }}
             >
-              Gerar boletos
+              Novo boleto
             </Button>
             <Button
               size="sm"

@@ -426,21 +426,106 @@ export const APP_FLAT_NAV = getAppNav().flatMap((g) =>
   g.items.map((item) => ({ ...item, group: g.label }))
 );
 
-/** Botão Novo global — ordem do prompt réplica. */
-export const NOVO_ATALHOS = [
-  { href: "/financeiro/pagamentos?novo=1", label: "Lançamento" },
-  { href: "/financeiro/recebimentos?novo=1", label: "Faturamento" },
-  { href: "/financeiro/transferencias?novo=1", label: "Transferência" },
-  { href: "/compras/solicitacoes?novo=1", label: "Solicitação" },
-  { href: "/compras/cotacoes?novo=1", label: "Cotação" },
-  { href: "/compras/ordens?novo=1", label: "Ordem de compra" },
-  { href: "/leads", label: "Lead" },
-  { href: "/vendas", label: "Proposta" },
-  { href: "/cadastros/pessoas?novo=1", label: "Pessoa" },
-  { href: "/contratos", label: "Venda / contrato" },
-  { href: "/tarefas?novo=1", label: "Tarefa" },
-  { href: "/demandas", label: "Demanda" },
-  { href: "/boletos", label: "Boleto" },
-  { href: "/obras?novo=1", label: "Obra" },
-  { href: "/rdo?novo=1", label: "RDO" },
+/** Botão Novo global — abre o formulário via `?novo=1` (J05 / réplica). */
+export type NovoAtalho = {
+  href: string;
+  label: string;
+  /** Rotina da matriz A04 usada para liberar o atalho. */
+  rotina: string;
+};
+
+export const NOVO_ATALHOS: readonly NovoAtalho[] = [
+  {
+    href: "/financeiro/pagamentos?novo=1",
+    label: "Lançamento",
+    rotina: "financeiro.pagamentos",
+  },
+  {
+    href: "/financeiro/recebimentos?novo=1",
+    label: "Faturamento",
+    rotina: "financeiro.recebimentos",
+  },
+  {
+    href: "/financeiro/transferencias?novo=1",
+    label: "Transferência",
+    rotina: "financeiro.transferencias",
+  },
+  {
+    href: "/financeiro/pre-lancamentos?novo=1",
+    label: "Pré-lançamento",
+    rotina: "financeiro.pre",
+  },
+  {
+    href: "/financeiro/contas?novo=1",
+    label: "Conta bancária",
+    rotina: "financeiro.contas",
+  },
+  {
+    href: "/compras/solicitacoes?novo=1",
+    label: "Solicitação",
+    rotina: "compras.sc.propria",
+  },
+  {
+    href: "/compras/cotacoes?novo=1",
+    label: "Cotação",
+    rotina: "compras.cotacao",
+  },
+  {
+    href: "/compras/ordens?novo=1",
+    label: "Ordem de compra",
+    rotina: "compras.oc",
+  },
+  { href: "/leads?novo=1", label: "Lead", rotina: "leads" },
+  { href: "/vendas?novo=1", label: "Proposta", rotina: "vendas" },
+  {
+    href: "/cadastros/pessoas?novo=1",
+    label: "Pessoa",
+    rotina: "cadastros.pessoas",
+  },
+  {
+    href: "/cadastros/pre-cadastro?novo=1",
+    label: "Pré-cadastro",
+    rotina: "cadastros.pessoas",
+  },
+  { href: "/contratos?novo=1", label: "Venda / contrato", rotina: "carteira" },
+  { href: "/tarefas?novo=1", label: "Tarefa", rotina: "tarefas" },
+  { href: "/demandas?novo=1", label: "Demanda", rotina: "tarefas" },
+  { href: "/boletos?novo=1", label: "Boleto", rotina: "boletos" },
+  { href: "/obras?novo=1", label: "Obra", rotina: "obras.cadastro" },
+  { href: "/rdo?novo=1", label: "RDO", rotina: "obras.rdo" },
+  {
+    href: "/empreendimentos?novo=1",
+    label: "Empreendimento",
+    rotina: "empreendimentos",
+  },
+  {
+    href: "/catalogo/insumos?novo=1",
+    label: "Insumo",
+    rotina: "catalogo.insumos",
+  },
+  {
+    href: "/catalogo/composicoes?novo=1",
+    label: "Composição",
+    rotina: "catalogo.composicoes",
+  },
+  {
+    href: "/cartorios?novo=1",
+    label: "Cartório",
+    rotina: "empreendimentos",
+  },
+  {
+    href: "/planos-pagamento?novo=1",
+    label: "Plano de pagamento",
+    rotina: "empreendimentos",
+  },
+  {
+    href: "/veiculos-comunicacao?novo=1",
+    label: "Veículo de comunicação",
+    rotina: "vendas",
+  },
+  {
+    href: "/configuracoes/listas?novo=1",
+    label: "Item de lista",
+    rotina: "cadastros.listas",
+  },
 ] as const;

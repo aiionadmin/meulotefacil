@@ -16,12 +16,13 @@ import { formatBRL } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
 import type { InsumoGrupo } from "@/lib/domain/obras-types";
 import { Star } from "lucide-react";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function InsumosPage() {
   const { state, addInsumo, toggleInsumoFavorito } = useObras();
   const [q, setQ] = useState("");
   const [grupo, setGrupo] = useState("todos");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState({
     codigo: "",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
   DetailSheet,
   Field,
   FilterBar,
+  FormDialog,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
@@ -29,6 +30,7 @@ import {
 import { useCompras } from "@/lib/store/compras-store";
 import { parseCotacaoPdf } from "@/lib/compras/cotacao-pdf";
 import type { Cotacao } from "@/lib/domain/compras-types";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function CotacoesPage() {
   const {
@@ -37,6 +39,7 @@ export default function CotacoesPage() {
     setPrecoCotacao,
     addArquivoCotacao,
     gerarOrdensDaCotacao,
+    criarCotacaoDeSc,
   } = useCompras();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Cotacao | null>(null);
@@ -44,6 +47,20 @@ export default function CotacoesPage() {
     "itens" | "fornecedores" | "mapa" | "arquivos"
   >("mapa");
   const [pdfFornecedor, setPdfFornecedor] = useState("");
+  const [open, setOpen] = useNovoParam();
+  const scElegiveis = useMemo(
+    () =>
+      state.solicitacoes.filter((s) =>
+        ["a_atender", "em_andamento"].includes(s.status)
+      ),
+    [state.solicitacoes]
+  );
+  const [scId, setScId] = useState("");
+  const [forn, setForn] = useState("Distribuidora Sul");
+
+  useEffect(() => {
+    if (open && !scId && scElegiveis[0]) setScId(scElegiveis[0].id);
+  }, [open, scId, scElegiveis]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -72,6 +89,15 @@ export default function CotacoesPage() {
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/compras/ordens">Ordem de Compra</Link>
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setScId(scElegiveis[0]?.id ?? "");
+                setOpen(true);
+              }}
+            >
+              Nova cotação
             </Button>
           </>
         }
@@ -417,6 +443,56 @@ export default function CotacoesPage() {
           </div>
         ) : null}
       </DetailSheet>
+
+      <FormDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Nova cotação"
+        onSubmit={() => {
+          if (!scId) {
+            notify("Selecione uma solicitação");
+            return;
+          }
+          const cot = criarCotacaoDeSc(scId, [
+            { fornecedor: forn || "Fornecedor" },
+            { fornecedor: "Materiais Campinas" },
+            { fornecedor: "ConstruMax" },
+          ]);
+          if (!cot) {
+            notify("Não foi possível criar cotação");
+            return;
+          }
+          notify(`Cotação ${cot.numero} criada`);
+          setOpen(false);
+          setSelected(cot);
+        }}
+      >
+        <Field label="Solicitação">
+          <select
+            className={fieldControlClass}
+            value={scId}
+            onChange={(e) => setScId(e.target.value)}
+          >
+            <option value="">Selecione…</option>
+            {scElegiveis.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.numero} · {s.descricao}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Fornecedor principal">
+          <Input value={forn} onChange={(e) => setForn(e.target.value)} />
+        </Field>
+        {scElegiveis.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma SC elegível.{" "}
+            <Link className="underline" href="/compras/solicitacoes?novo=1">
+              Criar solicitação
+            </Link>
+          </p>
+        ) : null}
+      </FormDialog>
     </div>
   );
 }

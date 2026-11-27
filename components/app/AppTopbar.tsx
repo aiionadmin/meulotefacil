@@ -54,12 +54,15 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { currentUser, currentProfileName, state } = useFase1();
+  const { currentUser, currentProfileName, state, can } = useFase1();
   const { empresas, selectedId, setSelectedId } = useEmpresa();
   const { openClient } = useClientCard();
   const [open, setOpen] = useState(false);
   const parts = pathname.split("/").filter(Boolean);
   const unread = state.notifications.filter((n) => !n.lida).length;
+  const novoLiberados = NOVO_ATALHOS.filter((a) =>
+    can(a.rotina, "inserirAlterar")
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -130,21 +133,23 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
             ))}
           </select>
         </label>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" className="hidden sm:inline-flex">
-              <Plus className="h-4 w-4" />
-              Novo
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {NOVO_ATALHOS.map((a) => (
-              <DropdownMenuItem key={a.href} asChild>
-                <Link href={a.href}>{a.label}</Link>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {novoLiberados.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="inline-flex">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Novo</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
+              {novoLiberados.map((a) => (
+                <DropdownMenuItem key={`${a.label}:${a.href}`} asChild>
+                  <Link href={a.href}>{a.label}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
         <Button
           variant="outline"
           size="sm"

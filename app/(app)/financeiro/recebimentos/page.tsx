@@ -31,6 +31,7 @@ import {
   fichaFinanceiraNav,
   resolveContract,
 } from "@/lib/financeiro/ficha-links";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function RecebimentosPage() {
   const {
@@ -63,7 +64,7 @@ export default function RecebimentosPage() {
   );
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Recebimento | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState({
     descricao: "",

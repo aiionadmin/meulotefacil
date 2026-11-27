@@ -24,6 +24,7 @@ import { useCarteira } from "@/lib/store/carteira-store";
 import { useSystemSettings } from "@/lib/store/system-settings-store";
 import { calcReservaExpiraEm } from "@/lib/domain/system-settings";
 import type { Proposal } from "@/lib/domain/fluxo-types";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 const STATUS_COLS = [
   { id: "aberta", label: "Aberta" },
@@ -76,7 +77,7 @@ export default function VendasPage() {
   } = useFluxo();
   const { state: carteira, addContract, changeLotStatus } = useCarteira();
   const { validadeReservaDias } = useSystemSettings();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProposalForm>(() =>
     emptyForm(

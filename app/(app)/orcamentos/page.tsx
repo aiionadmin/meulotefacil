@@ -64,6 +64,9 @@ export default function OrcamentosPage() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/obras">Minhas Obras</Link>
             </Button>
+            <Button size="sm" asChild>
+              <Link href="/obras?novo=1">Novo orçamento</Link>
+            </Button>
           </div>
         }
       />
