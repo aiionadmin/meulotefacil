@@ -55,7 +55,7 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { currentUser, currentProfileName, state, can } = useFase1();
-  const { empresas, selectedId, setSelectedId } = useEmpresa();
+  const { empresas, selectedId, selected, setSelectedId } = useEmpresa();
   const { openClient } = useClientCard();
   const [open, setOpen] = useState(false);
   const parts = pathname.split("/").filter(Boolean);
@@ -115,17 +115,27 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
       </nav>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
-        <label className="hidden items-center gap-1.5 lg:flex">
-          <span className="text-[11px] text-muted-foreground">Empresa</span>
+        <label className="flex min-w-0 items-center gap-1.5">
+          <span className="hidden text-[11px] text-muted-foreground sm:inline">
+            Empresa
+          </span>
           <select
-            className={cn(fieldControlClass, "h-8 w-[180px] py-0 text-xs")}
+            className={cn(
+              fieldControlClass,
+              "h-8 max-w-[42vw] py-0 text-xs sm:w-[200px] sm:max-w-none"
+            )}
             value={selectedId}
             onChange={(e) =>
               setSelectedId(e.target.value as string | "todas")
             }
             aria-label="Selecionar empresa"
+            title={
+              selected
+                ? `${selected.nome} · ${selected.cnpj}`
+                : "Todas as empresas"
+            }
           >
-            <option value="todas">Todas</option>
+            <option value="todas">Todas as empresas</option>
             {empresas.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.nome}

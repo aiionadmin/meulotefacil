@@ -776,7 +776,7 @@ export default function EmpreendimentosPage() {
               ...patch,
               empresaId:
                 selectedId === "todas"
-                  ? developments[0]?.empresaId
+                  ? developmentsAll[0]?.empresaId
                   : selectedId,
             });
             notify("Empreendimento criado", empForm.nome);

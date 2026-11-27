@@ -20,6 +20,7 @@ import { SearchSelect } from "@/components/app/SearchSelect";
 import { useServerPage } from "@/lib/ui/use-server-page";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useEmpresa } from "@/lib/empresa/context";
 import type { Lead, LeadOrigem } from "@/lib/domain/fluxo-types";
 import { statusLabel } from "@/lib/status/labels";
 import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
@@ -112,6 +113,12 @@ function leadToForm(l: Lead): LeadForm {
 export default function LeadsPage() {
   const { state, addLead, updateLead, removeLead, moveLead } = useFluxo();
   const { state: carteira } = useCarteira();
+  const {
+    selectedId,
+    scopedDevelopments,
+    empresaIdForEmpNome,
+    filterByEmpresa,
+  } = useEmpresa();
   const [open, setOpen] = useNovoParam();
   const [geo, setGeo] = useState<GeoEmpFilterValues>(EMPTY_GEO_EMP);
   const [q, setQ] = useState("");
@@ -123,19 +130,24 @@ export default function LeadsPage() {
     pageSize: 25,
   });
 
+  const developments = useMemo(
+    () => scopedDevelopments(carteira.developments),
+    [scopedDevelopments, carteira.developments]
+  );
+
   const geoIds = useMemo(
-    () => developmentIdsMatching(carteira.developments, geo),
-    [carteira.developments, geo]
+    () => developmentIdsMatching(developments, geo),
+    [developments, geo]
   );
 
   const empNamesAllowed = useMemo(() => {
     if (!geoIds) return null;
     return new Set(
-      carteira.developments
+      developments
         .filter((d) => geoIds.has(d.id))
         .map((d) => d.nome.toLowerCase())
     );
-  }, [carteira.developments, geoIds]);
+  }, [developments, geoIds]);
 
   const activeLeads = useMemo(
     () =>
@@ -147,6 +159,15 @@ export default function LeadsPage() {
           l.etapa === "retomado" ||
           l.etapa === "quitado" ||
           l.etapa === "escritura"
+        ) {
+          return false;
+        }
+        const leadEmpresa =
+          l.empresaId ||
+          empresaIdForEmpNome(l.empInteresse, carteira.developments);
+        if (
+          selectedId !== "todas" &&
+          !filterByEmpresa([{ empresaId: leadEmpresa }]).length
         ) {
           return false;
         }
@@ -168,7 +189,16 @@ export default function LeadsPage() {
           .toLowerCase()
           .includes(term);
       }),
-    [state.leads, empNamesAllowed, geo, q]
+    [
+      state.leads,
+      empNamesAllowed,
+      geo,
+      q,
+      selectedId,
+      filterByEmpresa,
+      empresaIdForEmpNome,
+      carteira.developments,
+    ]
   );
 
   const leadSuggestions = useMemo(
@@ -281,7 +311,7 @@ export default function LeadsPage() {
         suggestions={leadSuggestions}
       >
         <GeoEmpFilters
-          developments={carteira.developments}
+          developments={developments}
           value={geo}
           onChange={setGeo}
         />
@@ -486,7 +516,7 @@ export default function LeadsPage() {
         </Field>
         <Field label="Empreendimento de interesse">
           <SearchSelect
-            options={carteira.developments.map((d) => ({
+            options={developments.map((d) => ({
               value: d.nome,
               label: d.nome,
               meta: d.modalidade,

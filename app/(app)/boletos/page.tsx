@@ -27,6 +27,7 @@ import { downloadExcel, downloadTextTemplate } from "@/lib/export/list-export";
 import { parseCnab400Retorno } from "@/lib/cnab/retorno";
 import { useServerPage } from "@/lib/ui/use-server-page";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useEmpresa } from "@/lib/empresa/context";
 import type { BankSlip } from "@/lib/domain/carteira-types";
 
 export default function BoletosPage() {
@@ -37,6 +38,7 @@ export default function BoletosPage() {
     processarRetorno,
     cancelarBoletosPorIds,
   } = useCarteira();
+  const { scopedDevelopments, filterByDevelopmentEmpresa } = useEmpresa();
   const [q, setQ] = useState("");
   const [geo, setGeo] = useState<GeoEmpFilterValues>(EMPTY_GEO_EMP);
   const [selected, setSelected] = useState<BankSlip | null>(null);
@@ -64,14 +66,25 @@ export default function BoletosPage() {
     q,
   });
 
+  const developments = useMemo(
+    () => scopedDevelopments(state.developments),
+    [scopedDevelopments, state.developments]
+  );
+
   const geoIds = useMemo(
-    () => developmentIdsMatching(state.developments, geo),
-    [state.developments, geo]
+    () => developmentIdsMatching(developments, geo),
+    [developments, geo]
   );
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
+    const scopedContracts = filterByDevelopmentEmpresa(
+      state.contracts,
+      state.developments
+    );
+    const allowedContracts = new Set(scopedContracts.map((c) => c.id));
     return state.bankSlips.filter((b) => {
+      if (!allowedContracts.has(b.contractId)) return false;
       if (geoIds) {
         const ct = state.contracts.find((c) => c.id === b.contractId);
         if (!ct || !geoIds.has(ct.developmentId)) return false;
@@ -82,7 +95,14 @@ export default function BoletosPage() {
         .toLowerCase()
         .includes(term);
     });
-  }, [state.bankSlips, q, geoIds, state.contracts]);
+  }, [
+    state.bankSlips,
+    q,
+    geoIds,
+    state.contracts,
+    state.developments,
+    filterByDevelopmentEmpresa,
+  ]);
 
   const boletoSuggestions = useMemo(
     () =>
@@ -229,7 +249,7 @@ export default function BoletosPage() {
         suggestions={boletoSuggestions}
       >
         <GeoEmpFilters
-          developments={state.developments}
+          developments={developments}
           value={geo}
           onChange={setGeo}
         />

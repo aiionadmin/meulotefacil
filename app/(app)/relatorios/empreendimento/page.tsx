@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,19 +38,37 @@ const STEPS = ["Emitente", "Empreendimento", "Conteúdo", "Gerar"] as const;
 export default function RelatorioEmpreendimentoPage() {
   const { state } = useCarteira();
   const { state: f1 } = useFase1();
-  const { selected: empSel, empresas } = useEmpresa();
+  const { selected: empSel, empresas, scopedDevelopments, selectedId } =
+    useEmpresa();
   const [step, setStep] = useState(0);
   const [emitenteId, setEmitenteId] = useState<EmitenteId>(() => {
     const bySel = resolveEmitente(empSel?.cnpj ?? f1.organization.cnpj);
     return bySel.id;
   });
-  const [devId, setDevId] = useState(state.developments[0]?.id ?? "");
+  const developments = useMemo(
+    () => scopedDevelopments(state.developments),
+    [scopedDevelopments, state.developments]
+  );
+  const [devId, setDevId] = useState(
+    () => developments[0]?.id ?? state.developments[0]?.id ?? ""
+  );
   const [sections, setSections] = useState<EmpReportSections>({
     ...DEFAULT_EMP_REPORT_SECTIONS,
   });
 
+  useEffect(() => {
+    const bySel = resolveEmitente(empSel?.cnpj ?? f1.organization.cnpj);
+    setEmitenteId(bySel.id);
+  }, [empSel?.cnpj, f1.organization.cnpj, selectedId]);
+
+  useEffect(() => {
+    if (!developments.some((d) => d.id === devId)) {
+      setDevId(developments[0]?.id ?? "");
+    }
+  }, [developments, devId]);
+
   const emitente = EMITENTES[emitenteId];
-  const development = state.developments.find((d) => d.id === devId);
+  const development = developments.find((d) => d.id === devId);
   const lots = useMemo(
     () => state.lots.filter((l) => l.developmentId === devId),
     [state.lots, devId]
@@ -215,7 +233,7 @@ export default function RelatorioEmpreendimentoPage() {
               value={devId}
               onChange={setDevId}
               placeholder="Buscar empreendimento…"
-              options={state.developments.map((d) => ({
+              options={developments.map((d) => ({
                 value: d.id,
                 label: `${d.nome} · ${d.cidade}/${d.uf}`,
               }))}

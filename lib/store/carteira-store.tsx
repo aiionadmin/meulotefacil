@@ -221,19 +221,35 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
     state,
     setState,
     seed: unifiedCarteiraSeed,
-    merge: (seed, saved) => ({
-      ...seed,
-      ...saved,
-      receiptParams: {
-        ...seed.receiptParams,
-        ...(saved as CarteiraState).receiptParams,
-      },
-      adjustments: ((saved as CarteiraState).adjustments ?? []).map((a) => ({
-        ...a,
-        residuosGerados: a.residuosGerados ?? 0,
-        residuoIds: a.residuoIds ?? [],
-      })),
-    }),
+    merge: (seed, saved) => {
+      const s = saved as CarteiraState;
+      const byId = new Map(seed.developments.map((d) => [d.id, d]));
+      const byNome = new Map(
+        seed.developments.map((d) => [d.nome.trim().toLowerCase(), d])
+      );
+      return {
+        ...seed,
+        ...s,
+        developments: (s.developments ?? seed.developments).map((d) => {
+          if (d.empresaId) return d;
+          const fromSeed =
+            byId.get(d.id) ?? byNome.get(d.nome.trim().toLowerCase());
+          return {
+            ...d,
+            empresaId: fromSeed?.empresaId ?? DEMO_ORG_ID,
+          };
+        }),
+        receiptParams: {
+          ...seed.receiptParams,
+          ...s.receiptParams,
+        },
+        adjustments: (s.adjustments ?? []).map((a) => ({
+          ...a,
+          residuosGerados: a.residuosGerados ?? 0,
+          residuoIds: a.residuoIds ?? [],
+        })),
+      };
+    },
   });
 
   const saldoDevedor = useCallback(

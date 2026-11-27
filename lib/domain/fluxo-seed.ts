@@ -1,4 +1,5 @@
 import type { FluxoState } from "./fluxo-types";
+import { EMPRESA_LA_ID, EMPRESA_MLF_ID } from "@/lib/empresa/ids";
 
 export const FLUXO_STORAGE_KEY = "mlf-fluxo-store-v1";
 
@@ -27,6 +28,7 @@ export function seedFluxo(): FluxoState {
         telefone: "(19) 99911-2233",
         email: "pedro@email.com",
         empInteresse: "Residencial Horizonte",
+        empresaId: EMPRESA_MLF_ID,
         origem: "whatsapp",
         campanha: "Black Friday lotes",
         corretor: "Carla Corretora",
@@ -52,6 +54,7 @@ export function seedFluxo(): FluxoState {
         nome: "Fernanda Costa",
         telefone: "(19) 98822-3344",
         empInteresse: "Jardins do Sol",
+        empresaId: EMPRESA_LA_ID,
         origem: "anuncio",
         campanha: "Meta Ads Nov",
         corretor: "Carla Corretora",
@@ -81,6 +84,7 @@ export function seedFluxo(): FluxoState {
         nome: "Pré-reserva",
         telefone: "(19) 97700-1100",
         empInteresse: "Residencial Horizonte",
+        empresaId: EMPRESA_MLF_ID,
         origem: "site",
         score: 60,
         classificacao: "morno",
@@ -94,6 +98,7 @@ export function seedFluxo(): FluxoState {
         nome: "Ana Souza",
         telefone: "(19) 99100-1001",
         empInteresse: "Residencial Horizonte",
+        empresaId: EMPRESA_MLF_ID,
         origem: "indicacao",
         responsavel: "Carla Corretora",
         etapa: "contrato",
@@ -108,6 +113,7 @@ export function seedFluxo(): FluxoState {
         nome: "Bruno Lima",
         telefone: "(19) 99200-2002",
         empInteresse: "Jardins do Sol",
+        empresaId: EMPRESA_LA_ID,
         origem: "manual",
         responsavel: "Comercial",
         etapa: "carteira_em_dia",
@@ -123,6 +129,8 @@ export function seedFluxo(): FluxoState {
         leadId: "ld-3",
         cliente: "Pré-reserva",
         empNome: "Residencial Horizonte",
+        developmentId: "dev-horizonte",
+        empresaId: EMPRESA_MLF_ID,
         loteLabel: "A/03",
         valor: 220000,
         parcelas: 120,
@@ -136,6 +144,8 @@ export function seedFluxo(): FluxoState {
         leadId: "ld-2",
         cliente: "Fernanda Costa",
         empNome: "Jardins do Sol",
+        developmentId: "dev-jardins",
+        empresaId: EMPRESA_LA_ID,
         loteLabel: "C/02",
         valor: 240000,
         parcelas: 96,

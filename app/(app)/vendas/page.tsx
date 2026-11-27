@@ -22,6 +22,7 @@ import { downloadPropostaPdf } from "@/lib/export/proposta-report";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useSystemSettings } from "@/lib/store/system-settings-store";
+import { useEmpresa } from "@/lib/empresa/context";
 import { calcReservaExpiraEm } from "@/lib/domain/system-settings";
 import type { Proposal } from "@/lib/domain/fluxo-types";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
@@ -84,30 +85,44 @@ export default function VendasPage() {
   } = useFluxo();
   const { state: carteira, addContract, changeLotStatus } = useCarteira();
   const { validadeReservaDias, indicePadrao } = useSystemSettings();
+  const { scopedDevelopments, filterByDevelopmentEmpresa } = useEmpresa();
   const [open, setOpen] = useNovoParam();
   const [geo, setGeo] = useState<GeoEmpFilterValues>(EMPTY_GEO_EMP);
   const [q, setQ] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const developments = useMemo(
+    () => scopedDevelopments(carteira.developments),
+    [scopedDevelopments, carteira.developments]
+  );
+
   const [form, setForm] = useState<ProposalForm>(() =>
     emptyForm(
       state.leads[0]?.id ?? "",
-      carteira.developments[0]?.id ?? "",
+      developments[0]?.id ?? carteira.developments[0]?.id ?? "",
       validadeReservaDias
     )
   );
 
   const geoIds = useMemo(
-    () => developmentIdsMatching(carteira.developments, geo),
-    [carteira.developments, geo]
+    () => developmentIdsMatching(developments, geo),
+    [developments, geo]
   );
 
   const filteredProposals = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return state.proposals.filter((p) => {
-      if (geoIds) {
-        const did =
+    const scoped = filterByDevelopmentEmpresa(
+      state.proposals.map((p) => ({
+        ...p,
+        developmentId:
           p.developmentId ||
-          carteira.developments.find((d) => d.nome === p.empNome)?.id;
+          carteira.developments.find((d) => d.nome === p.empNome)?.id,
+      })),
+      carteira.developments
+    );
+    return scoped.filter((p) => {
+      if (geoIds) {
+        const did = p.developmentId;
         if (!did || !geoIds.has(did)) return false;
       }
       if (!term) return true;
@@ -116,7 +131,13 @@ export default function VendasPage() {
         .toLowerCase()
         .includes(term);
     });
-  }, [state.proposals, geoIds, q, carteira.developments]);
+  }, [
+    state.proposals,
+    geoIds,
+    q,
+    carteira.developments,
+    filterByDevelopmentEmpresa,
+  ]);
 
   const searchSuggestions = useMemo(
     () =>
@@ -360,7 +381,7 @@ export default function VendasPage() {
         suggestions={searchSuggestions}
       >
         <GeoEmpFilters
-          developments={carteira.developments}
+          developments={developments}
           value={geo}
           onChange={setGeo}
         />
@@ -552,7 +573,7 @@ export default function VendasPage() {
         </Field>
         <Field label="Empreendimento *">
           <SearchSelect
-            options={carteira.developments.map((d) => ({
+            options={developments.map((d) => ({
               value: d.id,
               label: d.nome,
               meta: d.modalidade,
