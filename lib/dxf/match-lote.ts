@@ -57,7 +57,7 @@ export function matchLotsFromPick(
 ): Lot[] {
   const parsed = parseQuadraLote(pick.code);
   if (!parsed) return [];
-  let candidates = lots.filter((l) => {
+  const candidates = lots.filter((l) => {
     const n = l.lote.replace(/\D/g, "").padStart(2, "0");
     const target = parsed.lote.padStart(2, "0");
     if (n !== target && l.lote !== parsed.lote) return false;

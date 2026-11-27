@@ -155,7 +155,7 @@ export default function PlantaPage() {
     try {
       let nome = dxfFile?.name || savedName || dxfSample;
       let sampleId: string | undefined;
-      let labelCount = labels.length;
+      const labelCount = labels.length;
 
       if (dxfFile) {
         const buf = await dxfFile.arrayBuffer();
