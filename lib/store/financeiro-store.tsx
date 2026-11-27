@@ -20,7 +20,9 @@ import {
   dualWriteNatureza,
   dualWritePagamento,
   dualWritePlano,
+  dualWritePreLancamento,
   dualWriteRecebimento,
+  dualWriteTransferencia,
 } from "@/lib/persist/dual-write";
 import { loadFinanceiroFromTables } from "@/lib/persist/load-from-tables";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
@@ -717,6 +719,7 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
             contas,
           };
         });
+        void dualWriteTransferencia(tr);
         return tr;
       },
       conciliarTransferencias: (ids) => {
@@ -745,12 +748,16 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
             });
           }
           const alvoSet = new Set(alvos.map((t) => t.id));
+          const transferencias = s.transferencias.map((t) =>
+            alvoSet.has(t.id) ? { ...t, pago: true } : t
+          );
+          for (const t of transferencias.filter((x) => alvoSet.has(x.id))) {
+            void dualWriteTransferencia(t);
+          }
           return {
             ...s,
             contas,
-            transferencias: s.transferencias.map((t) =>
-              alvoSet.has(t.id) ? { ...t, pago: true } : t
-            ),
+            transferencias,
           };
         });
         return alvos.length;
@@ -769,6 +776,7 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           ...s,
           preLancamentos: [pre, ...s.preLancamentos],
         }));
+        void dualWritePreLancamento(pre);
         return pre;
       },
       aprovarPre: (id) => {
@@ -814,32 +822,40 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           conciliado: false,
           historico: [],
         };
+        const preNext = {
+          ...pre,
+          status: "aprovado" as const,
+          lancamentoId: lanId,
+        };
         setState((s) => ({
           ...s,
           lancamentos: [lan, ...s.lancamentos],
           pagamentos: [pag, ...s.pagamentos],
           preLancamentos: s.preLancamentos.map((p) =>
-            p.id === id
-              ? { ...p, status: "aprovado" as const, lancamentoId: lanId }
-              : p
+            p.id === id ? preNext : p
           ),
         }));
+        void dualWritePreLancamento(preNext);
+        void dualWriteLancamento(lan);
+        void dualWritePagamento(pag);
         return true;
       },
       recusarPre: (id, motivo) => {
         if (!motivo.trim()) return false;
+        const pre = state.preLancamentos.find((p) => p.id === id);
+        if (!pre) return false;
+        const next = {
+          ...pre,
+          status: "recusado" as const,
+          motivoRecusa: motivo.trim(),
+        };
         setState((s) => ({
           ...s,
           preLancamentos: s.preLancamentos.map((p) =>
-            p.id === id
-              ? {
-                  ...p,
-                  status: "recusado" as const,
-                  motivoRecusa: motivo.trim(),
-                }
-              : p
+            p.id === id ? next : p
           ),
         }));
+        void dualWritePreLancamento(next);
         return true;
       },
       aprovarPresLote: (ids) => {
