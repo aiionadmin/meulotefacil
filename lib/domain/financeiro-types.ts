@@ -215,6 +215,8 @@ export type FinanceiroConfig = {
   mesesProvisionamento: number;
   numeroDocObrigatorioLancamento: boolean;
   numeroDocObrigatorioPagamento: boolean;
+  /** G20 — ao selecionar a obra, abrir etapas/itens automaticamente. */
+  abrirEtapasItensAutomatico: boolean;
 };
 
 export type FinanceiroState = {

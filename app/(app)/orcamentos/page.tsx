@@ -7,6 +7,8 @@ import { ModuleHeader, StatusPill } from "@/components/app/ModulePage";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import { FilterBar } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
+import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
+import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
 import { BoardViews } from "@/components/kanban/BoardViews";
 import type { PropostaStatus } from "@/lib/domain/obras-types";
@@ -22,19 +24,21 @@ const FUNIL: { id: PropostaStatus; label: string }[] = [
 
 export default function OrcamentosPage() {
   const { state, totaisDaObra, updateObra } = useObras();
+  const { currentUser, currentProfileName: perfilNome } = useFase1();
   const [q, setQ] = useState("");
   const [view, setView] = useState<"lista" | "funil">("lista");
 
   const filtered = useMemo(() => {
+    const base = filterObrasVisiveis(state.obras, currentUser, perfilNome);
     const term = q.trim().toLowerCase();
-    if (!term) return state.obras;
-    return state.obras.filter((o) =>
+    if (!term) return base;
+    return base.filter((o) =>
       [o.codigo, o.nome, o.clienteNome, o.status]
         .join(" ")
         .toLowerCase()
         .includes(term)
     );
-  }, [state.obras, q]);
+  }, [state.obras, q, currentUser, perfilNome]);
 
   return (
     <div className="space-y-6">

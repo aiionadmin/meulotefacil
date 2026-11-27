@@ -189,6 +189,7 @@ export function FormSheet({
   submitLabel = "Salvar",
   busy,
   wide,
+  dirty,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -198,9 +199,29 @@ export function FormSheet({
   submitLabel?: string;
   busy?: boolean;
   wide?: boolean;
+  /** Se true, confirma antes de fechar com alterações não salvas. */
+  dirty?: boolean;
 }) {
+  function requestClose() {
+    if (
+      dirty &&
+      !window.confirm(
+        "Há alterações não salvas. Deseja sair sem salvar?"
+      )
+    ) {
+      return;
+    }
+    onOpenChange(false);
+  }
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) requestClose();
+        else onOpenChange(true);
+      }}
+    >
       <SheetContent
         side="right"
         className={cn(
@@ -220,11 +241,7 @@ export function FormSheet({
         >
           <div className="flex-1 space-y-4 overflow-y-auto pr-1">{children}</div>
           <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-linha pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={requestClose}>
               Cancelar
             </Button>
             <Button type="submit" disabled={busy}>

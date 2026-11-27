@@ -24,7 +24,9 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
+import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
 import { useServerPage } from "@/lib/ui/use-server-page";
+import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
 import type { ObraStatus } from "@/lib/domain/obras-types";
 import { useCarteira } from "@/lib/store/carteira-store";
@@ -78,10 +80,12 @@ const EMPTY_FORM = {
 
 export default function ObrasPage() {
   const { state, addObra, duplicateObra, softRemoveObra } = useObras();
+  const { currentUser, currentProfileName: perfilNome } = useFase1();
   const { state: carteira } = useCarteira();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const server = useServerPage({
     url: "/api/list/obras",
     page: 1,
@@ -90,8 +94,13 @@ export default function ObrasPage() {
   });
   const [form, setForm] = useState(EMPTY_FORM);
 
+  function patchForm(patch: Partial<typeof EMPTY_FORM>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
+
   const filtered = useMemo(() => {
-    let list = state.obras;
+    let list = filterObrasVisiveis(state.obras, currentUser, perfilNome);
     if (statusFilter !== "todos") {
       list = list.filter((o) => o.status === statusFilter);
     }
@@ -106,7 +115,7 @@ export default function ObrasPage() {
       );
     }
     return list;
-  }, [state.obras, q, statusFilter]);
+  }, [state.obras, q, statusFilter, currentUser, perfilNome]);
 
   return (
     <div className="space-y-6">
@@ -125,6 +134,7 @@ export default function ObrasPage() {
               size="sm"
               onClick={() => {
                 setForm(EMPTY_FORM);
+                setFormDirty(false);
                 setOpen(true);
               }}
             >
@@ -245,6 +255,7 @@ export default function ObrasPage() {
         title="Nova Obra"
         submitLabel="Salvar dados da obra"
         wide
+        dirty={formDirty}
         onSubmit={() => {
           if (!form.nome.trim()) {
             notify("Nome da obra é obrigatório");
@@ -324,6 +335,7 @@ export default function ObrasPage() {
             propostaStatus: "contato_inicial",
           });
           notify("Obra criada");
+          setFormDirty(false);
           setOpen(false);
         }}
       >
@@ -331,13 +343,13 @@ export default function ObrasPage() {
           <Input
             value={form.nome}
             maxLength={200}
-            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            onChange={(e) => patchForm({ nome: e.target.value })}
           />
         </Field>
         <Field label="Tipo da obra">
           <Input
             value={form.tipo}
-            onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+            onChange={(e) => patchForm({tipo: e.target.value })}
             placeholder="Ex.: infraestrutura, loteamento…"
           />
         </Field>
@@ -346,7 +358,7 @@ export default function ObrasPage() {
             className={fieldControlClass}
             value={form.status}
             onChange={(e) =>
-              setForm({ ...form, status: e.target.value as ObraStatus })
+              patchForm({status: e.target.value as ObraStatus })
             }
           >
             {(Object.keys(STATUS_LABEL) as ObraStatus[]).map((s) => (
@@ -360,7 +372,7 @@ export default function ObrasPage() {
           <Input
             value={form.visivelPara}
             onChange={(e) =>
-              setForm({ ...form, visivelPara: e.target.value })
+              patchForm({visivelPara: e.target.value })
             }
             placeholder="Admin, Comercial…"
           />
@@ -381,7 +393,7 @@ export default function ObrasPage() {
                     placeholder="Sugestão automática se vazio"
                     value={form.codigo}
                     onChange={(e) =>
-                      setForm({ ...form, codigo: e.target.value })
+                      patchForm({codigo: e.target.value })
                     }
                   />
                 </Field>
@@ -391,9 +403,7 @@ export default function ObrasPage() {
                       type="number"
                       value={form.areaTotal || ""}
                       onChange={(e) =>
-                        setForm({
-                          ...form,
-                          areaTotal: Number(e.target.value) || 0,
+                        patchForm({areaTotal: Number(e.target.value) || 0,
                         })
                       }
                     />
@@ -402,7 +412,7 @@ export default function ObrasPage() {
                     <Input
                       value={form.unidade}
                       onChange={(e) =>
-                        setForm({ ...form, unidade: e.target.value })
+                        patchForm({unidade: e.target.value })
                       }
                     />
                   </Field>
@@ -412,7 +422,7 @@ export default function ObrasPage() {
                     <Input
                       value={form.art}
                       onChange={(e) =>
-                        setForm({ ...form, art: e.target.value })
+                        patchForm({art: e.target.value })
                       }
                     />
                   </Field>
@@ -421,7 +431,7 @@ export default function ObrasPage() {
                       maxLength={20}
                       value={form.ceiCno}
                       onChange={(e) =>
-                        setForm({ ...form, ceiCno: e.target.value })
+                        patchForm({ceiCno: e.target.value })
                       }
                     />
                   </Field>
@@ -430,9 +440,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.responsavelTecnico}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        responsavelTecnico: e.target.value,
+                      patchForm({responsavelTecnico: e.target.value,
                       })
                     }
                   />
@@ -441,9 +449,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.responsavelObra}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        responsavelObra: e.target.value,
+                      patchForm({responsavelObra: e.target.value,
                       })
                     }
                   />
@@ -453,7 +459,7 @@ export default function ObrasPage() {
                     className={fieldControlClass}
                     value={form.developmentId}
                     onChange={(e) =>
-                      setForm({ ...form, developmentId: e.target.value })
+                      patchForm({developmentId: e.target.value })
                     }
                   >
                     <option value="">Sem vínculo</option>
@@ -476,7 +482,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.clienteNome}
                     onChange={(e) =>
-                      setForm({ ...form, clienteNome: e.target.value })
+                      patchForm({clienteNome: e.target.value })
                     }
                     placeholder="Busca / criação rápida"
                   />
@@ -493,7 +499,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.cep}
                     onChange={(e) =>
-                      setForm({ ...form, cep: e.target.value })
+                      patchForm({cep: e.target.value })
                     }
                   />
                 </Field>
@@ -501,7 +507,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.logradouro}
                     onChange={(e) =>
-                      setForm({ ...form, logradouro: e.target.value })
+                      patchForm({logradouro: e.target.value })
                     }
                   />
                 </Field>
@@ -510,7 +516,7 @@ export default function ObrasPage() {
                     <Input
                       value={form.numero}
                       onChange={(e) =>
-                        setForm({ ...form, numero: e.target.value })
+                        patchForm({numero: e.target.value })
                       }
                     />
                   </Field>
@@ -518,7 +524,7 @@ export default function ObrasPage() {
                     <Input
                       value={form.complemento}
                       onChange={(e) =>
-                        setForm({ ...form, complemento: e.target.value })
+                        patchForm({complemento: e.target.value })
                       }
                     />
                   </Field>
@@ -527,7 +533,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.bairro}
                     onChange={(e) =>
-                      setForm({ ...form, bairro: e.target.value })
+                      patchForm({bairro: e.target.value })
                     }
                   />
                 </Field>
@@ -537,9 +543,7 @@ export default function ObrasPage() {
                       value={form.uf}
                       maxLength={2}
                       onChange={(e) =>
-                        setForm({
-                          ...form,
-                          uf: e.target.value.toUpperCase(),
+                        patchForm({uf: e.target.value.toUpperCase(),
                         })
                       }
                     />
@@ -548,7 +552,7 @@ export default function ObrasPage() {
                     <Input
                       value={form.cidade}
                       onChange={(e) =>
-                        setForm({ ...form, cidade: e.target.value })
+                        patchForm({cidade: e.target.value })
                       }
                     />
                   </Field>
@@ -565,7 +569,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.contatoNome}
                     onChange={(e) =>
-                      setForm({ ...form, contatoNome: e.target.value })
+                      patchForm({contatoNome: e.target.value })
                     }
                   />
                 </Field>
@@ -573,9 +577,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.contatoTelefone}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        contatoTelefone: e.target.value,
+                      patchForm({contatoTelefone: e.target.value,
                       })
                     }
                   />
@@ -585,7 +587,7 @@ export default function ObrasPage() {
                     type="email"
                     value={form.contatoEmail}
                     onChange={(e) =>
-                      setForm({ ...form, contatoEmail: e.target.value })
+                      patchForm({contatoEmail: e.target.value })
                     }
                   />
                 </Field>
@@ -602,9 +604,7 @@ export default function ObrasPage() {
                     className={fieldControlClass}
                     value={form.quemPaga}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        quemPaga: e.target.value as "empresa" | "cliente",
+                      patchForm({quemPaga: e.target.value as "empresa" | "cliente",
                       })
                     }
                   >
@@ -616,7 +616,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.contaPadrao}
                     onChange={(e) =>
-                      setForm({ ...form, contaPadrao: e.target.value })
+                      patchForm({contaPadrao: e.target.value })
                     }
                     placeholder="Nome ou número da conta"
                   />
@@ -634,9 +634,7 @@ export default function ObrasPage() {
                     className={fieldControlClass}
                     value={form.fatTipo}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        fatTipo: e.target.value as "pj" | "pf",
+                      patchForm({fatTipo: e.target.value as "pj" | "pf",
                       })
                     }
                   >
@@ -648,7 +646,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.fatDocumento}
                     onChange={(e) =>
-                      setForm({ ...form, fatDocumento: e.target.value })
+                      patchForm({fatDocumento: e.target.value })
                     }
                   />
                 </Field>
@@ -660,7 +658,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.fatRazao}
                     onChange={(e) =>
-                      setForm({ ...form, fatRazao: e.target.value })
+                      patchForm({fatRazao: e.target.value })
                     }
                   />
                 </Field>
@@ -669,7 +667,7 @@ export default function ObrasPage() {
                     <Input
                       value={form.fatIe}
                       onChange={(e) =>
-                        setForm({ ...form, fatIe: e.target.value })
+                        patchForm({fatIe: e.target.value })
                       }
                     />
                   </Field>
@@ -678,7 +676,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.fatTelefone}
                     onChange={(e) =>
-                      setForm({ ...form, fatTelefone: e.target.value })
+                      patchForm({fatTelefone: e.target.value })
                     }
                   />
                 </Field>
@@ -687,7 +685,7 @@ export default function ObrasPage() {
                     type="email"
                     value={form.fatEmail}
                     onChange={(e) =>
-                      setForm({ ...form, fatEmail: e.target.value })
+                      patchForm({fatEmail: e.target.value })
                     }
                   />
                 </Field>
@@ -695,9 +693,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.fatEmailsCopia}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        fatEmailsCopia: e.target.value,
+                      patchForm({fatEmailsCopia: e.target.value,
                       })
                     }
                     placeholder="sepados por vírgula"
@@ -707,7 +703,7 @@ export default function ObrasPage() {
                   <Input
                     value={form.fatEndereco}
                     onChange={(e) =>
-                      setForm({ ...form, fatEndereco: e.target.value })
+                      patchForm({fatEndereco: e.target.value })
                     }
                   />
                 </Field>
@@ -735,7 +731,7 @@ export default function ObrasPage() {
                         type="checkbox"
                         checked={form[key]}
                         onChange={(e) =>
-                          setForm({ ...form, [key]: e.target.checked })
+                          patchForm({[key]: e.target.checked })
                         }
                       />
                       {label}

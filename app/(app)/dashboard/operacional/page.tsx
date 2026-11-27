@@ -18,6 +18,7 @@ import {
 } from "@/lib/indicators/receivables";
 import { agingPorConta } from "@/lib/financeiro/aging-faixas";
 import { useEmpresa } from "@/lib/empresa/context";
+import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
@@ -36,7 +37,7 @@ function daysFromToday(iso: string) {
 
 export default function DashboardOperacionalPage() {
   const { state: cart } = useCarteira();
-  const { state: f1 } = useFase1();
+  const { state: f1, currentUser, currentProfileName: perfilNome } = useFase1();
   const { state: obras } = useObras();
   const { state: compras } = useCompras();
   const { state: fin, fluxoMensal } = useFinanceiro();
@@ -115,6 +116,11 @@ export default function DashboardOperacionalPage() {
   >("em_andamento");
   const [centroFiltro, setCentroFiltro] = useState("todos");
 
+  const obrasVisiveis = useMemo(
+    () => filterObrasVisiveis(obras.obras, currentUser, perfilNome),
+    [obras.obras, currentUser, perfilNome]
+  );
+
   const obrasGestao = useMemo(() => {
     const map: Record<"em_andamento" | "paralisada" | "finalizada", ObraStatus> =
       {
@@ -122,8 +128,8 @@ export default function DashboardOperacionalPage() {
         paralisada: "paralisada",
         finalizada: "finalizada",
       };
-    return obras.obras.filter((o) => o.status === map[obraTab]);
-  }, [obras.obras, obraTab]);
+    return obrasVisiveis.filter((o) => o.status === map[obraTab]);
+  }, [obrasVisiveis, obraTab]);
 
   const agingPag = useMemo(
     () =>
@@ -249,7 +255,7 @@ export default function DashboardOperacionalPage() {
           },
           {
             label: "Obras em andamento",
-            value: obras.obras.filter((o) => o.status === "em_andamento")
+            value: obrasVisiveis.filter((o) => o.status === "em_andamento")
               .length,
           },
           {

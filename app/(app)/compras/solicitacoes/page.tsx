@@ -24,6 +24,7 @@ import { SearchSelect } from "@/components/app/SearchSelect";
 import { canApprove } from "@/lib/alcadas/check";
 import { scTimelineFromSolicitacao } from "@/lib/compras/sc-timeline";
 import { formatDateBR } from "@/lib/masks/br";
+import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
 import { useCompras } from "@/lib/store/compras-store";
 import { useObras } from "@/lib/store/obras-store";
 import { useFase1 } from "@/lib/store/fase1-store";
@@ -56,9 +57,7 @@ export default function ComprasSolicitacoesPage() {
     criarCotacaoDeSc,
   } = useCompras();
   const { state: obras } = useObras();
-  const { currentUser, state: f1 } = useFase1();
-  const perfilNome =
-    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
+  const { currentUser, state: f1, currentProfileName: perfilNome } = useFase1();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("todas");
   const [open, setOpen] = useState(false);
@@ -78,7 +77,8 @@ export default function ComprasSolicitacoesPage() {
   });
 
   const centros = useMemo(() => {
-    const list: { key: string; centro: CentroCusto }[] = obras.obras.map(
+    const visiveis = filterObrasVisiveis(obras.obras, currentUser, perfilNome);
+    const list: { key: string; centro: CentroCusto }[] = visiveis.map(
       (o) => ({
         key: `obra:${o.id}`,
         centro: { tipo: "obra", obraId: o.id, label: o.nome },
@@ -89,7 +89,7 @@ export default function ComprasSolicitacoesPage() {
       centro: { tipo: "empresa", label: "Meu Lote Fácil" },
     });
     return list;
-  }, [obras.obras]);
+  }, [obras.obras, currentUser, perfilNome]);
 
   const counts = useMemo(() => {
     const map: Record<string, number> = { todas: state.solicitacoes.length };

@@ -22,6 +22,7 @@ import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { canApprove } from "@/lib/alcadas/check";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
@@ -48,10 +49,12 @@ export default function PagamentosPage() {
     conciliarPagamentosLote,
     setPagamentoStatus,
   } = useFinanceiro();
-  const { currentUser, state: f1 } = useFase1();
+  const { currentUser, state: f1, currentProfileName: perfilNome } = useFase1();
   const { state: obrasState } = useObras();
-  const perfilNome =
-    f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
+  const obrasVisiveis = useMemo(
+    () => filterObrasVisiveis(obrasState.obras, currentUser, perfilNome),
+    [obrasState.obras, currentUser, perfilNome]
+  );
   const tiposRetencao =
     f1.lookups
       .find((l) => l.codigo === "tipos_retencao")
@@ -528,8 +531,8 @@ export default function PagamentosPage() {
             ];
           } else {
             const obra =
-              obrasState.obras.find((o) => o.id === form.obraId) ??
-              obrasState.obras[0];
+              obrasVisiveis.find((o) => o.id === form.obraId) ??
+              obrasVisiveis[0];
             if (!obra && !form.centroLabel.trim()) {
               notify("Informe o centro de custo");
               return;
@@ -742,7 +745,7 @@ export default function PagamentosPage() {
                   <SearchSelect
                     value={form.obraId}
                     onChange={(obraId) => {
-                      const o = obrasState.obras.find((x) => x.id === obraId);
+                      const o = obrasVisiveis.find((x) => x.id === obraId);
                       setForm({
                         ...form,
                         obraId,
@@ -750,7 +753,7 @@ export default function PagamentosPage() {
                       });
                     }}
                     placeholder="Buscar obra…"
-                    options={obrasState.obras.map((o) => ({
+                    options={obrasVisiveis.map((o) => ({
                       value: o.id,
                       label: o.nome,
                       meta: o.codigo,
@@ -788,7 +791,7 @@ export default function PagamentosPage() {
                       <SearchSelect
                         value={r.obraId}
                         onChange={(obraId) => {
-                          const o = obrasState.obras.find(
+                          const o = obrasVisiveis.find(
                             (x) => x.id === obraId
                           );
                           const next = [...form.rateios];
@@ -800,7 +803,7 @@ export default function PagamentosPage() {
                           setForm({ ...form, rateios: next });
                         }}
                         placeholder="Obra…"
-                        options={obrasState.obras.map((o) => ({
+                        options={obrasVisiveis.map((o) => ({
                           value: o.id,
                           label: o.nome,
                         }))}

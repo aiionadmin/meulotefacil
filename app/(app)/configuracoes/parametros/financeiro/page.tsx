@@ -17,6 +17,9 @@ export default function ParametrosFinanceiroPage() {
   const [meses, setMeses] = useState(cfg.mesesProvisionamento);
   const [docLan, setDocLan] = useState(cfg.numeroDocObrigatorioLancamento);
   const [docPag, setDocPag] = useState(cfg.numeroDocObrigatorioPagamento);
+  const [abrirEtapas, setAbrirEtapas] = useState(
+    cfg.abrirEtapasItensAutomatico ?? true
+  );
 
   return (
     <div className="space-y-6">
@@ -32,6 +35,7 @@ export default function ParametrosFinanceiroPage() {
                 mesesProvisionamento: meses,
                 numeroDocObrigatorioLancamento: docLan,
                 numeroDocObrigatorioPagamento: docPag,
+                abrirEtapasItensAutomatico: abrirEtapas,
               });
               void recordAudit({
                 userId: currentUser?.id,
@@ -44,6 +48,7 @@ export default function ParametrosFinanceiroPage() {
                   mesesProvisionamento: meses,
                   numeroDocObrigatorioLancamento: docLan,
                   numeroDocObrigatorioPagamento: docPag,
+                  abrirEtapasItensAutomatico: abrirEtapas,
                 },
               });
               notify("Parâmetros salvos", "Financeiro");
@@ -70,6 +75,10 @@ export default function ParametrosFinanceiroPage() {
         <label className="flex items-center justify-between gap-3 text-sm">
           <span>Número do documento obrigatório no pagamento</span>
           <Switch checked={docPag} onCheckedChange={setDocPag} />
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span>Abrir etapas e itens ao selecionar a obra</span>
+          <Switch checked={abrirEtapas} onCheckedChange={setAbrirEtapas} />
         </label>
       </div>
     </div>
