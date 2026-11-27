@@ -17,6 +17,7 @@ import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
 import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
 import type {
   CentroCusto,
+  ComprasConfig,
   ComprasState,
   Cotacao,
   CotacaoStatus,
@@ -85,6 +86,7 @@ type ComprasApi = {
   negarOrdensLote: (ids: string[]) => number;
   marcarOcComprada: (id: string) => boolean;
   marcarOcEntregue: (id: string, parcial?: boolean) => boolean;
+  updateConfig: (patch: Partial<ComprasConfig>) => void;
 };
 
 const Ctx = createContext<ComprasApi | null>(null);
@@ -704,6 +706,23 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
           ),
         }));
         return true;
+      },
+      updateConfig: (patch) => {
+        setState((s) => ({
+          ...s,
+          config: {
+            ...s.config,
+            ...patch,
+            cotacaoNumeroInicial: Math.max(
+              1,
+              patch.cotacaoNumeroInicial ?? s.config.cotacaoNumeroInicial
+            ),
+            ocNumeroInicial: Math.max(
+              1,
+              patch.ocNumeroInicial ?? s.config.ocNumeroInicial
+            ),
+          },
+        }));
       },
     }),
     [state, ready]
