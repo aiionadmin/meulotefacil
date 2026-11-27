@@ -86,6 +86,8 @@ const EMPTY_EMP_FORM = {
   taxaMulta: 0.02,
   diaMulta: 0,
   observacoes: "",
+  bairro: "",
+  nucleoId: "",
 };
 
 export default function EmpreendimentosPage() {
@@ -183,6 +185,8 @@ export default function EmpreendimentosPage() {
       taxaMulta: d.taxaMulta,
       diaMulta: d.diaMulta,
       observacoes: d.observacoes ?? "",
+      bairro: d.bairro ?? "",
+      nucleoId: d.nucleoId ?? "",
     });
     setOpenEmp(true);
   }
@@ -285,6 +289,7 @@ export default function EmpreendimentosPage() {
           columns={[
             { key: "codigo", label: "Código" },
             { key: "nome", label: "Nome" },
+            { key: "bairro", label: "Bairro/núcleo" },
             { key: "tipo", label: "Tipo" },
             { key: "modalidade", label: "Modalidade" },
             { key: "cidade", label: "Cidade" },
@@ -295,6 +300,7 @@ export default function EmpreendimentosPage() {
           rows={developments.map((d) => ({
             codigo: d.codigo,
             nome: d.nome,
+            bairro: d.bairro || "—",
             tipo: d.tipo,
             modalidade: (d.modalidade ?? "loteamento").replace(/_/g, " "),
             cidade: `${d.cidade}/${d.uf}`,
@@ -635,14 +641,17 @@ export default function EmpreendimentosPage() {
             notify("Código e nome obrigatórios");
             return;
           }
+          const patch = {
+            ...empForm,
+            bairro: empForm.bairro.trim() || undefined,
+            nucleoId: empForm.nucleoId.trim() || undefined,
+          };
           if (editingEmpId) {
-            updateDevelopment(editingEmpId, {
-              ...empForm,
-            });
+            updateDevelopment(editingEmpId, patch);
             notify("Empreendimento atualizado", empForm.nome);
           } else {
             addDevelopment({
-              ...empForm,
+              ...patch,
               empresaId:
                 selectedId === "todas"
                   ? developments[0]?.empresaId
@@ -690,6 +699,22 @@ export default function EmpreendimentosPage() {
               Loteamento e regularização
             </option>
           </select>
+        </Field>
+        <Field label="Bairro (núcleo) *">
+          <Input
+            value={empForm.bairro}
+            onChange={(e) => setEmpForm({ ...empForm, bairro: e.target.value })}
+            placeholder="Núcleo = bairro em todo o sistema"
+          />
+        </Field>
+        <Field label="Núcleo REURB (id opcional)">
+          <Input
+            value={empForm.nucleoId}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, nucleoId: e.target.value })
+            }
+            placeholder="ex.: n-lisa"
+          />
         </Field>
         <Field label="Cidade">
           <Input
