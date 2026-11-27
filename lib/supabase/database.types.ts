@@ -93,7 +93,9 @@ export type Database = {
           organization_id: string;
           codigo: string;
           nome: string;
+          tipo: string;
           status: string;
+          cliente_nome: string | null;
           deleted_at: string | null;
         };
         Insert: {
@@ -101,7 +103,9 @@ export type Database = {
           organization_id: string;
           codigo: string;
           nome: string;
+          tipo?: string;
           status?: string;
+          cliente_nome?: string | null;
           deleted_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["obras"]["Insert"]>;
@@ -152,12 +156,14 @@ export type Database = {
           organization_id: string;
           nome: string;
           ativo: boolean;
+          linha_resultados: string | null;
         };
         Insert: {
           id?: string;
           organization_id: string;
           nome: string;
           ativo?: boolean;
+          linha_resultados?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["naturezas_receita"]["Insert"]
@@ -188,12 +194,16 @@ export type Database = {
           cotacao_numero_inicial: number;
           oc_numero_inicial: number;
           permitir_oc_sem_cotacao: boolean;
+          fornecedor_documento_obrigatorio: boolean;
+          updated_at: string;
         };
         Insert: {
           organization_id: string;
           cotacao_numero_inicial?: number;
           oc_numero_inicial?: number;
           permitir_oc_sem_cotacao?: boolean;
+          fornecedor_documento_obrigatorio?: boolean;
+          updated_at?: string;
         };
         Update: Partial<
           Database["public"]["Tables"]["compras_config"]["Insert"]

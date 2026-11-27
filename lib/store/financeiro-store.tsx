@@ -12,6 +12,11 @@ import {
   planoDaCategoria,
   seedFinanceiro,
 } from "@/lib/domain/financeiro-seed";
+import {
+  dualWriteCategoria,
+  dualWriteNatureza,
+  dualWritePlano,
+} from "@/lib/persist/dual-write";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
@@ -1023,44 +1028,51 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
       addPlano: (data) => {
         const plano: PlanoConta = { ...data, id: uid("pla") };
         setState((s) => ({ ...s, planos: [plano, ...s.planos] }));
+        void dualWritePlano(plano);
         return plano;
       },
       updatePlano: (id, patch) => {
-        if (!state.planos.some((p) => p.id === id)) return false;
+        const cur = state.planos.find((p) => p.id === id);
+        if (!cur) return false;
+        const next = { ...cur, ...patch };
         setState((s) => ({
           ...s,
-          planos: s.planos.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+          planos: s.planos.map((p) => (p.id === id ? next : p)),
         }));
+        void dualWritePlano(next);
         return true;
       },
       removePlano: (id) => {
         if (state.categorias.some((c) => c.planoId === id && c.ativo)) {
           return { ok: false, reason: "Há categorias vinculadas" };
         }
-        if (!state.planos.some((p) => p.id === id)) {
+        const cur = state.planos.find((p) => p.id === id);
+        if (!cur) {
           return { ok: false, reason: "Plano não encontrado" };
         }
+        const next = { ...cur, ativo: false };
         setState((s) => ({
           ...s,
-          planos: s.planos.map((p) =>
-            p.id === id ? { ...p, ativo: false } : p
-          ),
+          planos: s.planos.map((p) => (p.id === id ? next : p)),
         }));
+        void dualWritePlano(next);
         return { ok: true };
       },
       addCategoria: (data) => {
         const cat: Categoria = { ...data, id: uid("cat") };
         setState((s) => ({ ...s, categorias: [cat, ...s.categorias] }));
+        void dualWriteCategoria(cat);
         return cat;
       },
       updateCategoria: (id, patch) => {
-        if (!state.categorias.some((c) => c.id === id)) return false;
+        const cur = state.categorias.find((c) => c.id === id);
+        if (!cur) return false;
+        const next = { ...cur, ...patch };
         setState((s) => ({
           ...s,
-          categorias: s.categorias.map((c) =>
-            c.id === id ? { ...c, ...patch } : c
-          ),
+          categorias: s.categorias.map((c) => (c.id === id ? next : c)),
         }));
+        void dualWriteCategoria(next);
         return true;
       },
       removeCategoria: (id) => {
@@ -1070,30 +1082,33 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
         if (usada) {
           return { ok: false, reason: "Há lançamentos/pagamentos vinculados" };
         }
-        if (!state.categorias.some((c) => c.id === id)) {
+        const cur = state.categorias.find((c) => c.id === id);
+        if (!cur) {
           return { ok: false, reason: "Categoria não encontrada" };
         }
+        const next = { ...cur, ativo: false };
         setState((s) => ({
           ...s,
-          categorias: s.categorias.map((c) =>
-            c.id === id ? { ...c, ativo: false } : c
-          ),
+          categorias: s.categorias.map((c) => (c.id === id ? next : c)),
         }));
+        void dualWriteCategoria(next);
         return { ok: true };
       },
       addNatureza: (data) => {
         const nat: NaturezaReceita = { ...data, id: uid("nat") };
         setState((s) => ({ ...s, naturezas: [nat, ...s.naturezas] }));
+        void dualWriteNatureza(nat);
         return nat;
       },
       updateNatureza: (id, patch) => {
-        if (!state.naturezas.some((n) => n.id === id)) return false;
+        const cur = state.naturezas.find((n) => n.id === id);
+        if (!cur) return false;
+        const next = { ...cur, ...patch };
         setState((s) => ({
           ...s,
-          naturezas: s.naturezas.map((n) =>
-            n.id === id ? { ...n, ...patch } : n
-          ),
+          naturezas: s.naturezas.map((n) => (n.id === id ? next : n)),
         }));
+        void dualWriteNatureza(next);
         return true;
       },
       removeNatureza: (id) => {
@@ -1101,15 +1116,16 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
         if (usada) {
           return { ok: false, reason: "Há faturamentos vinculados" };
         }
-        if (!state.naturezas.some((n) => n.id === id)) {
+        const cur = state.naturezas.find((n) => n.id === id);
+        if (!cur) {
           return { ok: false, reason: "Natureza não encontrada" };
         }
+        const next = { ...cur, ativo: false };
         setState((s) => ({
           ...s,
-          naturezas: s.naturezas.map((n) =>
-            n.id === id ? { ...n, ativo: false } : n
-          ),
+          naturezas: s.naturezas.map((n) => (n.id === id ? next : n)),
         }));
+        void dualWriteNatureza(next);
         return { ok: true };
       },
     }),
