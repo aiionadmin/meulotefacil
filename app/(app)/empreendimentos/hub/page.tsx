@@ -10,6 +10,7 @@ import {
   StatusPill,
 } from "@/components/app/ModulePage";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
+import { EmpreendimentoMap } from "@/components/app/EmpreendimentoMap";
 import { fieldControlClass } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { statusLabel } from "@/lib/status/labels";
@@ -136,17 +137,39 @@ export default function EmpreendimentoHubPage() {
       </div>
 
       {aba === "resumo" ? (
-        <KpiGrid
-          items={[
-            { label: "Lotes", value: lotes.length },
-            {
-              label: "Disponíveis",
-              value: lotes.filter((l) => l.status === "disponivel").length,
-            },
-            { label: "Contratos", value: contratos.length },
-            { label: "Demandas", value: demandas.length },
-          ]}
-        />
+        <>
+          <KpiGrid
+            items={[
+              { label: "Lotes", value: lotes.length },
+              {
+                label: "Disponíveis",
+                value: lotes.filter((l) => l.status === "disponivel").length,
+              },
+              { label: "Contratos", value: contratos.length },
+              { label: "Demandas", value: demandas.length },
+            ]}
+          />
+          <ModuleSection title="Localização">
+            <p className="mb-3 text-sm text-muted-foreground">
+              {[emp.bairro, emp.cidade, emp.uf].filter(Boolean).join(" · ") ||
+                "Sem endereço cadastrado"}
+              {emp.endereco ? ` · ${emp.endereco}` : ""}
+            </p>
+            <EmpreendimentoMap
+              location={{
+                nome: emp.nome,
+                endereco: emp.endereco,
+                bairro: emp.bairro,
+                cidade: emp.cidade,
+                uf: emp.uf,
+                cep: emp.cep,
+                latitude: emp.latitude,
+                longitude: emp.longitude,
+              }}
+              heightClassName="h-64"
+            />
+          </ModuleSection>
+        </>
       ) : null}
 
       {aba === "planta" ? (
