@@ -42,6 +42,7 @@ import {
   developmentIdsMatching,
   type GeoEmpFilterValues,
 } from "@/components/app/GeoEmpFilters";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 const STATUS_COLS = [
   { id: "ativo", label: "Ativo" },
@@ -70,7 +71,7 @@ function ContratosInner() {
   const abrirId = search.get("abrir") ?? "";
   const [selected, setSelected] = useState<Contract | null>(null);
   const [geo, setGeo] = useState<GeoEmpFilterValues>({ ...EMPTY_GEO_EMP });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [form, setForm] = useState({
     developmentId: state.developments[0]?.id ?? "",
     lotId: "",

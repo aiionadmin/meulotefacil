@@ -23,6 +23,7 @@ import { useCarteira } from "@/lib/store/carteira-store";
 import type { Lead, LeadOrigem } from "@/lib/domain/fluxo-types";
 import { statusLabel } from "@/lib/status/labels";
 import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 type LeadForm = {
   nome: string;
@@ -104,7 +105,7 @@ function leadToForm(l: Lead): LeadForm {
 export default function LeadsPage() {
   const { state, addLead, updateLead, removeLead, moveLead } = useFluxo();
   const { state: carteira } = useCarteira();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<LeadForm>(EMPTY_FORM);
   const server = useServerPage({

@@ -19,6 +19,7 @@ import { SearchSelect } from "@/components/app/SearchSelect";
 import { downloadExcel } from "@/lib/export/list-export";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { statusLabel } from "@/lib/status/labels";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function CartoriosPage() {
   const {
@@ -27,7 +28,7 @@ export default function CartoriosPage() {
     addEscritura,
     setEscrituraStatus,
   } = useCarteira();
-  const [openCart, setOpenCart] = useState(false);
+  const [openCart, setOpenCart] = useNovoParam();
   const [openEsc, setOpenEsc] = useState(false);
   const [cartForm, setCartForm] = useState({
     nome: "",

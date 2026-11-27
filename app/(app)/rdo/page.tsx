@@ -29,6 +29,7 @@ import { formatDateBR } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import type { Rdo, RdoStatus } from "@/lib/domain/obras-types";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 import { cn } from "@/lib/utils";
 
 /** Calendário do mês corrente — destaca dias úteis sem RDO (D21). */
@@ -108,7 +109,7 @@ function RdoInner() {
     f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const [q, setQ] = useState("");
   const [obraFilter, setObraFilter] = useState(obraQ || "todos");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [form, setForm] = useState({
     obraId: obraQ || state.obras[0]?.id || "",
     data: new Date().toISOString().slice(0, 10),

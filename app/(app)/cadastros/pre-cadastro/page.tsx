@@ -15,10 +15,11 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { useFase1 } from "@/lib/store/fase1-store";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function PreCadastroPage() {
   const { state, addPerson } = useFase1();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [form, setForm] = useState({
     nome: "",
     documento: "",

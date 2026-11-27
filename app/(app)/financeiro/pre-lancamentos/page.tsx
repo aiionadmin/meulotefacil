@@ -21,11 +21,12 @@ import {
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { PreLancamento } from "@/lib/domain/financeiro-types";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function PreLancamentosPage() {
   const { state, addPreLancamento, aprovarPre, recusarPre, aprovarPresLote } =
     useFinanceiro();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [motivo, setMotivo] = useState<Record<string, string>>({});
   const [form, setForm] = useState({

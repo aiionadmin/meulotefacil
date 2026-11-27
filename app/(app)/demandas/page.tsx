@@ -27,6 +27,7 @@ import type {
 } from "@/lib/domain/parte5-types";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useClientCard } from "@/lib/client/client-card-context";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 const COLS: { id: DemandaStatus; label: string }[] = [
   { id: "aberta", label: "Aberta" },
@@ -48,7 +49,7 @@ export default function DemandasPage() {
   const { state: cart } = useCarteira();
   const { openClient } = useClientCard();
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useNovoParam();
   const server = useServerPage({
     url: "/api/list/demandas",
     page: 1,

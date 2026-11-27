@@ -43,6 +43,7 @@ import { useSystemSettings } from "@/lib/store/system-settings-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { validateCartorioObrigatorio } from "@/lib/domain/cartorio-required";
 import { nucleos } from "@/lib/data/nucleos";
+import { useNovoParam } from "@/lib/ui/use-novo-param";
 import {
   findNucleoByBairro,
   findNucleoById,
@@ -148,7 +149,7 @@ export default function EmpreendimentosPage() {
     if (!geoIds) return developmentsAll;
     return developmentsAll.filter((d) => geoIds.has(d.id));
   }, [developmentsAll, geoIds]);
-  const [openEmp, setOpenEmp] = useState(false);
+  const [openEmp, setOpenEmp] = useNovoParam();
   const [editingEmpId, setEditingEmpId] = useState<string | null>(null);
   const [openLotEdit, setOpenLotEdit] = useState(false);
   const [lotForm, setLotForm] = useState({
