@@ -33,6 +33,8 @@ import {
   type GeoEmpFilterValues,
 } from "@/components/app/GeoEmpFilters";
 import { FilterBar } from "@/components/app/ModuleToolkit";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { peopleOptions, responsavelOptions } from "@/lib/ui/people-options";
 
 const STATUS_COLS = [
   { id: "aberta", label: "Aberta" },
@@ -86,6 +88,7 @@ export default function VendasPage() {
   const { state: carteira, addContract, changeLotStatus } = useCarteira();
   const { validadeReservaDias, indicePadrao } = useSystemSettings();
   const { scopedDevelopments, filterByDevelopmentEmpresa } = useEmpresa();
+  const { state: fase1 } = useFase1();
   const [open, setOpen] = useNovoParam();
   const [geo, setGeo] = useState<GeoEmpFilterValues>(EMPTY_GEO_EMP);
   const [q, setQ] = useState("");
@@ -94,6 +97,14 @@ export default function VendasPage() {
   const developments = useMemo(
     () => scopedDevelopments(carteira.developments),
     [scopedDevelopments, carteira.developments]
+  );
+  const clienteOpts = useMemo(
+    () => peopleOptions(fase1.people, ["cliente", "comprador"]),
+    [fase1.people]
+  );
+  const responsavelOpts = useMemo(
+    () => responsavelOptions(fase1.people, fase1.users),
+    [fase1.people, fase1.users]
   );
 
   const [form, setForm] = useState<ProposalForm>(() =>
@@ -564,12 +575,22 @@ export default function VendasPage() {
             disabled={locked}
           />
         </Field>
-        <Field label="Cliente">
-          <Input
+        <Field label="Cliente cadastrado">
+          <SearchSelect
             value={form.cliente}
+            onChange={(cliente) => setForm({ ...form, cliente })}
+            options={clienteOpts}
+            placeholder="Selecionar cliente cadastrado…"
             disabled={locked}
-            onChange={(e) => setForm({ ...form, cliente: e.target.value })}
           />
+          {clienteOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre em{" "}
+              <Link className="underline" href="/cadastros/clientes">
+                Clientes
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Empreendimento *">
           <SearchSelect
@@ -665,12 +686,12 @@ export default function VendasPage() {
           />
         </Field>
         <Field label="Responsável">
-          <Input
-            disabled={locked}
+          <SearchSelect
             value={form.responsavel}
-            onChange={(e) =>
-              setForm({ ...form, responsavel: e.target.value })
-            }
+            onChange={(responsavel) => setForm({ ...form, responsavel })}
+            options={responsavelOpts}
+            placeholder="Selecionar responsável…"
+            disabled={locked}
           />
         </Field>
         {editingId ? (

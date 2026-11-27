@@ -26,7 +26,10 @@ import type {
 import { useNovoParam } from "@/lib/ui/use-novo-param";
 import { custoLinha } from "@/lib/money/orcamento";
 import { SearchSelect } from "@/components/app/SearchSelect";
-import { peopleOptions } from "@/lib/ui/people-options";
+import {
+  peopleOptions,
+  responsavelOptions,
+} from "@/lib/ui/people-options";
 
 const FUNIL: { id: PropostaStatus; label: string }[] = [
   { id: "contato_inicial", label: "Contato inicial" },
@@ -489,11 +492,13 @@ export default function OrcamentosPage() {
                 />
               </Field>
               <Field label="Responsável">
-                <Input
+                <SearchSelect
                   value={form.responsavelObra}
-                  onChange={(e) =>
-                    patchForm({ responsavelObra: e.target.value })
+                  onChange={(responsavelObra) =>
+                    patchForm({ responsavelObra })
                   }
+                  options={responsavelOptions(fase1.people, fase1.users)}
+                  placeholder="Selecionar responsável cadastrado…"
                 />
               </Field>
             </div>

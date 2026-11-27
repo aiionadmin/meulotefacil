@@ -17,6 +17,7 @@ import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { downloadCsv } from "@/lib/export/list-export";
 
 type DespesaEmp = {
@@ -31,10 +32,22 @@ type DespesaEmp = {
 
 export default function DespesasEmpreendimentoPage() {
   const { state } = useCarteira();
+  const { state: fin } = useFinanceiro();
   const { filterByEmpresa, filterByDevelopmentEmpresa } = useEmpresa();
   const developments = useMemo(
     () => filterByEmpresa(state.developments),
     [filterByEmpresa, state.developments]
+  );
+  const categoriaOpts = useMemo(
+    () =>
+      fin.categorias
+        .filter((c) => c.ativo)
+        .map((c) => ({
+          value: c.nome,
+          label: c.nome,
+          meta: c.classificacaoObra,
+        })),
+    [fin.categorias]
   );
   const [itens, setItens] = useState<DespesaEmp[]>([
     {
@@ -52,7 +65,7 @@ export default function DespesasEmpreendimentoPage() {
     developmentId: state.developments[0]?.id ?? "",
     descricao: "",
     valor: 0,
-    categoria: "Manutenção",
+    categoria: "",
     data: new Date().toISOString().slice(0, 10),
   });
 
@@ -190,9 +203,11 @@ export default function DespesasEmpreendimentoPage() {
           />
         </Field>
         <Field label="Categoria">
-          <Input
+          <SearchSelect
             value={form.categoria}
-            onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+            onChange={(categoria) => setForm({ ...form, categoria })}
+            options={categoriaOpts}
+            placeholder="Selecionar categoria do plano…"
           />
         </Field>
         <Field label="Descrição *">

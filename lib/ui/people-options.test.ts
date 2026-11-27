@@ -1,6 +1,6 @@
 /** npx tsx lib/ui/people-options.test.ts */
-import { peopleOptions } from "./people-options";
-import type { Person } from "@/lib/domain/fase1-types";
+import { peopleOptions, responsavelOptions } from "./people-options";
+import type { AppUser, Person } from "@/lib/domain/fase1-types";
 
 function assert(cond: boolean, msg: string) {
   if (!cond) {
@@ -45,4 +45,21 @@ assert(forn.length === 1 && forn[0].value === "Fornecedor A", "só ativos fornec
 const cli = peopleOptions(people, ["cliente", "comprador"]);
 assert(cli.length === 1 && cli[0].label === "Cliente B", "cliente/comprador");
 
-console.log("OK people-options", forn, cli);
+const users: AppUser[] = [
+  {
+    id: "u1",
+    nome: "Admin",
+    email: "a@x.com",
+    status: "ativo",
+    chave: true,
+    profileId: "pf",
+    organizationIds: [],
+  },
+];
+const resp = responsavelOptions(people, users);
+assert(
+  resp.some((o) => o.value === "Admin"),
+  "inclui usuário"
+);
+
+console.log("OK people-options", forn, cli, resp.length);

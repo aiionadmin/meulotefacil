@@ -113,6 +113,7 @@ type CarteiraApi = {
     developmentId: string;
     lotId: string;
     compradorNome: string;
+    compradorId?: string;
     preco: number;
     entrada: number;
     qtdParcelas: number;
@@ -977,6 +978,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         developmentId,
         lotId,
         compradorNome,
+        compradorId,
         preco,
         entrada,
         qtdParcelas,
@@ -1013,7 +1015,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           empNome: emp.nome,
           quadra: lot.quadra,
           lote: lot.lote,
-          compradorId: uid("p"),
+          compradorId: compradorId || uid("p"),
           compradorNome,
           preco,
           status: "ativo",

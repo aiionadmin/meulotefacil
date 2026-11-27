@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import { SearchSelect } from "@/components/app/SearchSelect";
 import {
   configurePreLancamentoWhatsAppStub,
   notifyStub,
@@ -22,18 +23,42 @@ import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { PreLancamento } from "@/lib/domain/financeiro-types";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { useObras } from "@/lib/store/obras-store";
+import { useEmpresa } from "@/lib/empresa/context";
+import { userOptions } from "@/lib/ui/people-options";
 
 export default function PreLancamentosPage() {
   const { state, addPreLancamento, aprovarPre, recusarPre, aprovarPresLote } =
     useFinanceiro();
+  const { state: fase1 } = useFase1();
+  const { state: obrasState } = useObras();
+  const { selected: empresaAtiva, empresas } = useEmpresa();
   const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [motivo, setMotivo] = useState<Record<string, string>>({});
+  const solicitanteOpts = useMemo(
+    () => userOptions(fase1.users),
+    [fase1.users]
+  );
+  const centroOpts = useMemo(() => {
+    const empList = (empresaAtiva ? [empresaAtiva] : empresas).map((e) => ({
+      value: e.razaoSocial || e.nome,
+      label: e.razaoSocial || e.nome,
+      meta: "empresa",
+    }));
+    const obras = obrasState.obras.map((o) => ({
+      value: o.nome,
+      label: `${o.codigo} · ${o.nome}`,
+      meta: "obra",
+    }));
+    return [...empList, ...obras];
+  }, [empresaAtiva, empresas, obrasState.obras]);
   const [form, setForm] = useState({
     descricao: "",
     valor: 100,
-    solicitante: "Admin Demo",
-    centroLabel: "Meu Lote Fácil",
+    solicitante: "",
+    centroLabel: "",
   });
 
   function patchForm(patch: Partial<typeof form>) {
@@ -239,19 +264,19 @@ export default function PreLancamentosPage() {
           />
         </Field>
         <Field label="Solicitante">
-          <Input
+          <SearchSelect
             value={form.solicitante}
-            onChange={(e) =>
-              patchForm({ solicitante: e.target.value })
-            }
+            onChange={(solicitante) => patchForm({ solicitante })}
+            options={solicitanteOpts}
+            placeholder="Selecionar usuário cadastrado…"
           />
         </Field>
         <Field label="Centro de custo">
-          <Input
+          <SearchSelect
             value={form.centroLabel}
-            onChange={(e) =>
-              patchForm({ centroLabel: e.target.value })
-            }
+            onChange={(centroLabel) => patchForm({ centroLabel })}
+            options={centroOpts}
+            placeholder="Selecionar empresa ou obra…"
           />
         </Field>
       </FormDialog>

@@ -32,7 +32,7 @@ import { useCarteira } from "@/lib/store/carteira-store";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
-import { peopleOptions } from "@/lib/ui/people-options";
+import { peopleOptions, responsavelOptions } from "@/lib/ui/people-options";
 
 const STATUS_LABEL: Record<ObraStatus, string> = {
   em_orcamento: "Em orçamento",
@@ -635,38 +635,38 @@ export default function ObrasPage() {
                   </Field>
                 </div>
                 <Field label="Responsável técnico">
-                  <Input
+                  <SearchSelect
                     value={form.responsavelTecnico}
-                    onChange={(e) =>
-                      patchForm({responsavelTecnico: e.target.value,
-                      })
+                    onChange={(responsavelTecnico) =>
+                      patchForm({ responsavelTecnico })
                     }
+                    options={peopleOptions(fase1.people, "profissional")}
+                    placeholder="Selecionar profissional cadastrado…"
                   />
                 </Field>
                 <Field label="Responsável da obra">
-                  <Input
+                  <SearchSelect
                     value={form.responsavelObra}
-                    onChange={(e) =>
-                      patchForm({responsavelObra: e.target.value,
-                      })
+                    onChange={(responsavelObra) =>
+                      patchForm({ responsavelObra })
                     }
+                    options={responsavelOptions(fase1.people, fase1.users)}
+                    placeholder="Selecionar responsável cadastrado…"
                   />
                 </Field>
                 <Field label="Empreendimento (opcional)">
-                  <select
-                    className={fieldControlClass}
+                  <SearchSelect
                     value={form.developmentId}
-                    onChange={(e) =>
-                      patchForm({developmentId: e.target.value })
+                    onChange={(developmentId) =>
+                      patchForm({ developmentId })
                     }
-                  >
-                    <option value="">Sem vínculo</option>
-                    {carteira.developments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.nome}
-                      </option>
-                    ))}
-                  </select>
+                    options={carteira.developments.map((d) => ({
+                      value: d.id,
+                      label: d.nome,
+                      meta: `${d.cidade}/${d.uf}`,
+                    }))}
+                    placeholder="Selecionar empreendimento…"
+                  />
                 </Field>
               </AccordionContent>
             </AccordionItem>

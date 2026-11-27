@@ -45,6 +45,9 @@ import {
 } from "@/components/app/GeoEmpFilters";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
 import { useSystemSettings } from "@/lib/store/system-settings-store";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { peopleIdOptions } from "@/lib/ui/people-options";
+
 
 const STATUS_COLS = [
   { id: "ativo", label: "Ativo" },
@@ -69,15 +72,21 @@ function ContratosInner() {
   const { state, saldoDevedor, addContract, registrarOperacao } = useCarteira();
   const { indicePadrao } = useSystemSettings();
   const { filterByDevelopmentEmpresa } = useEmpresa();
+  const { state: fase1 } = useFase1();
   const { openClient } = useClientCard();
   const search = useSearchParams();
   const abrirId = search.get("abrir") ?? "";
   const [selected, setSelected] = useState<Contract | null>(null);
   const [geo, setGeo] = useState<GeoEmpFilterValues>({ ...EMPTY_GEO_EMP });
   const [open, setOpen] = useNovoParam();
+  const compradorOpts = useMemo(
+    () => peopleIdOptions(fase1.people, ["cliente", "comprador"]),
+    [fase1.people]
+  );
   const [form, setForm] = useState({
     developmentId: state.developments[0]?.id ?? "",
     lotId: "",
+    compradorId: "",
     compradorNome: "",
     preco: 180000,
     entrada: 20000,
@@ -342,8 +351,8 @@ function ContratosInner() {
         onOpenChange={setOpen}
         title="Nova venda / contrato"
         onSubmit={() => {
-          if (!form.lotId || !form.compradorNome) {
-            notify("Selecione lote e informe o comprador");
+          if (!form.lotId || !form.compradorId || !form.compradorNome) {
+            notify("Selecione lote e comprador cadastrado");
             return;
           }
           const permutaErr = validatePermutaDescricao(
@@ -410,14 +419,28 @@ function ContratosInner() {
             placeholder="Buscar lote…"
           />
         </Field>
-        <Field label="Comprador *">
-          <Input
-            value={form.compradorNome}
-            onChange={(e) =>
-              setForm({ ...form, compradorNome: e.target.value })
-            }
-            required
+        <Field label="Comprador cadastrado *">
+          <SearchSelect
+            value={form.compradorId}
+            onChange={(compradorId) => {
+              const p = compradorOpts.find((o) => o.value === compradorId);
+              setForm({
+                ...form,
+                compradorId,
+                compradorNome: p?.label ?? "",
+              });
+            }}
+            options={compradorOpts}
+            placeholder="Selecionar comprador cadastrado…"
           />
+          {compradorOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre em{" "}
+              <Link className="underline" href="/cadastros/clientes">
+                Clientes
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Forma de pagamento *">
           <select

@@ -67,7 +67,7 @@ export default function NovaVendaPage() {
   const [permutaDescricao, setPermutaDescricao] = useState("");
   const [entradaPct, setEntradaPct] = useState(20);
   const [comissaoPct, setComissaoPct] = useState(3);
-  const [corretor, setCorretor] = useState("Carla Corretora");
+  const [corretor, setCorretor] = useState("");
   const [recado, setRecado] = useState("");
   const [obsLote, setObsLote] = useState("");
   const precisaPlano = formaPagamento === "plano";
@@ -371,7 +371,7 @@ export default function NovaVendaPage() {
 
       {step === 1 ? (
         <ModuleSection title="Comprador">
-          <Field label="Pessoa cadastrada">
+          <Field label="Comprador cadastrado *">
             <SearchSelect
               value={compradorId}
               onChange={(id) => {
@@ -379,18 +379,17 @@ export default function NovaVendaPage() {
                 const p = compradores.find((x) => x.id === id);
                 if (p) setCompradorNome(p.nome);
               }}
-              placeholder="Buscar comprador…"
+              placeholder="Selecionar comprador cadastrado…"
               options={compradores.map((p) => ({
                 value: p.id,
                 label: p.nome,
               }))}
             />
-          </Field>
-          <Field label="Nome do comprador">
-            <Input
-              value={compradorNome}
-              onChange={(e) => setCompradorNome(e.target.value)}
-            />
+            {compradorNome ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Selecionado: {compradorNome}
+              </p>
+            ) : null}
           </Field>
         </ModuleSection>
       ) : null}
@@ -567,24 +566,18 @@ export default function NovaVendaPage() {
 
       {step === 5 ? (
         <ModuleSection title="Comissão">
-          <Field label="Corretor">
+          <Field label="Corretor cadastrado">
             <SearchSelect
               value={corretores.find((c) => c.nome === corretor)?.id ?? ""}
               onChange={(id) => {
                 const p = corretores.find((x) => x.id === id);
                 if (p) setCorretor(p.nome);
               }}
-              placeholder="Buscar corretor…"
+              placeholder="Selecionar corretor cadastrado…"
               options={corretores.map((p) => ({
                 value: p.id,
                 label: p.nome,
               }))}
-            />
-          </Field>
-          <Field label="Nome do corretor">
-            <Input
-              value={corretor}
-              onChange={(e) => setCorretor(e.target.value)}
             />
           </Field>
           <Field label="% comissão">
