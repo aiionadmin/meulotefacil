@@ -1,7 +1,9 @@
 /**
  * Radix Dialog/Sheet (react-remove-scroll) sets `pointer-events: none` on
- * <body> while open and may aria-hide siblings. Navigating away mid-open
- * (ex.: link "Ficha financeira") leaves the lock — clicks and keyboard die.
+ * <body> while open. Soft-nav mid-open can leave the style stuck.
+ *
+ * NÃO remova portais/overlays do DOM aqui — o React/Radix é dono desses
+ * nós; remove-los causa "Maximum update depth exceeded" e trava a UI.
  */
 export function releaseDialogLock() {
   if (typeof document === "undefined") return;
@@ -24,25 +26,14 @@ export function releaseDialogLock() {
       '[role="dialog"][data-state="open"], [data-radix-dialog-content][data-state="open"]'
     )
   );
-
   if (hasOpenDialog) return;
 
-  // Orphan overlays / portals after abrupt unmount
-  document
-    .querySelectorAll(
-      "[data-radix-dialog-overlay], [data-mlf-sheet-overlay], [data-radix-portal]"
-    )
-    .forEach((node) => {
-      const openInside = node.querySelector?.(
-        '[data-state="open"][role="dialog"], [data-radix-dialog-content][data-state="open"]'
-      );
-      if (!openInside) node.remove();
-    });
-
-  // hideOthers leftovers on body children (app shell stuck aria-hidden/inert)
+  // Só limpa aria-hidden/inert grudados nos filhos diretos do body
+  // (hideOthers), sem tocar em portais Radix.
   Array.from(body.children).forEach((child) => {
     if (!(child instanceof HTMLElement)) return;
-    if (child.querySelector('[data-state="open"][role="dialog"]')) return;
+    if (child.hasAttribute("data-radix-portal")) return;
+    if (child.querySelector?.('[data-state="open"][role="dialog"]')) return;
     if (child.getAttribute("aria-hidden") === "true") {
       child.removeAttribute("aria-hidden");
       child.removeAttribute("data-aria-hidden");
@@ -65,15 +56,7 @@ export function isSpuriousDialogLock(): boolean {
   const pe = document.body.style.pointerEvents;
   if (pe === "none") return true;
   if (document.body.hasAttribute("data-scroll-locked")) return true;
-  if (document.querySelector("[data-radix-dialog-overlay]")) return true;
-  // App root aria-hidden with no dialog
-  const stuck = Array.from(document.body.children).some(
-    (c) =>
-      c instanceof HTMLElement &&
-      c.getAttribute("aria-hidden") === "true" &&
-      !c.querySelector('[role="dialog"]')
-  );
-  return stuck;
+  return false;
 }
 
 export function releaseDialogLockIfSpurious() {

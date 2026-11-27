@@ -62,7 +62,7 @@ export function ClientCardProvider({ children }: { children: ReactNode }) {
 
   // Close card on navigation so Sheet doesn't unmount mid-open.
   useEffect(() => {
-    setOpen(null);
+    setOpen((prev) => (prev ? null : prev));
     releaseDialogLock();
   }, [pathname]);
 

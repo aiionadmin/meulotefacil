@@ -57,17 +57,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         </div>
 
                         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                          <SheetContent
-                            side="left"
-                            className="w-72 border-0 bg-transparent p-0"
-                          >
-                            <AppSidebar
-                              collapsed={false}
-                              onToggle={() => undefined}
-                              mobile
-                              onNavigate={() => setMobileOpen(false)}
-                            />
-                          </SheetContent>
+                          {mobileOpen ? (
+                            <SheetContent
+                              side="left"
+                              className="w-72 border-0 bg-transparent p-0"
+                            >
+                              <AppSidebar
+                                collapsed={false}
+                                onToggle={() => undefined}
+                                mobile
+                                onNavigate={() => setMobileOpen(false)}
+                              />
+                            </SheetContent>
+                          ) : null}
                         </Sheet>
 
                         <div className="flex min-w-0 flex-1 flex-col">

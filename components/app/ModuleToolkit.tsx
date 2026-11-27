@@ -162,19 +162,21 @@ export function DetailSheet({
         if (!next) queueMicrotask(releaseDialogLock);
       }}
     >
-      <SheetContent side="right" className="flex w-full flex-col sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{title || "Detalhe"}</SheetTitle>
-        </SheetHeader>
-        <div className="mt-4 flex-1 space-y-4 overflow-y-auto text-sm text-ink">
-          {children}
-        </div>
-        {footer ? (
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-linha pt-4">
-            {footer}
+      {open ? (
+        <SheetContent side="right" className="flex w-full flex-col sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>{title || "Detalhe"}</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 flex-1 space-y-4 overflow-y-auto text-sm text-ink">
+            {children}
           </div>
-        ) : null}
-      </SheetContent>
+          {footer ? (
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-linha pt-4">
+              {footer}
+            </div>
+          ) : null}
+        </SheetContent>
+      ) : null}
     </Sheet>
   );
 }

@@ -584,9 +584,9 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
       },
       saldoDevedor,
       refreshEncargos: (consulta = todayIso()) => {
-        setState((s) => ({
-          ...s,
-          installments: s.installments.map((p) => {
+        setState((s) => {
+          let changed = false;
+          const installments = s.installments.map((p) => {
             if (p.status === "paga" || p.status === "cancelada") return p;
             const ct = s.contracts.find((c) => c.id === p.contractId);
             const r = resolveInstallmentStatus({
@@ -598,26 +598,38 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
               taxaMulta: ct?.multaPct ?? 0.02,
               diasTolerancia: ct?.diasTolerancia ?? 0,
             });
+            if (
+              p.juros === r.juros &&
+              p.multa === r.multa &&
+              p.status === r.status
+            ) {
+              return p;
+            }
+            changed = true;
             return {
               ...p,
               juros: r.juros,
               multa: r.multa,
               status: r.status,
             };
-          }),
-          cards: s.cards.map((card) => {
-            if (!card.contractId) return card;
-            const atrasada = s.installments.some(
-              (p) =>
-                p.contractId === card.contractId &&
-                p.status === "vencida"
-            );
-            if (atrasada && card.coluna === "carteira_em_dia") {
-              return { ...card, coluna: "cobranca" as const };
-            }
-            return card;
-          }),
-        }));
+          });
+          if (!changed) return s;
+          return {
+            ...s,
+            installments,
+            cards: s.cards.map((card) => {
+              if (!card.contractId) return card;
+              const atrasada = installments.some(
+                (p) =>
+                  p.contractId === card.contractId && p.status === "vencida"
+              );
+              if (atrasada && card.coluna === "carteira_em_dia") {
+                return { ...card, coluna: "cobranca" as const };
+              }
+              return card;
+            }),
+          };
+        });
       },
       baixarParcela: (installmentId) => {
         setState((s) => {

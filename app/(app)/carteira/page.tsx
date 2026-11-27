@@ -81,9 +81,13 @@ function CarteiraInner() {
     elapsedMs: number;
   } | null>(null);
 
+  // Só na montagem: `refreshEncargos` vem do api useMemo([state]) e
+  // sempre gera novo state → dependência [refreshEncargos] = loop infinito
+  // (Maximum update depth → UI “travada” sem cliques/teclado).
   useEffect(() => {
     refreshEncargos(CONSULTA);
-  }, [refreshEncargos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
 
   const contratoFiltroId = useMemo(() => {
     const c = resolveContract(
