@@ -47,15 +47,18 @@ export default function ContasPage() {
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Contas bancárias"
+        title="Contas Bancárias"
         description="C02 — contas por empresa; saldo, tipo e proprietário."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/financeiro/pagamentos">Pagamentos</Link>
+              <Link href="/financeiro/transferencias">Transferências</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/financeiro/cobranca-facil">Cobrança Fácil</Link>
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
-              Nova conta
+              Nova Conta bancária
             </Button>
           </>
         }

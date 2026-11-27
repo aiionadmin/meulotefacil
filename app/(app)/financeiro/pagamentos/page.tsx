@@ -454,7 +454,7 @@ export default function PagamentosPage() {
       <FormDialog
         open={open}
         onOpenChange={setOpen}
-        title="Novo lançamento"
+        title="Criar lançamento"
         onSubmit={() => {
           const contaId = form.contaId || state.contas[0]?.id;
           const categoriaId =
