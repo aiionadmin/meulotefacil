@@ -36,6 +36,12 @@ import {
   carteiraContratoHref,
   fichaFinanceiraNav,
 } from "@/lib/financeiro/ficha-links";
+import {
+  EMPTY_GEO_EMP,
+  GeoEmpFilters,
+  developmentIdsMatching,
+  type GeoEmpFilterValues,
+} from "@/components/app/GeoEmpFilters";
 
 const STATUS_COLS = [
   { id: "ativo", label: "Ativo" },
@@ -63,6 +69,7 @@ function ContratosInner() {
   const search = useSearchParams();
   const abrirId = search.get("abrir") ?? "";
   const [selected, setSelected] = useState<Contract | null>(null);
+  const [geo, setGeo] = useState<GeoEmpFilterValues>({ ...EMPTY_GEO_EMP });
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     developmentId: state.developments[0]?.id ?? "",
@@ -76,10 +83,20 @@ function ContratosInner() {
     permutaDescricao: "",
   });
 
-  const contracts = useMemo(
-    () => filterByDevelopmentEmpresa(state.contracts, state.developments),
-    [filterByDevelopmentEmpresa, state.contracts, state.developments]
-  );
+  const contracts = useMemo(() => {
+    let list = filterByDevelopmentEmpresa(
+      state.contracts,
+      state.developments
+    );
+    const ids = developmentIdsMatching(state.developments, geo);
+    if (ids) list = list.filter((c) => ids.has(c.developmentId));
+    return list;
+  }, [
+    filterByDevelopmentEmpresa,
+    state.contracts,
+    state.developments,
+    geo,
+  ]);
 
   useEffect(() => {
     if (!abrirId) return;
@@ -139,6 +156,12 @@ function ContratosInner() {
             </Button>
           </>
         }
+      />
+
+      <GeoEmpFilters
+        developments={state.developments}
+        value={geo}
+        onChange={setGeo}
       />
 
       <KpiGrid
