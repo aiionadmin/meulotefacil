@@ -16,6 +16,7 @@ const SheetOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
+    data-mlf-sheet-overlay=""
     className={cn("fixed inset-0 z-50 bg-brand-navy/60 backdrop-blur-sm", className)}
     {...props}
     ref={ref}

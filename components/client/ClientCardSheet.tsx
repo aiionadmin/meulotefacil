@@ -19,6 +19,7 @@ import {
   useClientCard,
   type ClientCardTab,
 } from "@/lib/client/client-card-context";
+import { releaseDialogLock } from "@/lib/ui/release-dialog-lock";
 import {
   buildMailtoLink,
   buildTelLink,
@@ -292,7 +293,11 @@ export function ClientCardSheet() {
     <Sheet
       open={Boolean(open)}
       onOpenChange={(next) => {
-        if (!next) closeClient();
+        if (!next) {
+          closeClient();
+          queueMicrotask(releaseDialogLock);
+          window.setTimeout(releaseDialogLock, 50);
+        }
       }}
     >
       {/* SheetContent must stay mounted so Radix can clear body pointer-events */}

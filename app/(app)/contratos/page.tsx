@@ -32,10 +32,11 @@ import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useClientCard } from "@/lib/client/client-card-context";
 import type { Contract } from "@/lib/domain/carteira-types";
+import { carteiraContratoHref } from "@/lib/financeiro/ficha-links";
 import {
-  carteiraContratoHref,
-  fichaFinanceiraNav,
-} from "@/lib/financeiro/ficha-links";
+  FichaFinanceiraButton,
+  FichaNavLinks,
+} from "@/components/app/FichaNavLinks";
 import {
   EMPTY_GEO_EMP,
   GeoEmpFilters,
@@ -148,9 +149,7 @@ function ContratosInner() {
         description="Nascem da proposta aprovada (C12). Kanban por situação."
         actions={
           <>
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/carteira">Ficha financeira</Link>
-            </Button>
+            <FichaFinanceiraButton href="/carteira" />
             <Button size="sm" variant="outline" asChild>
               <Link href="/vendas">Propostas</Link>
             </Button>
@@ -278,27 +277,17 @@ function ContratosInner() {
               <DetailRow label="Permuta" value={selected.permutaDescricao} />
             ) : null}
             <DetailRow label="Reajuste" value={selected.tipoReajuste} />
-            <div className="flex flex-wrap gap-2 border-b border-linha pb-3 text-xs">
-              {fichaFinanceiraNav(selected.id).map((l) => (
-                <Link
-                  key={l.label}
-                  className="underline"
-                  href={l.href}
-                  onClick={() => setSelected(null)}
-                >
-                  {l.label}
-                </Link>
-              ))}
-            </div>
+            <FichaNavLinks
+              contractId={selected.id}
+              onBeforeNavigate={() => setSelected(null)}
+              className="border-b border-linha pb-3"
+            />
             <div className="flex flex-wrap gap-2 pt-2">
-              <Button size="sm" asChild>
-                <Link
-                  href={carteiraContratoHref(selected.id)}
-                  onClick={() => setSelected(null)}
-                >
-                  Ficha financeira
-                </Link>
-              </Button>
+              <FichaFinanceiraButton
+                href={carteiraContratoHref(selected.id)}
+                onBeforeNavigate={() => setSelected(null)}
+                variant="default"
+              />
               {(
                 [
                   ["retomada", "Retomar lote"],
