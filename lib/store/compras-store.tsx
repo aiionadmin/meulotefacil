@@ -17,6 +17,7 @@ import {
   dualWriteOrdem,
   dualWriteSolicitacao,
 } from "@/lib/persist/dual-write";
+import { loadComprasFromTables } from "@/lib/persist/load-from-tables";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
@@ -108,6 +109,7 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
     state,
     setState,
     seed: seedCompras,
+    loadTables: loadComprasFromTables,
   });
 
   const api = useMemo<ComprasApi>(

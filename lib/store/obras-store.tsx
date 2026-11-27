@@ -20,6 +20,7 @@ import type {
 } from "@/lib/domain/obras-types";
 import { custoLinha, totaisOrcamento } from "@/lib/money/orcamento";
 import { dualWriteObra } from "@/lib/persist/dual-write";
+import { loadObrasFromTables } from "@/lib/persist/load-from-tables";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
@@ -104,6 +105,7 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
     state,
     setState,
     seed: seedObras,
+    loadTables: loadObrasFromTables,
   });
 
   const api = useMemo<ObrasApi>(() => {
