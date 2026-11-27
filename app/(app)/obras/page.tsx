@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +94,9 @@ export default function ObrasPage() {
   const usuariosAtivos = fase1.users.filter((u) => u.status === "ativo");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [finalidadeFilter, setFinalidadeFilter] = useState<
+    "todos" | ObraFinalidade
+  >("todos");
   const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -103,10 +106,36 @@ export default function ObrasPage() {
     setForm((prev) => ({ ...prev, ...patch }));
   }
 
+  function openNova(finalidade: ObraFinalidade) {
+    setForm({ ...EMPTY_FORM, finalidade });
+    setFormDirty(false);
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("novo") !== "1") return;
+      const f = params.get("finalidade");
+      if (f === "financeiro" || f === "rdo" || f === "ambos") {
+        setForm({ ...EMPTY_FORM, finalidade: f });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const filtered = useMemo(() => {
     let list = filterObrasVisiveis(state.obras, currentUser, perfilNome);
     if (statusFilter !== "todos") {
       list = list.filter((o) => o.status === statusFilter);
+    }
+    if (finalidadeFilter !== "todos") {
+      list = list.filter((o) => {
+        const f = o.finalidade ?? "ambos";
+        if (finalidadeFilter === "ambos") return f === "ambos";
+        return f === finalidadeFilter || f === "ambos";
+      });
     }
     const term = q.trim().toLowerCase();
     if (term) {
@@ -119,30 +148,44 @@ export default function ObrasPage() {
       );
     }
     return list;
-  }, [state.obras, q, statusFilter, currentUser, perfilNome]);
+  }, [
+    state.obras,
+    q,
+    statusFilter,
+    finalidadeFilter,
+    currentUser,
+    perfilNome,
+  ]);
+
+  const formTitle =
+    form.finalidade === "financeiro"
+      ? "Nova obra financeira (orçamento)"
+      : form.finalidade === "rdo"
+        ? "Nova obra RDO (diário)"
+        : "Nova obra (financeiro + RDO)";
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Minhas Obras"
-        description="Cadastro próprio de obra (independente dos lotes). Empreendimento é opcional."
+        description="Dois cadastros: obra financeira (orçamento) e obra RDO (diário de campo). Pode marcar Ambos."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/gestao">Gestão</Link>
+              <Link href="/orcamentos">Orçamentos</Link>
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/rdo">RDO</Link>
             </Button>
             <Button
               size="sm"
-              onClick={() => {
-                setForm(EMPTY_FORM);
-                setFormDirty(false);
-                setOpen(true);
-              }}
+              variant="outline"
+              onClick={() => openNova("financeiro")}
             >
-              Nova Obra
+              Nova obra financeira
+            </Button>
+            <Button size="sm" onClick={() => openNova("rdo")}>
+              Nova obra RDO
             </Button>
           </>
         }
@@ -152,9 +195,18 @@ export default function ObrasPage() {
         items={[
           { label: "Obras", value: state.obras.length },
           {
-            label: "Em andamento",
-            value: state.obras.filter((o) => o.status === "em_andamento")
-              .length,
+            label: "Financeiro",
+            value: state.obras.filter((o) => {
+              const f = o.finalidade ?? "ambos";
+              return f === "financeiro" || f === "ambos";
+            }).length,
+          },
+          {
+            label: "RDO",
+            value: state.obras.filter((o) => {
+              const f = o.finalidade ?? "ambos";
+              return f === "rdo" || f === "ambos";
+            }).length,
           },
           {
             label: "Orçado",
@@ -162,16 +214,22 @@ export default function ObrasPage() {
               state.obras.reduce((a, o) => a + o.orcado, 0)
             ),
           },
-          {
-            label: "Realizado",
-            value: formatBRL(
-              state.obras.reduce((a, o) => a + o.realizado, 0)
-            ),
-          },
         ]}
       />
 
       <FilterBar value={q} onChange={setQ} placeholder="Busque uma obra">
+        <select
+          className={fieldControlClass + " max-w-[180px]"}
+          value={finalidadeFilter}
+          onChange={(e) =>
+            setFinalidadeFilter(e.target.value as "todos" | ObraFinalidade)
+          }
+        >
+          <option value="todos">Todas finalidades</option>
+          <option value="financeiro">Financeiro</option>
+          <option value="rdo">RDO</option>
+          <option value="ambos">Ambos</option>
+        </select>
         <select
           className={fieldControlClass + " max-w-[180px]"}
           value={statusFilter}
@@ -194,6 +252,7 @@ export default function ObrasPage() {
           { key: "obra", label: "Obra" },
           { key: "cliente", label: "Cliente" },
           { key: "tipo", label: "Tipo" },
+          { key: "finalidade", label: "Cadastro" },
           { key: "status", label: "Status da Obra" },
           { key: "visivel", label: "Visível para" },
           { key: "fisico", label: "Físico" },
@@ -216,6 +275,23 @@ export default function ObrasPage() {
           ),
           cliente: o.clienteNome,
           tipo: o.tipo,
+          finalidade: (
+            <StatusPill
+              tone={
+                (o.finalidade ?? "ambos") === "financeiro"
+                  ? "info"
+                  : (o.finalidade ?? "ambos") === "rdo"
+                    ? "warn"
+                    : "ok"
+              }
+            >
+              {(o.finalidade ?? "ambos") === "financeiro"
+                ? "Financeiro"
+                : (o.finalidade ?? "ambos") === "rdo"
+                  ? "RDO"
+                  : "Ambos"}
+            </StatusPill>
+          ),
           status: (
             <StatusPill tone="info">{STATUS_LABEL[o.status]}</StatusPill>
           ),
@@ -254,7 +330,7 @@ export default function ObrasPage() {
       <FormSheet
         open={open}
         onOpenChange={setOpen}
-        title="Nova Obra"
+        title={formTitle}
         submitLabel="Salvar dados da obra"
         wide
         dirty={formDirty}

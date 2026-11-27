@@ -191,6 +191,11 @@ export default function OrcamentosPage() {
               Funil de Vendas
             </Button>
             <Button size="sm" variant="outline" asChild>
+              <Link href="/obras?novo=1&finalidade=financeiro">
+                Nova obra financeira
+              </Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
               <Link href="/obras">Minhas Obras</Link>
             </Button>
             <Button size="sm" onClick={openCreate}>
@@ -321,10 +326,13 @@ export default function OrcamentosPage() {
           {obraOptsNovo.length === 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">
               Nenhuma obra financeira.{" "}
-              <Link className="underline" href="/obras?novo=1">
-                Cadastrar obra
-              </Link>{" "}
-              com finalidade Financeiro ou Ambos.
+              <Link
+                className="underline"
+                href="/obras?novo=1&finalidade=financeiro"
+              >
+                Cadastrar obra financeira
+              </Link>
+              .
             </p>
           ) : (
             <p className="mt-1 text-xs text-muted-foreground">

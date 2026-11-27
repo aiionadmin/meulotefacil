@@ -208,6 +208,9 @@ function RdoInner() {
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
+              <Link href="/obras?novo=1&finalidade=rdo">Nova obra RDO</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
               <Link href="/obras">Obras</Link>
             </Button>
             <Button
@@ -414,10 +417,13 @@ function RdoInner() {
           {obraOpts.length === 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">
               Nenhuma obra de RDO.{" "}
-              <Link className="underline" href="/obras?novo=1">
-                Cadastrar obra
-              </Link>{" "}
-              com finalidade RDO ou Ambos.
+              <Link
+                className="underline"
+                href="/obras?novo=1&finalidade=rdo"
+              >
+                Cadastrar obra RDO
+              </Link>
+              .
             </p>
           ) : null}
         </Field>
