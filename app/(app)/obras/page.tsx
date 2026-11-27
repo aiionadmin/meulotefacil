@@ -84,15 +84,18 @@ export default function ObrasPage() {
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Minhas obras"
-        description="Obra independente dos lotes — vínculo com empreendimento é opcional."
+        title="Minhas Obras"
+        description="Cadastro próprio de obra (independente dos lotes). Empreendimento é opcional."
         actions={
           <>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/gestao">Gestão</Link>
+            </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/rdo">RDO</Link>
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
-              Nova obra
+              Nova Obra
             </Button>
           </>
         }
@@ -123,13 +126,13 @@ export default function ObrasPage() {
         ]}
       />
 
-      <FilterBar value={q} onChange={setQ} placeholder="Buscar código, obra, cliente…">
+      <FilterBar value={q} onChange={setQ} placeholder="Busque uma obra">
         <select
           className={fieldControlClass + " max-w-[180px]"}
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="todos">Todos status</option>
+          <option value="todos">Status da obra</option>
           {(Object.keys(STATUS_LABEL) as ObraStatus[]).map((s) => (
             <option key={s} value={s}>
               {STATUS_LABEL[s]}
@@ -146,7 +149,7 @@ export default function ObrasPage() {
           { key: "obra", label: "Obra" },
           { key: "cliente", label: "Cliente" },
           { key: "tipo", label: "Tipo" },
-          { key: "status", label: "Status" },
+          { key: "status", label: "Status da Obra" },
           { key: "visivel", label: "Visível para" },
           { key: "fisico", label: "Físico" },
           { key: "acoes", label: "" },
@@ -206,17 +209,23 @@ export default function ObrasPage() {
       <FormDialog
         open={open}
         onOpenChange={setOpen}
-        title="Nova obra"
+        title="Nova Obra"
         onSubmit={() => {
-          if (!form.nome.trim() || !form.codigo.trim()) {
-            notify("Código e nome obrigatórios");
+          if (!form.nome.trim()) {
+            notify("Nome da obra é obrigatório");
+            return;
+          }
+          if (!form.visivelPara.trim()) {
+            notify("Visível para é obrigatório");
             return;
           }
           const emp = carteira.developments.find(
             (d) => d.id === form.developmentId
           );
           addObra({
-            codigo: form.codigo,
+            codigo:
+              form.codigo.trim() ||
+              `OBR-${String(state.obras.length + 1).padStart(3, "0")}`,
             nome: form.nome.slice(0, 200),
             tipo: form.tipo,
             status: form.status,
@@ -246,8 +255,9 @@ export default function ObrasPage() {
           setOpen(false);
         }}
       >
-        <Field label="Código *">
+        <Field label="Código da obra">
           <Input
+            placeholder="Sugestão automática se vazio"
             value={form.codigo}
             onChange={(e) => setForm({ ...form, codigo: e.target.value })}
           />
