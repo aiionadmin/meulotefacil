@@ -1,16 +1,25 @@
 "use client";
 
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { ModuleHeader } from "@/components/app/ModulePage";
 import { ProcessList } from "@/components/app/ProcessList";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
 
 export default function IndicesPage() {
   const { state } = useCarteira();
+  const { indicePadrao } = useSystemSettings();
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Índices e cotações"
-        description="Moedas de referência por competência — lista filtrável (C14/C16)."
+        description={`Padrão do sistema: ${indicePadrao}. Cotações por competência (C14/C16).`}
+        actions={
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/configuracoes/indices">Configurar índices</Link>
+          </Button>
+        }
       />
       <ProcessList
         storageKey="indices"

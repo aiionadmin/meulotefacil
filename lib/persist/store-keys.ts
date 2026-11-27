@@ -9,6 +9,7 @@ export const STORE_KEYS = [
   "financeiro",
   "parte5",
   "ui",
+  "systemSettings",
 ] as const;
 
 export type StoreKey = (typeof STORE_KEYS)[number];

@@ -95,6 +95,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "/configuracoes/perfis": Shield,
   "/configuracoes/alcadas": Shield,
   "/configuracoes/listas": Files,
+  "/configuracoes/indices": Hash,
   "/configuracoes/auditoria": Shield,
 };
 

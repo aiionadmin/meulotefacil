@@ -13,6 +13,7 @@ import { ComprasStoreProvider } from "@/lib/store/compras-store";
 import { FinanceiroStoreProvider } from "@/lib/store/financeiro-store";
 import { Parte5StoreProvider } from "@/lib/store/parte5-store";
 import { UiStoreProvider } from "@/lib/store/ui-store";
+import { SystemSettingsStoreProvider } from "@/lib/store/system-settings-store";
 import { ClientCardProvider } from "@/lib/client/client-card-context";
 import { ClientCardSheet } from "@/components/client/ClientCardSheet";
 import { EmpresaProvider } from "@/lib/empresa/context";
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <Fase1StoreProvider>
         <EmpresaProvider>
+          <SystemSettingsStoreProvider>
           <CarteiraStoreProvider>
             <OperacoesStoreProvider>
               <FluxoStoreProvider>
@@ -80,6 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </FluxoStoreProvider>
             </OperacoesStoreProvider>
           </CarteiraStoreProvider>
+          </SystemSettingsStoreProvider>
         </EmpresaProvider>
       </Fase1StoreProvider>
     </ThemeProvider>

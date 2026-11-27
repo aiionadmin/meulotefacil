@@ -33,6 +33,7 @@ import {
 import { parseXlsxBytes, xlsxRowsToCsv } from "@/lib/import/xlsx-parse";
 import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { validateCartorioObrigatorio } from "@/lib/domain/cartorio-required";
 import { statusLabel } from "@/lib/status/labels";
@@ -117,6 +118,7 @@ export default function EmpreendimentosPage() {
     changeLotStatus,
     updateLot,
   } = useCarteira();
+  const { validadeReservaDias } = useSystemSettings();
   const { selectedId, filterByEmpresa, filterByDevelopmentEmpresa } =
     useEmpresa();
   const developments = useMemo(
@@ -387,7 +389,12 @@ export default function EmpreendimentosPage() {
         columnTotals={(_, items) => items.reduce((a, l) => a + l.valor, 0)}
         onOpen={(id) => setSelected(state.lots.find((l) => l.id === id) ?? null)}
         onMove={(id, to) => {
-          changeLotStatus([id], to as LotStatus, "Movido no quadro de lotes");
+          changeLotStatus(
+            [id],
+            to as LotStatus,
+            "Movido no quadro de lotes",
+            to === "reservado" ? { validadeReservaDias } : undefined
+          );
           notify(`Lote → ${statusLabel(to)}`);
           return true;
         }}
@@ -566,7 +573,10 @@ export default function EmpreendimentosPage() {
             changeLotStatus(
               [selected.id],
               lotForm.status,
-              "Edição manual do cadastro"
+              "Edição manual do cadastro",
+              lotForm.status === "reservado"
+                ? { validadeReservaDias }
+                : undefined
             );
           }
           notify("Lote atualizado", `${lotForm.quadra}/${lotForm.lote}`);
@@ -1138,7 +1148,14 @@ export default function EmpreendimentosPage() {
             notify("Selecione lotes na grade");
             return;
           }
-          changeLotStatus(selectedIds, statusForm.status, statusForm.motivo || "Alteração manual");
+          changeLotStatus(
+            selectedIds,
+            statusForm.status,
+            statusForm.motivo || "Alteração manual",
+            statusForm.status === "reservado"
+              ? { validadeReservaDias }
+              : undefined
+          );
           notify(`${selectedIds.length} lote(s) → ${statusForm.status}`);
           setSelectedIds([]);
           setOpenStatus(false);

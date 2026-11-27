@@ -18,6 +18,7 @@ import {
 import { ProcessList } from "@/components/app/ProcessList";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
 import { formatBRL } from "@/lib/masks/br";
 
 export default function ReajustesPage() {
@@ -27,12 +28,13 @@ export default function ReajustesPage() {
     desfazerUltimoReajuste,
     registrarOperacao,
   } = useCarteira();
+  const { indicePadrao, state: settings } = useSystemSettings();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    indice: "IGPM",
+    indice: indicePadrao,
     fator: 1.045,
-    mesBase: new Date().getMonth() + 1,
-    gerarResiduo: true,
+    mesBase: settings.reajuste.baseAnualMes || new Date().getMonth() + 1,
+    gerarResiduo: settings.reajuste.gerarResiduo,
   });
   const [opOpen, setOpOpen] = useState(false);
   const [opForm, setOpForm] = useState({
@@ -246,9 +248,13 @@ export default function ReajustesPage() {
             value={form.indice}
             onChange={(e) => setForm({ ...form, indice: e.target.value })}
           >
-            <option value="IGPM">IGPM</option>
-            <option value="IPCA">IPCA</option>
-            <option value="INCC">INCC</option>
+            {settings.indices
+              .filter((i) => i.ativo)
+              .map((i) => (
+                <option key={i.codigo} value={i.codigo}>
+                  {i.abreviatura} — {i.nome}
+                </option>
+              ))}
           </select>
         </Field>
         <Field label="Mês-base (1–12)">

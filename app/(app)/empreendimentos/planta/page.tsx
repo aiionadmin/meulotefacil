@@ -20,6 +20,7 @@ import {
 import { loadDxfBlob, saveDxfBlob } from "@/lib/persist/dxf-blob";
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
 import type { Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,7 @@ type PlantaModo = "grade" | "dxf";
 export default function PlantaPage() {
   const { state, changeLotStatus, setLotPlantaPoligono, updateDevelopment, importLots } =
     useCarteira();
+  const { validadeReservaDias } = useSystemSettings();
   const [devId, setDevId] = useState(state.developments[0]?.id ?? "");
   const [selected, setSelected] = useState<Lot | null>(null);
   const [pickHint, setPickHint] = useState<string | null>(null);
@@ -293,9 +295,13 @@ export default function PlantaPage() {
                 changeLotStatus(
                   [selected.id],
                   "reservado",
-                  "Reserva pela planta"
+                  "Reserva pela planta",
+                  { validadeReservaDias }
                 );
-                notify("Reservado");
+                notify(
+                  "Reservado",
+                  `Válido por ${validadeReservaDias} dia(s)`
+                );
                 setSelected(null);
               }}
             >

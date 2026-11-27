@@ -10,12 +10,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ModuleHeader } from "@/components/app/ModulePage";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
 
 const GRUPOS = [
   {
-    href: "/configuracoes/empresa",
-    titulo: "Empresa",
-    desc: "Dados cadastrais, logotipo e responsável",
+    href: "/configuracoes/indices",
+    titulo: "Índices",
+    desc: "Índice a usar, catálogo e correção por atraso",
+  },
+  {
+    href: "/configuracoes/parametros/vendas",
+    titulo: "Vendas e reserva",
+    desc: "Dias de reserva, plano, campos e comissão",
   },
   {
     href: "/configuracoes/parametros/encargos",
@@ -23,24 +29,19 @@ const GRUPOS = [
     desc: "Mora, multa e regras por empreendimento",
   },
   {
+    href: "/configuracoes/parametros/reajuste",
+    titulo: "Reajuste",
+    desc: "Índice padrão, base anual e resíduo",
+  },
+  {
     href: "/configuracoes/parametros/caixa",
     titulo: "Caixa",
     desc: "Recibo, autenticação e estorno",
   },
   {
-    href: "/configuracoes/parametros/vendas",
-    titulo: "Vendas",
-    desc: "Plano automático, parcelas e comissão",
-  },
-  {
     href: "/configuracoes/parametros/boletos",
     titulo: "Boletos",
     desc: "Mensagens, nosso número e travas",
-  },
-  {
-    href: "/configuracoes/parametros/reajuste",
-    titulo: "Reajuste",
-    desc: "Tipos, base anual e resíduo",
   },
   {
     href: "/configuracoes/parametros/financeiro",
@@ -63,6 +64,11 @@ const GRUPOS = [
     desc: "Cores da planta e máscara do lote",
   },
   {
+    href: "/configuracoes/empresa",
+    titulo: "Empresa",
+    desc: "Dados cadastrais, logotipo e responsável",
+  },
+  {
     href: "/configuracoes/parametros/integracoes",
     titulo: "Integrações",
     desc: "NFSe, Sefaz, e-mail, WhatsApp e banco (stubs)",
@@ -70,12 +76,42 @@ const GRUPOS = [
 ] as const;
 
 export default function ConfiguracoesPage() {
+  const { indicePadrao, validadeReservaDias } = useSystemSettings();
+
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Parâmetros"
-        description="Cada grupo abre uma tela funcional. Usuários, perfis, alçadas e listas ficam no menu ao lado."
+        title="Parâmetros e regras"
+        description="Todas as regras editáveis do sistema — índice, validade da reserva, encargos, vendas e demais grupos. Persistidos por organização."
       />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Índice a usar</CardDescription>
+            <CardTitle className="text-2xl">{indicePadrao}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/configuracoes/indices">Alterar</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Reserva de lote</CardDescription>
+            <CardTitle className="text-2xl">
+              {validadeReservaDias} dia{validadeReservaDias === 1 ? "" : "s"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/configuracoes/parametros/vendas">Alterar</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {GRUPOS.map((g) => (
           <Card key={g.href}>
