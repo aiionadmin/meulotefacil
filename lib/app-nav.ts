@@ -513,4 +513,19 @@ export const NOVO_ATALHOS: readonly NovoAtalho[] = [
     label: "Cartório",
     rotina: "empreendimentos",
   },
+  {
+    href: "/planos-pagamento?novo=1",
+    label: "Plano de pagamento",
+    rotina: "empreendimentos",
+  },
+  {
+    href: "/veiculos-comunicacao?novo=1",
+    label: "Veículo de comunicação",
+    rotina: "vendas",
+  },
+  {
+    href: "/configuracoes/listas?novo=1",
+    label: "Item de lista",
+    rotina: "cadastros.listas",
+  },
 ] as const;

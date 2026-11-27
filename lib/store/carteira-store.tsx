@@ -22,6 +22,7 @@ import type {
   Installment,
   Lot,
   LotStatus,
+  PaymentPlan,
 } from "@/lib/domain/carteira-types";
 import { resolveInstallmentStatus } from "@/lib/money/installment-status";
 import { buildCnab400Remessa } from "@/lib/cnab/remessa";
@@ -155,6 +156,16 @@ type CarteiraApi = {
     vendaRef: string;
     valorPrevisto: number;
   }) => boolean;
+  /** Cadastro de plano de pagamento. */
+  addPaymentPlan: (input: {
+    nome: string;
+    developmentId?: string;
+    entradas: number;
+    prestacoes: number;
+    moedaRef?: string;
+    moedaResiduo?: string;
+    series?: string;
+  }) => PaymentPlan | null;
   /** H25 — cartórios e escrituras. */
   addCartorio: (input: {
     nome: string;
@@ -1206,6 +1217,26 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return ok;
+      },
+      addPaymentPlan: (input) => {
+        if (!input.nome.trim()) return null;
+        const plan: PaymentPlan = {
+          id: uid("pp"),
+          nome: input.nome.trim(),
+          developmentId: input.developmentId || undefined,
+          entradas: Math.max(0, Math.floor(input.entradas)),
+          prestacoes: Math.max(1, Math.floor(input.prestacoes)),
+          moedaRef: input.moedaRef?.trim() || "BRL",
+          moedaResiduo: input.moedaResiduo?.trim() || "BRL",
+          dataBase: todayIso(),
+          series: input.series?.trim() || "mensal",
+          ativo: true,
+        };
+        setState((s) => ({
+          ...s,
+          paymentPlans: [plan, ...s.paymentPlans],
+        }));
+        return plan;
       },
       addCartorio: (input) => {
         if (!input.nome.trim() || !input.cidade.trim() || !input.uf.trim()) {

@@ -143,7 +143,7 @@ export function AppTopbar({ onMenu }: { onMenu: () => void }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
               {novoLiberados.map((a) => (
-                <DropdownMenuItem key={a.href} asChild>
+                <DropdownMenuItem key={`${a.label}:${a.href}`} asChild>
                   <Link href={a.href}>{a.label}</Link>
                 </DropdownMenuItem>
               ))}
