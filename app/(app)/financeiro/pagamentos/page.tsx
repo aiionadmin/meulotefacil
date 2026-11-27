@@ -306,7 +306,7 @@ export default function PagamentosPage() {
           Transferências
         </Link>
         {" · "}
-        <Link className="underline" href="/financeiro/fluxo">
+        <Link className="underline" href="/financeiro/fluxo-de-caixa">
           Fluxo de caixa
         </Link>
         {" · "}
@@ -314,7 +314,7 @@ export default function PagamentosPage() {
           Resultados
         </Link>
         {" · "}
-        <Link className="underline" href="/financeiro/notas">
+        <Link className="underline" href="/financeiro/notas-fiscais">
           Notas
         </Link>
         {" · "}

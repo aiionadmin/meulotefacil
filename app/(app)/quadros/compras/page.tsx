@@ -26,7 +26,7 @@ export default function QuadroComprasPage() {
         description="Parte 3 — solicitações por status (SC → Cotação → OC)."
         actions={
           <Button size="sm" variant="outline" asChild>
-            <Link href="/compras">Lista SC</Link>
+            <Link href="/compras/solicitacoes">Lista SC</Link>
           </Button>
         }
       />

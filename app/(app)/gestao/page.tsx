@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   ModuleHeader,
@@ -31,12 +32,23 @@ import { useFase1 } from "@/lib/store/fase1-store";
 import { custoPorGrupo } from "@/lib/money/orcamento";
 
 export default function GestaoObrasPage() {
+  return (
+    <Suspense fallback={<p className="p-6 text-sm text-ink/70">Carregando gestão…</p>}>
+      <GestaoObrasInner />
+    </Suspense>
+  );
+}
+
+function GestaoObrasInner() {
   const { state, nodesDaObra, setRelatorioGerencialStatus } = useObras();
   const { currentUser, state: f1 } = useFase1();
+  const search = useSearchParams();
   const perfilNome =
     f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
   const [q, setQ] = useState("");
-  const [obraId, setObraId] = useState(state.obras[0]?.id ?? "");
+  const [obraId, setObraId] = useState(
+    search.get("obra") || state.obras[0]?.id || ""
+  );
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();

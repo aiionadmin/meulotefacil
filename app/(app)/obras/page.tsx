@@ -89,7 +89,7 @@ export default function ObrasPage() {
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/obras/rdo">RDO</Link>
+              <Link href="/rdo">RDO</Link>
             </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               Nova obra

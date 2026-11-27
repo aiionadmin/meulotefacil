@@ -20,7 +20,7 @@ export default function PlanoContasPage() {
         description="Carga inicial Mais Controle; exclusão bloqueada se houver lançamento (demo)."
         actions={
           <Button size="sm" variant="outline" asChild>
-            <Link href="/financeiro">Pagamentos</Link>
+            <Link href="/financeiro/pagamentos">Pagamentos</Link>
           </Button>
         }
       />

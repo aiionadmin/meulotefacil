@@ -183,7 +183,7 @@ export default function DashboardGerencialPage() {
           {Object.entries(comprasPorStatus).map(([st, n]) => (
             <Link
               key={st}
-              href="/compras"
+              href="/compras/solicitacoes"
               className="rounded-md bg-muted px-3 py-1.5 hover:text-brand-orange"
             >
               {st.replace(/_/g, " ")}: {n}

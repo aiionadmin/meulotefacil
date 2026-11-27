@@ -93,7 +93,7 @@ export default function OrdensCompraPage() {
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/compras">Solicitações</Link>
+              <Link href="/compras/solicitacoes">Solicitações</Link>
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/compras/cotacoes">Cotações</Link>
