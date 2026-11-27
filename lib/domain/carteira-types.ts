@@ -242,6 +242,11 @@ export type Contract = {
   emiteBoleto: boolean;
   tipoReajuste: string;
   mesBase: number;
+  /** Forma de pagamento da venda (inclui permuta). */
+  formaPagamento?: string;
+  /** Obrigatório quando formaPagamento === "permuta". */
+  permutaDescricao?: string;
+  paymentPlanId?: string;
 };
 
 export type Installment = {

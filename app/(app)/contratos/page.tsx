@@ -15,10 +15,17 @@ import {
   DetailSheet,
   Field,
   FormDialog,
+  fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { SearchSelect } from "@/components/app/SearchSelect";
+import {
+  FORMAS_PAGAMENTO_VENDA,
+  labelFormaPagamentoVenda,
+  validatePermutaDescricao,
+  type FormaPagamentoVenda,
+} from "@/lib/domain/venda-pagamento";
 import { formatBRL } from "@/lib/masks/br";
 import { aReceberContratos } from "@/lib/indicators/receivables";
 import { useEmpresa } from "@/lib/empresa/context";
@@ -65,6 +72,8 @@ function ContratosInner() {
     entrada: 20000,
     qtdParcelas: 60,
     valorParcela: 2500,
+    formaPagamento: "plano" as FormaPagamentoVenda,
+    permutaDescricao: "",
   });
 
   const contracts = useMemo(
@@ -234,6 +243,14 @@ function ContratosInner() {
               label="Saldo"
               value={formatBRL(saldoDevedor(selected.id))}
             />
+            <DetailRow
+              label="Forma"
+              value={labelFormaPagamentoVenda(selected.formaPagamento)}
+            />
+            {selected.formaPagamento === "permuta" &&
+            selected.permutaDescricao ? (
+              <DetailRow label="Permuta" value={selected.permutaDescricao} />
+            ) : null}
             <DetailRow label="Reajuste" value={selected.tipoReajuste} />
             <div className="flex flex-wrap gap-2 border-b border-linha pb-3 text-xs">
               {fichaFinanceiraNav(selected.id).map((l) => (
@@ -306,9 +323,31 @@ function ContratosInner() {
             notify("Selecione lote e informe o comprador");
             return;
           }
-          const ct = addContract(form);
+          const permutaErr = validatePermutaDescricao(
+            form.formaPagamento,
+            form.permutaDescricao
+          );
+          if (permutaErr) {
+            notify("Permuta", permutaErr);
+            return;
+          }
+          const isPermuta = form.formaPagamento === "permuta";
+          const ct = addContract({
+            ...form,
+            entrada: isPermuta ? 0 : form.entrada,
+            qtdParcelas: isPermuta ? 0 : form.qtdParcelas,
+            valorParcela: isPermuta ? 0 : form.valorParcela,
+            permutaDescricao: isPermuta
+              ? form.permutaDescricao.trim()
+              : undefined,
+          });
           if (!ct) {
-            notify("Lote indisponível");
+            notify(
+              "Não foi possível criar",
+              isPermuta
+                ? "Descreva a permuta e verifique o lote"
+                : "Lote indisponível"
+            );
             return;
           }
           notify("Contrato criado", ct.numero);
@@ -356,33 +395,74 @@ function ContratosInner() {
             required
           />
         </Field>
-        <Field label="Entrada">
-          <Input
-            type="number"
-            value={form.entrada}
+        <Field label="Forma de pagamento *">
+          <select
+            className={fieldControlClass}
+            value={form.formaPagamento}
             onChange={(e) =>
-              setForm({ ...form, entrada: Number(e.target.value) || 0 })
+              setForm({
+                ...form,
+                formaPagamento: e.target.value as FormaPagamentoVenda,
+              })
             }
-          />
+          >
+            {FORMAS_PAGAMENTO_VENDA.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
         </Field>
-        <Field label="Qtd. prestações">
-          <Input
-            type="number"
-            value={form.qtdParcelas}
-            onChange={(e) =>
-              setForm({ ...form, qtdParcelas: Number(e.target.value) || 1 })
-            }
-          />
-        </Field>
-        <Field label="Valor da prestação">
-          <Input
-            type="number"
-            value={form.valorParcela}
-            onChange={(e) =>
-              setForm({ ...form, valorParcela: Number(e.target.value) || 0 })
-            }
-          />
-        </Field>
+        {form.formaPagamento === "permuta" ? (
+          <Field label="Como foi a permuta *">
+            <textarea
+              className={fieldControlClass + " min-h-[80px]"}
+              value={form.permutaDescricao}
+              onChange={(e) =>
+                setForm({ ...form, permutaDescricao: e.target.value })
+              }
+              placeholder="Descreva o bem/serviço, valores e condições"
+              required
+            />
+          </Field>
+        ) : null}
+        {form.formaPagamento !== "permuta" ? (
+          <>
+            <Field label="Entrada">
+              <Input
+                type="number"
+                value={form.entrada}
+                onChange={(e) =>
+                  setForm({ ...form, entrada: Number(e.target.value) || 0 })
+                }
+              />
+            </Field>
+            <Field label="Qtd. prestações">
+              <Input
+                type="number"
+                value={form.qtdParcelas}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    qtdParcelas: Number(e.target.value) || 1,
+                  })
+                }
+              />
+            </Field>
+            <Field label="Valor da prestação">
+              <Input
+                type="number"
+                value={form.valorParcela}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    valorParcela: Number(e.target.value) || 0,
+                  })
+                }
+              />
+            </Field>
+          </>
+        ) : null}
       </FormDialog>
     </div>
   );
