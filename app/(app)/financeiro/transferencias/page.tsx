@@ -10,6 +10,7 @@ import {
   StatusPill,
 } from "@/components/app/ModulePage";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
 import {
   Field,
   FormDialog,
@@ -66,6 +67,11 @@ export default function TransferenciasPage() {
       return next;
     });
   };
+
+  const selectableIds = useMemo(
+    () => filtered.filter((t) => !t.pago).map((t) => t.id),
+    [filtered]
+  );
 
   return (
     <div className="space-y-6">
@@ -173,6 +179,15 @@ export default function TransferenciasPage() {
       </div>
 
       <ModuleSection title="Lista">
+        <div className="mb-2 flex justify-end">
+          <SelectAllCheckboxes
+            allIds={selectableIds}
+            selected={[...selected].filter((id) => selectableIds.includes(id))}
+            onChange={(next) => {
+              if (Array.isArray(next)) setSelected(new Set(next));
+            }}
+          />
+        </div>
         <PaginatedTable
           exportName="transferencias"
           columns={[

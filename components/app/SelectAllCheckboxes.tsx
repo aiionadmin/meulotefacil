@@ -8,11 +8,14 @@ export function SelectAllCheckboxes({
   selected,
   onChange,
   className,
+  groupLabel,
 }: {
   allIds: string[];
   selected: Record<string, boolean> | string[];
   onChange: (next: Record<string, boolean> | string[]) => void;
   className?: string;
+  /** Prefixo opcional, ex.: "NFSe" → "Selecionar todos · NFSe". */
+  groupLabel?: string;
 }) {
   const selectedSet = Array.isArray(selected)
     ? new Set(selected)
@@ -38,6 +41,9 @@ export function SelectAllCheckboxes({
 
   if (allIds.length === 0) return null;
 
+  const base = allOn ? "Limpar seleção" : "Selecionar todos";
+  const text = groupLabel ? `${base} · ${groupLabel}` : base;
+
   return (
     <Button
       type="button"
@@ -46,7 +52,7 @@ export function SelectAllCheckboxes({
       className={className}
       onClick={toggle}
     >
-      {allOn ? "Limpar seleção" : "Selecionar todos"}
+      {text}
     </Button>
   );
 }

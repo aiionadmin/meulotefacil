@@ -17,6 +17,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { ProcessList } from "@/components/app/ProcessList";
 import { SearchSelect } from "@/components/app/SearchSelect";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useSystemSettings } from "@/lib/store/system-settings-store";
 import { formatBRL } from "@/lib/masks/br";
@@ -371,26 +372,53 @@ export default function ReajustesPage() {
               : "Nenhuma cotação para este índice/competência — cadastre em Índices."}
           </p>
         </Field>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.verificarMercado}
-            onChange={(e) =>
-              setForm({ ...form, verificarMercado: e.target.checked })
-            }
-          />
-          Verificar taxa com cotação de mercado antes de aplicar
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.gerarResiduo}
-            onChange={(e) =>
-              setForm({ ...form, gerarResiduo: e.target.checked })
-            }
-          />
-          Gerar resíduos de arredondamento
-        </label>
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <SelectAllCheckboxes
+              allIds={["verificarMercado", "gerarResiduo"]}
+              selected={{
+                verificarMercado: form.verificarMercado,
+                gerarResiduo: form.gerarResiduo,
+              }}
+              onChange={(next) => {
+                if (Array.isArray(next)) {
+                  const set = new Set(next);
+                  setForm({
+                    ...form,
+                    verificarMercado: set.has("verificarMercado"),
+                    gerarResiduo: set.has("gerarResiduo"),
+                  });
+                  return;
+                }
+                setForm({
+                  ...form,
+                  verificarMercado: !!next.verificarMercado,
+                  gerarResiduo: !!next.gerarResiduo,
+                });
+              }}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.verificarMercado}
+              onChange={(e) =>
+                setForm({ ...form, verificarMercado: e.target.checked })
+              }
+            />
+            Verificar taxa com cotação de mercado antes de aplicar
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.gerarResiduo}
+              onChange={(e) =>
+                setForm({ ...form, gerarResiduo: e.target.checked })
+              }
+            />
+            Gerar resíduos de arredondamento
+          </label>
+        </div>
       </FormDialog>
 
       <FormDialog

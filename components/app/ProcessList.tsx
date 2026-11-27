@@ -483,7 +483,20 @@ export function ProcessList<T extends { id: string }>({
               if (v) setSelected(new Set(paged.items.map((r) => r.id)));
               else setSelected(new Set());
             }}
+            aria-label={
+              allSelected ? "Limpar seleção" : "Selecionar todos da página"
+            }
           />
+          <button
+            type="button"
+            className="underline-offset-2 hover:underline"
+            onClick={() => {
+              if (allSelected) setSelected(new Set());
+              else setSelected(new Set(paged.items.map((r) => r.id)));
+            }}
+          >
+            {allSelected ? "Limpar seleção" : "Selecionar todos"}
+          </button>
           <span>
             Página {paged.page}/{paged.totalPages} · {paged.total} filtrado(s)
           </span>

@@ -10,6 +10,7 @@ import {
 } from "@/components/app/ModulePage";
 import { Field, notify } from "@/components/app/ModuleToolkit";
 import { SearchSelect } from "@/components/app/SearchSelect";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useEmpresa } from "@/lib/empresa/context";
@@ -288,38 +289,28 @@ export default function RelatorioEmpreendimentoPage() {
             >
               Padrão
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              onClick={() =>
-                setSections(
-                  Object.fromEntries(
-                    (
-                      Object.keys(sections) as (keyof EmpReportSections)[]
-                    ).map((k) => [k, true])
-                  ) as EmpReportSections
-                )
+            <SelectAllCheckboxes
+              allIds={
+                Object.keys(EMP_REPORT_SECTION_LABELS) as (keyof EmpReportSections)[]
               }
-            >
-              Marcar tudo
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              type="button"
-              onClick={() =>
-                setSections(
-                  Object.fromEntries(
-                    (
-                      Object.keys(sections) as (keyof EmpReportSections)[]
-                    ).map((k) => [k, false])
-                  ) as EmpReportSections
-                )
-              }
-            >
-              Limpar
-            </Button>
+              selected={sections}
+              onChange={(next) => {
+                if (Array.isArray(next)) {
+                  const set = new Set(next);
+                  setSections(
+                    Object.fromEntries(
+                      (
+                        Object.keys(
+                          EMP_REPORT_SECTION_LABELS
+                        ) as (keyof EmpReportSections)[]
+                      ).map((k) => [k, set.has(k)])
+                    ) as EmpReportSections
+                  );
+                  return;
+                }
+                setSections(next as EmpReportSections);
+              }}
+            />
           </div>
         </ModuleSection>
       ) : null}

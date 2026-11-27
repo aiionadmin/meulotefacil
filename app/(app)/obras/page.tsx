@@ -921,6 +921,28 @@ export default function ObrasPage() {
                 Exibir obra para
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-2 flex justify-end">
+                  <SelectAllCheckboxes
+                    allIds={[
+                      "exibirLancamentos",
+                      "exibirFaturamentos",
+                      "exibirCompras",
+                    ]}
+                    selected={{
+                      exibirLancamentos: form.exibirLancamentos,
+                      exibirFaturamentos: form.exibirFaturamentos,
+                      exibirCompras: form.exibirCompras,
+                    }}
+                    onChange={(next) => {
+                      if (Array.isArray(next)) return;
+                      patchForm({
+                        exibirLancamentos: !!next.exibirLancamentos,
+                        exibirFaturamentos: !!next.exibirFaturamentos,
+                        exibirCompras: !!next.exibirCompras,
+                      });
+                    }}
+                  />
+                </div>
                 <div className="flex flex-wrap gap-3 text-sm">
                   {(
                     [
@@ -937,7 +959,7 @@ export default function ObrasPage() {
                         type="checkbox"
                         checked={form[key]}
                         onChange={(e) =>
-                          patchForm({[key]: e.target.checked })
+                          patchForm({ [key]: e.target.checked })
                         }
                       />
                       {label}
