@@ -22,6 +22,12 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { EmpreendimentoMap } from "@/components/app/EmpreendimentoMap";
+import {
+  EMPTY_GEO_EMP,
+  GeoEmpFilters,
+  developmentIdsMatching,
+  type GeoEmpFilterValues,
+} from "@/components/app/GeoEmpFilters";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL } from "@/lib/masks/br";
 import { downloadTextTemplate } from "@/lib/export/list-export";
@@ -121,12 +127,21 @@ export default function EmpreendimentosPage() {
   const { validadeReservaDias } = useSystemSettings();
   const { selectedId, filterByEmpresa, filterByDevelopmentEmpresa } =
     useEmpresa();
-  const developments = useMemo(
+  const developmentsAll = useMemo(
     () => filterByEmpresa(state.developments),
     [filterByEmpresa, state.developments]
   );
   const [q, setQ] = useState("");
   const [empFilter, setEmpFilter] = useState("todos");
+  const [geo, setGeo] = useState<GeoEmpFilterValues>({ ...EMPTY_GEO_EMP });
+  const geoIds = useMemo(
+    () => developmentIdsMatching(developmentsAll, geo),
+    [developmentsAll, geo]
+  );
+  const developments = useMemo(() => {
+    if (!geoIds) return developmentsAll;
+    return developmentsAll.filter((d) => geoIds.has(d.id));
+  }, [developmentsAll, geoIds]);
   const [openEmp, setOpenEmp] = useState(false);
   const [editingEmpId, setEditingEmpId] = useState<string | null>(null);
   const [openLotEdit, setOpenLotEdit] = useState(false);
@@ -228,6 +243,9 @@ export default function EmpreendimentosPage() {
 
   const lotes = useMemo(() => {
     let list = filterByDevelopmentEmpresa(state.lots, state.developments);
+    if (geoIds) {
+      list = list.filter((l) => geoIds.has(l.developmentId));
+    }
     if (empFilter !== "todos") {
       list = list.filter((l) => l.developmentId === empFilter);
     }
@@ -247,6 +265,7 @@ export default function EmpreendimentosPage() {
     state.developments,
     q,
     empFilter,
+    geoIds,
     filterByDevelopmentEmpresa,
   ]);
 
@@ -367,12 +386,20 @@ export default function EmpreendimentosPage() {
         onChange={setQ}
         placeholder="Buscar quadra, lote, status, comprador…"
       >
+        <GeoEmpFilters
+          developments={developmentsAll}
+          value={geo}
+          onChange={(next) => {
+            setGeo(next);
+            setEmpFilter("todos");
+          }}
+        />
         <select
           className={fieldControlClass + " max-w-[220px]"}
           value={empFilter}
           onChange={(e) => setEmpFilter(e.target.value)}
         >
-          <option value="todos">Todos empreendimentos</option>
+          <option value="todos">Emp. (atalho lista)</option>
           {developments.map((d) => (
             <option key={d.id} value={d.id}>
               {d.nome}
