@@ -18,6 +18,12 @@ import {
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import { parseNfeXml } from "@/lib/import/nfe-xml";
+import {
+  captureSefazStub,
+  emitNfseStub,
+  notifyStub,
+  updateIntegrationsConfig,
+} from "@/lib/integrations";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { NotaFiscal } from "@/lib/domain/financeiro-types";
@@ -61,9 +67,16 @@ export default function NotasFiscaisPage() {
         title="Notas Fiscais"
         description="Upload XML/PDF, vínculo com lançamento. Emissão NFSe e captura Sefaz preparadas (desligadas)."
         actions={
-          <Button size="sm" variant="outline" asChild>
-            <Link href="/financeiro/pagamentos">Pagamentos</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/financeiro/pagamentos">Pagamentos</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/configuracoes/parametros/integracoes">
+                Integrações
+              </Link>
+            </Button>
+          </div>
         }
       />
       <ModuleSection title="Importar nota">
@@ -144,12 +157,20 @@ export default function NotasFiscaisPage() {
                   type="checkbox"
                   checked={c.emissaoNfse}
                   onChange={(e) => {
-                    updateMeuCnpj(c.id, { emissaoNfse: e.target.checked });
-                    notify(
-                      e.target.checked
-                        ? "NFSe marcada (provedor desligado)"
-                        : "NFSe desligada"
-                    );
+                    const on = e.target.checked;
+                    updateMeuCnpj(c.id, { emissaoNfse: on });
+                    updateIntegrationsConfig({ nfse: { enabled: on } });
+                    if (on) {
+                      const r = emitNfseStub({
+                        meuCnpjId: c.id,
+                        valor: 0,
+                        descricao: "probe",
+                      });
+                      const n = notifyStub(r, "NFSe");
+                      notify(n.title, n.description);
+                    } else {
+                      notify("NFSe desligada");
+                    }
                   }}
                 />
                 {c.emissaoNfse ? "Preparada" : "Off"}
@@ -161,45 +182,65 @@ export default function NotasFiscaisPage() {
                   type="checkbox"
                   checked={c.capturaAutomatica}
                   onChange={(e) => {
+                    const on = e.target.checked;
                     updateMeuCnpj(c.id, {
-                      capturaAutomatica: e.target.checked,
+                      capturaAutomatica: on,
                     });
-                    notify(
-                      e.target.checked
-                        ? "Captura Sefaz marcada (desligada)"
-                        : "Captura desligada"
-                    );
+                    updateIntegrationsConfig({ sefaz: { enabled: on } });
+                    if (on) {
+                      const r = captureSefazStub({ meuCnpjId: c.id });
+                      const n = notifyStub(r, "Sefaz");
+                      notify(n.title, n.description);
+                    } else {
+                      notify("Captura Sefaz desligada");
+                    }
                   }}
                 />
                 {c.capturaAutomatica ? "Preparada" : "Off"}
               </label>
             ),
             acao: (
-              <label className="inline-flex cursor-pointer">
-                <input
-                  type="file"
-                  accept=".pfx,.p12"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    updateMeuCnpj(c.id, { certificadoNome: f.name });
-                    notify(
-                      "Certificado A1 registrado (stub)",
-                      "Emissão Sefaz permanece desligada"
-                    );
+              <div className="flex flex-wrap gap-1">
+                <label className="inline-flex cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".pfx,.p12"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      updateMeuCnpj(c.id, { certificadoNome: f.name });
+                      notify(
+                        "Certificado A1 registrado (stub)",
+                        "Emissão permanece desligada"
+                      );
+                    }}
+                  />
+                  <span className="inline-flex h-7 items-center rounded-md border border-input px-2 text-xs hover:bg-accent">
+                    Enviar .pfx
+                  </span>
+                </label>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    const r = emitNfseStub({
+                      meuCnpjId: c.id,
+                      valor: 0,
+                    });
+                    const n = notifyStub(r, "Emitir NFSe");
+                    notify(n.title, n.description);
                   }}
-                />
-                <span className="inline-flex h-7 items-center rounded-md border border-input px-2 text-xs hover:bg-accent">
-                  Enviar .pfx
-                </span>
-              </label>
+                >
+                  Testar NFSe
+                </Button>
+              </div>
             ),
           }))}
         />
         <p className="mt-2 text-xs text-muted-foreground">
-          Flags NFSe/Sefaz ficam no modelo; chamadas reais só após escolha do
-          provedor.
+          Flags + provedor em Integrações; stubs nunca chamam API neste PR.
         </p>
       </ModuleSection>
 

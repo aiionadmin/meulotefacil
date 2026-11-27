@@ -10,6 +10,7 @@ import {
 } from "@/components/app/ModulePage";
 import { notify } from "@/components/app/ModuleToolkit";
 import { ProcessList } from "@/components/app/ProcessList";
+import { notifyStub, openBankingStub } from "@/lib/integrations";
 import { formatBRL } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 
@@ -39,6 +40,23 @@ export default function CobrancaFacilPage() {
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/financeiro/contas">Contas bancárias</Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const contaId = state.contas[0]?.id ?? "";
+                const r = openBankingStub({ contaId });
+                const n = notifyStub(r, "Integração bancária");
+                notify(n.title, n.description);
+              }}
+            >
+              Open Finance (stub)
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/configuracoes/parametros/integracoes">
+                Integrações
+              </Link>
             </Button>
           </div>
         }

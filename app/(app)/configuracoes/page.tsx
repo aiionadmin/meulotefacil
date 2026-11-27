@@ -62,6 +62,11 @@ const GRUPOS = [
     titulo: "Aparência",
     desc: "Cores da planta e máscara do lote",
   },
+  {
+    href: "/configuracoes/parametros/integracoes",
+    titulo: "Integrações",
+    desc: "NFSe, Sefaz, e-mail, WhatsApp e banco (stubs)",
+  },
 ] as const;
 
 export default function ConfiguracoesPage() {
