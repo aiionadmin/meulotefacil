@@ -116,6 +116,9 @@ export default function EmpreendimentoHubPage() {
               <Link href="/empreendimentos/planta">Planta</Link>
             </Button>
             <Button size="sm" variant="outline" asChild>
+              <Link href="/empreendimentos/dxf-wizard">Wizard DXF</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
               <Link href="/relatorios/empreendimento">Relatório</Link>
             </Button>
           </>

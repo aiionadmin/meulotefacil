@@ -342,6 +342,9 @@ export default function PlantaPage() {
               </Button>
             </div>
             <Button size="sm" variant="outline" asChild>
+              <Link href="/empreendimentos/dxf-wizard">Wizard DXF → lotes</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
               <Link href="/empreendimentos">Voltar à grade</Link>
             </Button>
           </div>
