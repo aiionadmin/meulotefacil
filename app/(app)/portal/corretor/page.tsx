@@ -23,6 +23,7 @@ import { statusLabel } from "@/lib/status/labels";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
 
 const MATERIAIS = [
   {
@@ -46,6 +47,7 @@ export default function PortalCorretorPage() {
   const { state: p5, addDemanda, demandasDoCorretor } = useParte5();
   const { state: fluxo } = useFluxo();
   const { state: cart, changeLotStatus } = useCarteira();
+  const { validadeReservaDias } = useSystemSettings();
   const sess = p5.portalCorretor;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -142,10 +144,15 @@ export default function PortalCorretorPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  changeLotStatus([l.id], "reservado", `Reserva portal · ${sess.nome}`);
+                  changeLotStatus(
+                    [l.id],
+                    "reservado",
+                    `Reserva portal · ${sess.nome}`,
+                    { validadeReservaDias }
+                  );
                   notify(
                     "Lote reservado",
-                    `${l.quadra}-${l.lote} · ${l.empNome}`
+                    `${l.quadra}-${l.lote} · ${validadeReservaDias} dia(s)`
                   );
                 }}
               >

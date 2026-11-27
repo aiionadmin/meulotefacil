@@ -398,11 +398,12 @@ export const APP_NAV: AppNavGroup[] = [
       { href: "/configuracoes/perfis", label: "Perfis de acesso" },
       { href: "/configuracoes/alcadas", label: "Alçadas" },
       { href: "/configuracoes/listas", label: "Listas de apoio" },
+      { href: "/configuracoes/indices", label: "Índices e regras" },
       { href: "/configuracoes/auditoria", label: "Auditoria" },
       {
         href: "/configuracoes",
         label: "Parâmetros",
-        description: "Expediente, plano de contas, cobrança…",
+        description: "Índice, reserva, encargos, vendas…",
       },
     ],
   },

@@ -82,8 +82,11 @@ type CarteiraApi = {
   changeLotStatus: (
     ids: string[],
     status: LotStatus,
-    motivo: string
+    motivo: string,
+    opts?: { validadeReservaDias?: number; reservaExpiraEm?: string }
   ) => void;
+  /** Libera lotes reservados com reservaExpiraEm vencida. */
+  liberarReservasVencidas: (hojeIso?: string) => number;
   saldoDevedor: (contractId: string) => number;
   refreshEncargos: (consulta?: string) => void;
   baixarParcela: (installmentId: string) => void;
@@ -438,9 +441,10 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           lots: s.lots.map((l) => (l.id === id ? { ...l, ...patch } : l)),
         }));
       },
-      changeLotStatus: (ids, status, motivo) => {
+      changeLotStatus: (ids, status, motivo, opts) => {
         setState((s) => {
           const history = [...s.lotHistory];
+          const today = todayIso();
           const lots = s.lots.map((l) => {
             if (!ids.includes(l.id)) return l;
             history.unshift({
@@ -449,16 +453,34 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
               de: l.status,
               para: status,
               motivo,
-              quando: todayIso(),
+              quando: today,
             });
             const clearTrava =
               status === "vendido" ||
               status === "quitado" ||
               status === "escritura" ||
               status === "disponivel";
+            let reservaExpiraEm = l.reservaExpiraEm;
+            if (status === "reservado") {
+              reservaExpiraEm =
+                opts?.reservaExpiraEm ??
+                (opts?.validadeReservaDias != null
+                  ? (() => {
+                      const d = new Date(`${today}T12:00:00`);
+                      d.setDate(
+                        d.getDate() +
+                          Math.max(1, Math.floor(opts.validadeReservaDias!))
+                      );
+                      return d.toISOString().slice(0, 10);
+                    })()
+                  : reservaExpiraEm);
+            } else {
+              reservaExpiraEm = undefined;
+            }
             return {
               ...l,
               status,
+              reservaExpiraEm,
               bloqueiaVenda:
                 status === "vendido" ||
                 status === "reservado" ||
@@ -485,6 +507,43 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           });
           return { ...s, lots, lotHistory: history.slice(0, 80) };
         });
+      },
+      liberarReservasVencidas: (hojeIso = todayIso()) => {
+        let count = 0;
+        setState((s) => {
+          const history = [...s.lotHistory];
+          const lots = s.lots.map((l) => {
+            if (
+              l.status !== "reservado" ||
+              !l.reservaExpiraEm ||
+              l.reservaExpiraEm.slice(0, 10) >= hojeIso.slice(0, 10)
+            ) {
+              return l;
+            }
+            count += 1;
+            history.unshift({
+              id: uid("lh"),
+              lotId: l.id,
+              de: l.status,
+              para: "disponivel",
+              motivo: "Reserva vencida (regra de validade)",
+              quando: hojeIso,
+            });
+            return {
+              ...l,
+              status: "disponivel" as const,
+              reservaExpiraEm: undefined,
+              bloqueiaVenda: false,
+              vendaEmAndamento: undefined,
+              vendedorUserId: undefined,
+              vendedorNome: undefined,
+              vendaTravadaEm: undefined,
+            };
+          });
+          if (!count) return s;
+          return { ...s, lots, lotHistory: history.slice(0, 80) };
+        });
+        return count;
       },
       saldoDevedor,
       refreshEncargos: (consulta = todayIso()) => {

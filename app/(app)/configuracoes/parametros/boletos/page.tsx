@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ModuleHeader } from "@/components/app/ModulePage";
 import { Field, notify } from "@/components/app/ModuleToolkit";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
+import type { BoletosParams } from "@/lib/domain/system-settings-types";
 
 export default function ParametrosBoletosPage() {
-  const [form, setForm] = useState({
-    mensagemPadrao: 'Pagável em qualquer banco até o vencimento.',
-    nossoNumeroSeq: 10001,
-    travaEmissaoAtraso: false,
-    despesaBancaria: 2.5,
-  });
+  const { state, updateBoletos } = useSystemSettings();
+  const [form, setForm] = useState<BoletosParams>(state.boletos);
+
+  useEffect(() => {
+    setForm(state.boletos);
+  }, [state.boletos]);
 
   return (
     <div className="space-y-6">
@@ -23,7 +25,14 @@ export default function ParametrosBoletosPage() {
         actions={
           <Button
             size="sm"
-            onClick={() => notify("Parâmetros salvos", "Boletos")}
+            onClick={() => {
+              const err = updateBoletos(form);
+              if (err) {
+                notify(err);
+                return;
+              }
+              notify("Parâmetros salvos", "Boletos");
+            }}
           >
             Salvar
           </Button>
@@ -33,7 +42,9 @@ export default function ParametrosBoletosPage() {
         <Field label="Mensagem do boleto">
           <Input
             value={form.mensagemPadrao}
-            onChange={(e) => setForm({ ...form, mensagemPadrao: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, mensagemPadrao: e.target.value })
+            }
           />
         </Field>
         <Field label="Próximo nosso número">
@@ -41,7 +52,23 @@ export default function ParametrosBoletosPage() {
             type="number"
             value={form.nossoNumeroSeq}
             onChange={(e) =>
-              setForm({ ...form, nossoNumeroSeq: Number(e.target.value) })
+              setForm({
+                ...form,
+                nossoNumeroSeq: Number(e.target.value) || 1,
+              })
+            }
+          />
+        </Field>
+        <Field label="Despesa bancária padrão (R$)">
+          <Input
+            type="number"
+            step="0.01"
+            value={form.despesaBancaria}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                despesaBancaria: Number(e.target.value) || 0,
+              })
             }
           />
         </Field>
@@ -49,18 +76,29 @@ export default function ParametrosBoletosPage() {
           <span>Travar emissão com atraso</span>
           <Switch
             checked={form.travaEmissaoAtraso}
-            onCheckedChange={(v) => setForm({ ...form, travaEmissaoAtraso: v })}
-          />
-        </label>
-        <Field label="Despesa bancária padrão">
-          <Input
-            type="number"
-            value={form.despesaBancaria}
-            onChange={(e) =>
-              setForm({ ...form, despesaBancaria: Number(e.target.value) })
+            onCheckedChange={(v) =>
+              setForm({ ...form, travaEmissaoAtraso: v })
             }
           />
-        </Field>
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span>Bloquear parcela com boleto gerado</span>
+          <Switch
+            checked={form.bloquearParcelaComBoleto}
+            onCheckedChange={(v) =>
+              setForm({ ...form, bloquearParcelaComBoleto: v })
+            }
+          />
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span>Atualizar boleto vencido</span>
+          <Switch
+            checked={form.atualizarBoletoVencido}
+            onCheckedChange={(v) =>
+              setForm({ ...form, atualizarBoletoVencido: v })
+            }
+          />
+        </label>
       </div>
     </div>
   );

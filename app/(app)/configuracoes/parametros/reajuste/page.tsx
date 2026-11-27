@@ -1,44 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ModuleHeader } from "@/components/app/ModulePage";
-import { Field, notify } from "@/components/app/ModuleToolkit";
+import { Field, fieldControlClass, notify } from "@/components/app/ModuleToolkit";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
+import type { ReajusteParams } from "@/lib/domain/system-settings-types";
 
 export default function ParametrosReajustePage() {
-  const [form, setForm] = useState({
-    tipoPadrao: "IGPM",
-    baseAnual: 1,
-    gerarResiduo: true,
-    permitirDesfazer: true,
+  const { state, updateReajuste, indicePadrao } = useSystemSettings();
+  const [form, setForm] = useState<ReajusteParams>({
+    ...state.reajuste,
+    indicePadrao: state.reajuste.indicePadrao || indicePadrao,
   });
+
+  useEffect(() => {
+    setForm({
+      ...state.reajuste,
+      indicePadrao: state.reajuste.indicePadrao || indicePadrao,
+    });
+  }, [state.reajuste, indicePadrao]);
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Reajuste"
-        description="Tipo padrão, mês-base anual, resíduo e desfazer (H18)."
+        description="Índice padrão, mês-base anual, resíduo e desfazer (H18)."
         actions={
           <Button
             size="sm"
-            onClick={() => notify("Parâmetros salvos", "Reajuste")}
+            onClick={() => {
+              const err = updateReajuste(form);
+              if (err) {
+                notify(err);
+                return;
+              }
+              notify("Parâmetros salvos", `Índice ${form.indicePadrao}`);
+            }}
           >
             Salvar
           </Button>
         }
       />
       <div className="grid max-w-xl gap-4">
-        <Field label="Tipo padrão">
+        <Field label="Índice padrão">
           <select
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-            value={form.tipoPadrao}
-            onChange={(e) => setForm({ ...form, tipoPadrao: e.target.value })}
+            className={fieldControlClass}
+            value={form.indicePadrao}
+            onChange={(e) => setForm({ ...form, indicePadrao: e.target.value })}
           >
-            <option value="IGPM">IGPM</option>
-            <option value="IPCA">IPCA</option>
-            <option value="INCC">INCC</option>
+            {state.indices
+              .filter((i) => i.ativo)
+              .map((i) => (
+                <option key={i.codigo} value={i.codigo}>
+                  {i.abreviatura} — {i.nome}
+                </option>
+              ))}
           </select>
         </Field>
         <Field label="Base anual (mês 1–12)">
@@ -46,14 +65,27 @@ export default function ParametrosReajustePage() {
             type="number"
             min={1}
             max={12}
-            value={form.baseAnual}
+            value={form.baseAnualMes}
             onChange={(e) =>
               setForm({
                 ...form,
-                baseAnual: Math.min(
+                baseAnualMes: Math.min(
                   12,
                   Math.max(1, Number(e.target.value) || 1)
                 ),
+              })
+            }
+          />
+        </Field>
+        <Field label="Acréscimo percentual sobre o índice">
+          <Input
+            type="number"
+            step="0.01"
+            value={form.acrescimoPercentual}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                acrescimoPercentual: Number(e.target.value) || 0,
               })
             }
           />
@@ -70,6 +102,22 @@ export default function ParametrosReajustePage() {
           <Switch
             checked={form.permitirDesfazer}
             onCheckedChange={(v) => setForm({ ...form, permitirDesfazer: v })}
+          />
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span>Arredondar para valores inteiros</span>
+          <Switch
+            checked={form.arredondarInteiros}
+            onCheckedChange={(v) => setForm({ ...form, arredondarInteiros: v })}
+          />
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span>Primeira parcela com correção pro-rata</span>
+          <Switch
+            checked={form.primeiraParcelaProRata}
+            onCheckedChange={(v) =>
+              setForm({ ...form, primeiraParcelaProRata: v })
+            }
           />
         </label>
       </div>

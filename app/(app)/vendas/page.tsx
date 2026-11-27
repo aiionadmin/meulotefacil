@@ -21,6 +21,8 @@ import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { downloadPropostaPdf } from "@/lib/export/proposta-report";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
+import { calcReservaExpiraEm } from "@/lib/domain/system-settings";
 import type { Proposal } from "@/lib/domain/fluxo-types";
 
 const STATUS_COLS = [
@@ -46,7 +48,8 @@ type ProposalForm = {
 
 function emptyForm(
   leadId: string,
-  developmentId: string
+  developmentId: string,
+  validadeReservaDias = 7
 ): ProposalForm {
   return {
     leadId,
@@ -57,7 +60,7 @@ function emptyForm(
     valor: 185000,
     parcelas: 120,
     entrada: 20000,
-    validade: new Date().toISOString().slice(0, 10),
+    validade: calcReservaExpiraEm(validadeReservaDias),
     responsavel: "Comercial",
     status: "aberta",
   };
@@ -72,10 +75,15 @@ export default function VendasPage() {
     converterProposal,
   } = useFluxo();
   const { state: carteira, addContract, changeLotStatus } = useCarteira();
+  const { validadeReservaDias } = useSystemSettings();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProposalForm>(() =>
-    emptyForm(state.leads[0]?.id ?? "", carteira.developments[0]?.id ?? "")
+    emptyForm(
+      state.leads[0]?.id ?? "",
+      carteira.developments[0]?.id ?? "",
+      validadeReservaDias
+    )
   );
 
   const editing = editingId
@@ -109,7 +117,11 @@ export default function VendasPage() {
 
   function resetForm() {
     setForm(
-      emptyForm(state.leads[0]?.id ?? "", carteira.developments[0]?.id ?? "")
+      emptyForm(
+        state.leads[0]?.id ?? "",
+        carteira.developments[0]?.id ?? "",
+        validadeReservaDias
+      )
     );
     setEditingId(null);
   }
@@ -152,7 +164,9 @@ export default function VendasPage() {
     if (!lotId) return;
     const lot = carteira.lots.find((l) => l.id === lotId);
     if (lot && lot.status === "disponivel") {
-      changeLotStatus([lotId], "reservado", motivo);
+      changeLotStatus([lotId], "reservado", motivo, {
+        validadeReservaDias,
+      });
     }
   }
 

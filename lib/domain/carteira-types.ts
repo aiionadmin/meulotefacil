@@ -201,6 +201,8 @@ export type Lot = {
   vendedorUserId?: string;
   vendedorNome?: string;
   vendaTravadaEm?: string;
+  /** Data ISO (YYYY-MM-DD) em que a reserva expira — volta a disponível. */
+  reservaExpiraEm?: string;
   compradorNome?: string;
   contractId?: string;
   frente?: string;
