@@ -44,15 +44,15 @@ export default function CotacoesPage() {
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Cotações"
-        description="Mapa comparativo e geração de OC a partir dos vencedores."
+        title="Cotação"
+        description="Mapa de cotação item × fornecedor; gera Ordem de Compra a partir dos vencedores."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/compras/solicitacoes">Solicitações</Link>
+              <Link href="/compras/solicitacoes">Solicitação</Link>
             </Button>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/compras/ordens">Ordens</Link>
+              <Link href="/compras/ordens">Ordem de Compra</Link>
             </Button>
           </>
         }

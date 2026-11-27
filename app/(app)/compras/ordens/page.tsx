@@ -88,15 +88,15 @@ export default function OrdensCompraPage() {
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Ordens de compra"
-        description="C19/C15 — Kanban por aprovação; ações em lote."
+        title="Ordem de Compra"
+        description="Aprovação por alçada; padrão bloqueia OC sem cotação. Gera lançamento a pagar."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/compras/solicitacoes">Solicitações</Link>
+              <Link href="/compras/solicitacoes">Solicitação</Link>
             </Button>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/compras/cotacoes">Cotações</Link>
+              <Link href="/compras/cotacoes">Cotação</Link>
             </Button>
           </>
         }
