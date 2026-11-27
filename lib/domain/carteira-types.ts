@@ -94,12 +94,15 @@ export type Development = {
     savedAt: string;
     labelCount?: number;
   };
-  /** Cartório / registro (cadastro completo). */
+  /** Cartório / registro (cadastro completo — MLF cartório). */
+  cartorioId?: string;
   cartorioNome?: string;
   cartorioCidade?: string;
   cartorioUf?: string;
+  cartorioContato?: string;
   certidaoNumero?: string;
   certidaoData?: string;
+  certidaoTipo?: string;
   certidaoObs?: string;
 };
 
@@ -188,6 +191,11 @@ export type Lot = {
   status: LotStatus;
   bloqueiaVenda: boolean;
   bloqueiaFinanceiro: boolean;
+  /** Trava temporária enquanto há venda em andamento. */
+  vendaEmAndamento?: boolean;
+  vendedorUserId?: string;
+  vendedorNome?: string;
+  vendaTravadaEm?: string;
   compradorNome?: string;
   contractId?: string;
   frente?: string;
