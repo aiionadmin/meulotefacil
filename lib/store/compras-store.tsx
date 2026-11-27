@@ -12,6 +12,7 @@ import {
   seedCompras,
 } from "@/lib/domain/compras-seed";
 import {
+  dualWriteAnexo,
   dualWriteComprasConfig,
   dualWriteCotacao,
   dualWriteOrdem,
@@ -246,30 +247,30 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
       addArquivoSc: (id, nome) => {
         const n = nome.trim();
         if (!n) return false;
-        let ok = false;
-        setState((s) => {
-          if (!s.solicitacoes.some((x) => x.id === id)) return s;
-          ok = true;
-          return {
-            ...s,
-            solicitacoes: s.solicitacoes.map((x) =>
-              x.id === id
-                ? {
-                    ...x,
-                    arquivos: [
-                      {
-                        id: uid("sca"),
-                        nome: n,
-                        quando: new Date().toISOString(),
-                      },
-                      ...(x.arquivos ?? []),
-                    ],
-                  }
-                : x
-            ),
-          };
+        const sc = state.solicitacoes.find((x) => x.id === id);
+        if (!sc) return false;
+        const arq = {
+          id: uid("sca"),
+          nome: n,
+          quando: new Date().toISOString(),
+        };
+        setState((s) => ({
+          ...s,
+          solicitacoes: s.solicitacoes.map((x) =>
+            x.id === id
+              ? { ...x, arquivos: [arq, ...(x.arquivos ?? [])] }
+              : x
+          ),
+        }));
+        void dualWriteAnexo({
+          id: arq.id,
+          nome: arq.nome,
+          rotina: "Compras > Solicitação",
+          registroTipo: "solicitacao",
+          registroId: id,
+          quando: arq.quando,
         });
-        return ok;
+        return true;
       },
       setPrevisaoEntregaSc: (id, data) => {
         if (!data) return false;
@@ -468,32 +469,31 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
       addArquivoCotacao: (cotacaoId, nome, supplierId) => {
         const n = nome.trim();
         if (!n) return false;
-        let ok = false;
-        setState((s) => {
-          if (!s.cotacoes.some((c) => c.id === cotacaoId)) return s;
-          ok = true;
-          return {
-            ...s,
-            cotacoes: s.cotacoes.map((c) =>
-              c.id === cotacaoId
-                ? {
-                    ...c,
-                    arquivos: [
-                      {
-                        id: uid("carq"),
-                        nome: n,
-                        quando: todayIso(),
-                        supplierId,
-                        origem: "upload" as const,
-                      },
-                      ...(c.arquivos ?? []),
-                    ],
-                  }
-                : c
-            ),
-          };
+        if (!state.cotacoes.some((c) => c.id === cotacaoId)) return false;
+        const arq = {
+          id: uid("carq"),
+          nome: n,
+          quando: todayIso(),
+          supplierId,
+          origem: "upload" as const,
+        };
+        setState((s) => ({
+          ...s,
+          cotacoes: s.cotacoes.map((c) =>
+            c.id === cotacaoId
+              ? { ...c, arquivos: [arq, ...(c.arquivos ?? [])] }
+              : c
+          ),
+        }));
+        void dualWriteAnexo({
+          id: arq.id,
+          nome: arq.nome,
+          rotina: "Compras > Cotação",
+          registroTipo: "cotacao",
+          registroId: cotacaoId,
+          quando: arq.quando,
         });
-        return ok;
+        return true;
       },
       gerarOrdensDaCotacao: (cotacaoId) => {
         const cot = state.cotacoes.find((c) => c.id === cotacaoId);

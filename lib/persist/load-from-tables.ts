@@ -21,11 +21,22 @@ import type {
   NaturezaReceita,
   Pagamento,
   PlanoConta,
+  PreLancamento,
   Recebimento,
   ResultadoGrupo,
   ClassificacaoObra,
+  Transferencia,
 } from "@/lib/domain/financeiro-types";
-import type { Obra, ObraStatus, ObrasCatalogState } from "@/lib/domain/obras-types";
+import type {
+  Composicao,
+  Insumo,
+  InsumoGrupo,
+  Obra,
+  ObraStatus,
+  ObrasCatalogState,
+  OrcamentoNode,
+  BudgetNodeKind,
+} from "@/lib/domain/obras-types";
 import { DEMO_ORG_ID } from "./store-keys";
 
 function client() {
@@ -38,60 +49,191 @@ function dateStr(v: string | null | undefined): string {
   return String(v).slice(0, 10);
 }
 
-/** Overlay parcial de Obras a partir de `obras`. */
+/** Overlay parcial de Obras/catálogo/orçamento a partir das tabelas D. */
 export async function loadObrasFromTables(
   orgId: string = DEMO_ORG_ID
 ): Promise<Partial<ObrasCatalogState> | null> {
   const sb = client();
   if (!sb) return null;
-  const { data, error } = await sb
-    .from("obras")
-    .select(
-      "id, codigo, nome, tipo, status, cliente_nome, visivel_para, fisico_pct, orcado, realizado, bdi_pct, area_total, unidade, art, cei_cno, responsavel_tecnico, responsavel_obra, deleted_at"
-    )
-    .eq("organization_id", orgId)
-    .is("deleted_at", null)
-    .order("codigo");
-  if (error) {
-    console.warn("[load-tables] obras:", error.message);
-    return null;
+
+  const [obrasRes, insumosRes, compsRes, budgetsRes] = await Promise.all([
+    sb
+      .from("obras")
+      .select(
+        "id, codigo, nome, tipo, status, cliente_nome, visivel_para, fisico_pct, orcado, realizado, bdi_pct, area_total, unidade, art, cei_cno, responsavel_tecnico, responsavel_obra, deleted_at"
+      )
+      .eq("organization_id", orgId)
+      .is("deleted_at", null)
+      .order("codigo"),
+    sb
+      .from("insumos")
+      .select("*")
+      .eq("organization_id", orgId)
+      .is("deleted_at", null),
+    sb
+      .from("composicoes")
+      .select("*")
+      .eq("organization_id", orgId)
+      .is("deleted_at", null),
+    sb.from("budgets").select("id, obra_id").eq("organization_id", orgId),
+  ]);
+
+  const patch: Partial<ObrasCatalogState> = {};
+  let any = false;
+
+  if (obrasRes.error) {
+    console.warn("[load-tables] obras:", obrasRes.error.message);
   }
-  if (!data?.length) return null;
+  if (obrasRes.data?.length) {
+    any = true;
+    patch.obras = obrasRes.data.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        id: String(row.id),
+        codigo: String(row.codigo),
+        nome: String(row.nome),
+        tipo: String(row.tipo ?? "loteamento"),
+        status: (row.status as ObraStatus) ?? "em_orcamento",
+        clienteNome: String(row.cliente_nome ?? "Cliente"),
+        visivelPara: Array.isArray(row.visivel_para)
+          ? (row.visivel_para as string[])
+          : ["Administrador"],
+        fisicoPct: Number(row.fisico_pct ?? 0),
+        orcado: Number(row.orcado ?? 0),
+        realizado: Number(row.realizado ?? 0),
+        bdiPct: Number(row.bdi_pct ?? 0.25),
+        areaTotal: row.area_total != null ? Number(row.area_total) : undefined,
+        unidade: String(row.unidade ?? "m²"),
+        art: row.art ? String(row.art) : undefined,
+        ceiCno: row.cei_cno ? String(row.cei_cno) : undefined,
+        responsavelTecnico: row.responsavel_tecnico
+          ? String(row.responsavel_tecnico)
+          : undefined,
+        responsavelObra: row.responsavel_obra
+          ? String(row.responsavel_obra)
+          : undefined,
+        propostaStatus: "em_elaboracao",
+        exibirLancamentos: true,
+        exibirFaturamentos: true,
+        exibirCompras: true,
+      } satisfies Obra;
+    });
+  }
 
-  const obras: Obra[] = data.map((r) => {
-    const row = r as Record<string, unknown>;
-    return {
-      id: String(row.id),
-      codigo: String(row.codigo),
-      nome: String(row.nome),
-      tipo: String(row.tipo ?? "loteamento"),
-      status: (row.status as ObraStatus) ?? "em_orcamento",
-      clienteNome: String(row.cliente_nome ?? "Cliente"),
-      visivelPara: Array.isArray(row.visivel_para)
-        ? (row.visivel_para as string[])
-        : ["Administrador"],
-      fisicoPct: Number(row.fisico_pct ?? 0),
-      orcado: Number(row.orcado ?? 0),
-      realizado: Number(row.realizado ?? 0),
-      bdiPct: Number(row.bdi_pct ?? 0.25),
-      areaTotal: row.area_total != null ? Number(row.area_total) : undefined,
-      unidade: String(row.unidade ?? "m²"),
-      art: row.art ? String(row.art) : undefined,
-      ceiCno: row.cei_cno ? String(row.cei_cno) : undefined,
-      responsavelTecnico: row.responsavel_tecnico
-        ? String(row.responsavel_tecnico)
-        : undefined,
-      responsavelObra: row.responsavel_obra
-        ? String(row.responsavel_obra)
-        : undefined,
-      propostaStatus: "em_elaboracao",
-      exibirLancamentos: true,
-      exibirFaturamentos: true,
-      exibirCompras: true,
-    };
-  });
+  if (insumosRes.data?.length) {
+    any = true;
+    patch.insumos = insumosRes.data.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        id: String(row.id),
+        codigo: String(row.codigo),
+        descricao: String(row.descricao),
+        grupo: (row.grupo as InsumoGrupo) ?? "material",
+        unidade: String(row.unidade),
+        tipo: row.tipo ? String(row.tipo) : undefined,
+        base: String(row.base ?? "SINAPI"),
+        custoUnitario: Number(row.custo_unitario ?? 0),
+        favorito: Boolean(row.favorito),
+        ativo: Boolean(row.ativo ?? true),
+        observacoes: row.observacoes ? String(row.observacoes) : undefined,
+      } satisfies Insumo;
+    });
+  }
 
-  return { obras };
+  if (compsRes.data?.length) {
+    any = true;
+    const ids = compsRes.data.map((r) => String((r as { id: string }).id));
+    const { data: citens } = await sb
+      .from("composicao_itens")
+      .select("*")
+      .in("composicao_id", ids);
+    const byComp = new Map<string, typeof citens>();
+    for (const it of citens ?? []) {
+      const row = it as Record<string, unknown>;
+      const cid = String(row.composicao_id);
+      const list = byComp.get(cid) ?? [];
+      list.push(it);
+      byComp.set(cid, list);
+    }
+    patch.composicoes = compsRes.data.map((r) => {
+      const row = r as Record<string, unknown>;
+      const id = String(row.id);
+      return {
+        id,
+        codigo: String(row.codigo),
+        descricao: String(row.descricao),
+        unidade: String(row.unidade),
+        tipo: row.tipo ? String(row.tipo) : undefined,
+        base: String(row.base ?? "SINAPI"),
+        descricaoDetalhada: row.descricao_detalhada
+          ? String(row.descricao_detalhada)
+          : undefined,
+        favorito: Boolean(row.favorito),
+        ativo: Boolean(row.ativo ?? true),
+        bdiPct: Number(row.bdi_pct ?? 0.25),
+        itens: (byComp.get(id) ?? []).map((it) => {
+          const i = it as Record<string, unknown>;
+          return {
+            id: String(i.id),
+            insumoId: String(i.insumo_id),
+            coeficiente: Number(i.coeficiente ?? 1),
+          };
+        }),
+      } satisfies Composicao;
+    });
+  }
+
+  if (budgetsRes.data?.length) {
+    const budgetIds = budgetsRes.data.map((b) =>
+      String((b as { id: string }).id)
+    );
+    const obraByBudget = new Map(
+      budgetsRes.data.map((b) => {
+        const row = b as { id: string; obra_id?: string | null };
+        return [String(row.id), row.obra_id ? String(row.obra_id) : ""];
+      })
+    );
+    const { data: nodes } = await sb
+      .from("budget_nodes")
+      .select("*")
+      .in("budget_id", budgetIds);
+    if (nodes?.length) {
+      const mapped: OrcamentoNode[] = [];
+      for (const n of nodes) {
+        const row = n as Record<string, unknown>;
+        const budgetId = String(row.budget_id);
+        const obraId = obraByBudget.get(budgetId);
+        if (!obraId) continue;
+        mapped.push({
+          id: String(row.id),
+          obraId,
+          parentId: row.parent_id ? String(row.parent_id) : undefined,
+          kind: (row.kind as BudgetNodeKind) ?? "item",
+          codigo: String(row.codigo),
+          descricao: String(row.descricao),
+          unidade: String(row.unidade ?? "un"),
+          quantidade: Number(row.quantidade ?? 0),
+          custoUnit: Number(row.custo_unit ?? 0),
+          orcado: Number(row.orcado ?? 0),
+          realizado: Number(row.realizado ?? 0),
+          fisicoPct: Number(row.fisico_pct ?? 0),
+          bdiPct: Number(row.bdi_pct ?? 0),
+          composicaoId: row.composicao_id
+            ? String(row.composicao_id)
+            : undefined,
+          insumoId: row.insumo_id ? String(row.insumo_id) : undefined,
+          grupo: row.grupo ? (row.grupo as InsumoGrupo) : undefined,
+          ordem: Number(row.ordem ?? 0),
+        });
+      }
+      if (mapped.length) {
+        any = true;
+        patch.nodes = mapped;
+      }
+    }
+  }
+
+  return any ? patch : null;
 }
 
 /** Overlay parcial de Financeiro a partir das tabelas G. */
@@ -101,17 +243,29 @@ export async function loadFinanceiroFromTables(
   const sb = client();
   if (!sb) return null;
 
-  const [planosRes, catsRes, natsRes, contasRes, lansRes, pagsRes, fatsRes, recsRes] =
-    await Promise.all([
-      sb.from("planos_conta").select("*").eq("organization_id", orgId),
-      sb.from("categorias_financeiras").select("*").eq("organization_id", orgId),
-      sb.from("naturezas_receita").select("*").eq("organization_id", orgId),
-      sb.from("contas_bancarias").select("*").eq("organization_id", orgId),
-      sb.from("lancamentos").select("*").eq("organization_id", orgId),
-      sb.from("pagamentos").select("*").eq("organization_id", orgId),
-      sb.from("faturamentos").select("*").eq("organization_id", orgId),
-      sb.from("recebimentos").select("*").eq("organization_id", orgId),
-    ]);
+  const [
+    planosRes,
+    catsRes,
+    natsRes,
+    contasRes,
+    lansRes,
+    pagsRes,
+    fatsRes,
+    recsRes,
+    trsRes,
+    preRes,
+  ] = await Promise.all([
+    sb.from("planos_conta").select("*").eq("organization_id", orgId),
+    sb.from("categorias_financeiras").select("*").eq("organization_id", orgId),
+    sb.from("naturezas_receita").select("*").eq("organization_id", orgId),
+    sb.from("contas_bancarias").select("*").eq("organization_id", orgId),
+    sb.from("lancamentos").select("*").eq("organization_id", orgId),
+    sb.from("pagamentos").select("*").eq("organization_id", orgId),
+    sb.from("faturamentos").select("*").eq("organization_id", orgId),
+    sb.from("recebimentos").select("*").eq("organization_id", orgId),
+    sb.from("transferencias").select("*").eq("organization_id", orgId),
+    sb.from("pre_lancamentos").select("*").eq("organization_id", orgId),
+  ]);
 
   for (const [name, res] of [
     ["planos_conta", planosRes],
@@ -122,6 +276,8 @@ export async function loadFinanceiroFromTables(
     ["pagamentos", pagsRes],
     ["faturamentos", fatsRes],
     ["recebimentos", recsRes],
+    ["transferencias", trsRes],
+    ["pre_lancamentos", preRes],
   ] as const) {
     if (res.error) {
       console.warn(`[load-tables] ${name}:`, res.error.message);
@@ -335,6 +491,55 @@ export async function loadFinanceiroFromTables(
     });
   }
 
+  if (trsRes.data?.length) {
+    any = true;
+    patch.transferencias = trsRes.data.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        id: String(row.id),
+        data: dateStr(row.data as string),
+        descricao: String(row.descricao ?? ""),
+        deContaId: String(row.de_conta_id),
+        paraContaId: String(row.para_conta_id),
+        valor: Number(row.valor),
+        pago: Boolean(row.pago),
+      } satisfies Transferencia;
+    });
+  }
+
+  if (preRes.data?.length) {
+    any = true;
+    patch.preLancamentos = preRes.data.map((r) => {
+      const row = r as Record<string, unknown>;
+      const centroTipo = (row.centro_tipo as string) ?? "empresa";
+      return {
+        id: String(row.id),
+        descricao: String(row.descricao),
+        valor: Number(row.valor),
+        centro:
+          centroTipo === "obra"
+            ? {
+                tipo: "obra" as const,
+                obraId: row.obra_id ? String(row.obra_id) : "",
+                label: String(row.centro_label),
+              }
+            : {
+                tipo: "empresa" as const,
+                label: String(row.centro_label),
+              },
+        solicitante: String(row.solicitante ?? ""),
+        status: (row.status as PreLancamento["status"]) ?? "pendente",
+        motivoRecusa: row.motivo_recusa
+          ? String(row.motivo_recusa)
+          : undefined,
+        criadoEm: dateStr(row.created_at as string),
+        lancamentoId: row.lancamento_id
+          ? String(row.lancamento_id)
+          : undefined,
+      } satisfies PreLancamento;
+    });
+  }
+
   return any ? patch : null;
 }
 
@@ -524,6 +729,67 @@ export async function loadComprasFromTables(
       };
       return cot;
     });
+  }
+
+  // Anexos (files) → SC / cotação
+  const { data: files } = await sb
+    .from("files")
+    .select("id, nome, registro_tipo, registro_id, created_at")
+    .eq("organization_id", orgId)
+    .in("registro_tipo", ["solicitacao", "cotacao"])
+    .is("deleted_at", null);
+  if (files?.length && patch.solicitacoes) {
+    any = true;
+    const byReg = new Map<string, typeof files>();
+    for (const f of files) {
+      const row = f as Record<string, unknown>;
+      if (String(row.registro_tipo) !== "solicitacao") continue;
+      const rid = String(row.registro_id);
+      const list = byReg.get(rid) ?? [];
+      list.push(f);
+      byReg.set(rid, list);
+    }
+    patch.solicitacoes = patch.solicitacoes.map((sc) => ({
+      ...sc,
+      arquivos: [
+        ...(byReg.get(sc.id) ?? []).map((f) => {
+          const row = f as Record<string, unknown>;
+          return {
+            id: String(row.id),
+            nome: String(row.nome),
+            quando: dateStr(row.created_at as string),
+          };
+        }),
+        ...(sc.arquivos ?? []),
+      ],
+    }));
+  }
+  if (files?.length && patch.cotacoes) {
+    any = true;
+    const byReg = new Map<string, typeof files>();
+    for (const f of files) {
+      const row = f as Record<string, unknown>;
+      if (String(row.registro_tipo) !== "cotacao") continue;
+      const rid = String(row.registro_id);
+      const list = byReg.get(rid) ?? [];
+      list.push(f);
+      byReg.set(rid, list);
+    }
+    patch.cotacoes = patch.cotacoes.map((c) => ({
+      ...c,
+      arquivos: [
+        ...(byReg.get(c.id) ?? []).map((f) => {
+          const row = f as Record<string, unknown>;
+          return {
+            id: String(row.id),
+            nome: String(row.nome),
+            quando: dateStr(row.created_at as string),
+            origem: "upload" as const,
+          };
+        }),
+        ...(c.arquivos ?? []),
+      ],
+    }));
   }
 
   if (ocRes.data?.length) {

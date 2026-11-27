@@ -19,9 +19,16 @@ import type {
   NaturezaReceita,
   Pagamento,
   PlanoConta,
+  PreLancamento,
   Recebimento,
+  Transferencia,
 } from "@/lib/domain/financeiro-types";
-import type { Obra } from "@/lib/domain/obras-types";
+import type {
+  Composicao,
+  Insumo,
+  Obra,
+  OrcamentoNode,
+} from "@/lib/domain/obras-types";
 import { DEMO_ORG_ID } from "./store-keys";
 import { stableUuid } from "./stable-uuid";
 
@@ -583,5 +590,212 @@ export async function dualWriteRecebimento(
     { onConflict: "id" }
   );
   warn("recebimentos", error);
+  return { ok: !error };
+}
+
+export async function dualWriteInsumo(
+  insumo: Insumo,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const { error } = await sb.from("insumos").upsert(
+    {
+      id: stableUuid(insumo.id),
+      organization_id: orgId,
+      codigo: insumo.codigo,
+      descricao: insumo.descricao,
+      grupo: insumo.grupo,
+      unidade: insumo.unidade,
+      tipo: insumo.tipo ?? null,
+      base: insumo.base,
+      custo_unitario: insumo.custoUnitario,
+      favorito: insumo.favorito,
+      ativo: insumo.ativo,
+      observacoes: insumo.observacoes ?? null,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("insumos", error);
+  return { ok: !error };
+}
+
+export async function dualWriteComposicao(
+  comp: Composicao,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const id = stableUuid(comp.id);
+  const { error } = await sb.from("composicoes").upsert(
+    {
+      id,
+      organization_id: orgId,
+      codigo: comp.codigo,
+      descricao: comp.descricao,
+      unidade: comp.unidade,
+      tipo: comp.tipo ?? null,
+      base: comp.base,
+      descricao_detalhada: comp.descricaoDetalhada ?? null,
+      favorito: comp.favorito,
+      ativo: comp.ativo,
+      bdi_pct: comp.bdiPct,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("composicoes", error);
+  if (!error) {
+    await sb.from("composicao_itens").delete().eq("composicao_id", id);
+    if (comp.itens.length) {
+      const { error: ie } = await sb.from("composicao_itens").insert(
+        comp.itens.map((it, i) => ({
+          id: stableUuid(it.id),
+          composicao_id: id,
+          insumo_id: stableUuid(it.insumoId),
+          coeficiente: it.coeficiente,
+          ordem: i,
+        })) as never
+      );
+      warn("composicao_itens", ie);
+    }
+  }
+  return { ok: !error };
+}
+
+async function ensureBudgetId(
+  obraId: string,
+  orgId: string
+): Promise<string | null> {
+  const sb = client();
+  if (!sb) return null;
+  const bid = stableUuid(`budget:${obraId}`);
+  const { error } = await sb.from("budgets").upsert(
+    {
+      id: bid,
+      organization_id: orgId,
+      development_id: null,
+      obra_id: stableUuid(obraId),
+      codigo: `BUD-${obraId.slice(0, 8)}`,
+      status: "rascunho",
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("budgets", error);
+  return error ? null : bid;
+}
+
+export async function dualWriteOrcamentoNode(
+  node: OrcamentoNode,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const budgetId = await ensureBudgetId(node.obraId, orgId);
+  if (!budgetId) return { ok: false };
+  const { error } = await sb.from("budget_nodes").upsert(
+    {
+      id: stableUuid(node.id),
+      budget_id: budgetId,
+      parent_id: node.parentId ? stableUuid(node.parentId) : null,
+      kind: node.kind,
+      codigo: node.codigo,
+      descricao: node.descricao,
+      unidade: node.unidade,
+      quantidade: node.quantidade,
+      custo_unit: node.custoUnit,
+      orcado: node.orcado,
+      realizado: node.realizado,
+      fisico_pct: node.fisicoPct,
+      bdi_pct: node.bdiPct,
+      composicao_id: node.composicaoId
+        ? stableUuid(node.composicaoId)
+        : null,
+      insumo_id: node.insumoId ? stableUuid(node.insumoId) : null,
+      grupo: node.grupo ?? null,
+      ordem: node.ordem,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("budget_nodes", error);
+  return { ok: !error };
+}
+
+export async function dualWriteTransferencia(
+  tr: Transferencia,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const { error } = await sb.from("transferencias").upsert(
+    {
+      id: stableUuid(tr.id),
+      organization_id: orgId,
+      data: tr.data,
+      descricao: tr.descricao,
+      de_conta_id: stableUuid(tr.deContaId),
+      para_conta_id: stableUuid(tr.paraContaId),
+      valor: tr.valor,
+      pago: tr.pago,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("transferencias", error);
+  return { ok: !error };
+}
+
+export async function dualWritePreLancamento(
+  pre: PreLancamento,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const { error } = await sb.from("pre_lancamentos").upsert(
+    {
+      id: stableUuid(pre.id),
+      organization_id: orgId,
+      descricao: pre.descricao,
+      valor: pre.valor,
+      centro_tipo: pre.centro.tipo,
+      obra_id: pre.centro.obraId ? stableUuid(pre.centro.obraId) : null,
+      centro_label: pre.centro.label,
+      solicitante: pre.solicitante,
+      status: pre.status,
+      motivo_recusa: pre.motivoRecusa ?? null,
+      lancamento_id: pre.lancamentoId
+        ? stableUuid(pre.lancamentoId)
+        : null,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("pre_lancamentos", error);
+  return { ok: !error };
+}
+
+/** Anexos de SC/cotação/etc. → public.files (metadados; sem upload de blob). */
+export async function dualWriteAnexo(input: {
+  id: string;
+  nome: string;
+  rotina: string;
+  registroTipo: string;
+  registroId: string;
+  quando?: string;
+  orgId?: string;
+}): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const orgId = input.orgId ?? DEMO_ORG_ID;
+  const { error } = await sb.from("files").upsert(
+    {
+      id: stableUuid(input.id),
+      organization_id: orgId,
+      nome: input.nome,
+      rotina: input.rotina,
+      registro_tipo: input.registroTipo,
+      registro_id: stableUuid(input.registroId),
+      created_at: input.quando ?? new Date().toISOString(),
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("files", error);
   return { ok: !error };
 }

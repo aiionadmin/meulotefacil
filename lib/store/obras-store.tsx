@@ -19,7 +19,12 @@ import type {
   RdoStatus,
 } from "@/lib/domain/obras-types";
 import { custoLinha, totaisOrcamento } from "@/lib/money/orcamento";
-import { dualWriteObra } from "@/lib/persist/dual-write";
+import {
+  dualWriteComposicao,
+  dualWriteInsumo,
+  dualWriteObra,
+  dualWriteOrcamentoNode,
+} from "@/lib/persist/dual-write";
 import { loadObrasFromTables } from "@/lib/persist/load-from-tables";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
@@ -177,25 +182,33 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
       addInsumo: (data) => {
         const row: Insumo = { ...data, id: uid("ins") };
         setState((s) => ({ ...s, insumos: [row, ...s.insumos] }));
+        void dualWriteInsumo(row);
         return row;
       },
       updateInsumo: (id, patch) => {
-        setState((s) => ({
-          ...s,
-          insumos: s.insumos.map((i) => (i.id === id ? { ...i, ...patch } : i)),
-        }));
+        setState((s) => {
+          const insumos = s.insumos.map((i) =>
+            i.id === id ? { ...i, ...patch } : i
+          );
+          const next = insumos.find((i) => i.id === id);
+          if (next) void dualWriteInsumo(next);
+          return { ...s, insumos };
+        });
       },
       toggleInsumoFavorito: (id) => {
-        setState((s) => ({
-          ...s,
-          insumos: s.insumos.map((i) =>
+        setState((s) => {
+          const insumos = s.insumos.map((i) =>
             i.id === id ? { ...i, favorito: !i.favorito } : i
-          ),
-        }));
+          );
+          const next = insumos.find((i) => i.id === id);
+          if (next) void dualWriteInsumo(next);
+          return { ...s, insumos };
+        });
       },
       addComposicao: (data) => {
         const row: Composicao = { ...data, id: uid("comp") };
         setState((s) => ({ ...s, composicoes: [row, ...s.composicoes] }));
+        void dualWriteComposicao(row);
         return row;
       },
       addObra: (data) => {
@@ -280,6 +293,7 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
           fisicoPct: data.fisicoPct ?? 0,
         };
         setState((s) => ({ ...s, nodes: [...s.nodes, node] }));
+        void dualWriteOrcamentoNode(node);
         queueMicrotask(() => recomputeObraTotais(data.obraId));
         return node;
       },
