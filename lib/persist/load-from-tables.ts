@@ -354,7 +354,7 @@ export async function loadFinanceiroFromTables(
     });
   }
 
-  let centrosByLan = new Map<
+  const centrosByLan = new Map<
     string,
     { tipo: "obra" | "empresa"; obraId?: string; label: string; valor?: number; pct?: number }[]
   >();
