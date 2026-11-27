@@ -66,7 +66,7 @@ export default function FluxoCaixaPage() {
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Fluxo de caixa"
+        title="Fluxo de Caixa"
         description="G16 — matriz plano × período, realizado e previsto, saldo inicial."
         actions={
           <>

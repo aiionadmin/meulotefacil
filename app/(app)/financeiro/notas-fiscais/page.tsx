@@ -41,7 +41,7 @@ export default function NotasFiscaisPage() {
   return (
     <div className="space-y-6">
       <ModuleHeader
-        title="Notas fiscais"
+        title="Notas Fiscais"
         description="Kanban | Lista (C19) · Meus CNPJs e captura XML/PDF (G19)."
         actions={
           <>
