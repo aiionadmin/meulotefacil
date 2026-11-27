@@ -156,10 +156,18 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
       aprovarSolicitacao: (id) => {
         const sc = state.solicitacoes.find((x) => x.id === id);
         if (!sc || sc.status !== "em_aprovacao") return false;
+        const agora = todayIso();
         setState((s) => ({
           ...s,
           solicitacoes: s.solicitacoes.map((x) =>
-            x.id === id ? { ...x, status: "a_atender" as ScStatus } : x
+            x.id === id
+              ? {
+                  ...x,
+                  status: "a_atender" as ScStatus,
+                  aprovadoEm: agora,
+                  aprovadoPor: "Aprovador",
+                }
+              : x
           ),
         }));
         return true;
@@ -276,10 +284,17 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
             const all = itens.every(
               (it) => it.quantidadeRecebida >= it.quantidade
             );
+            const agora = todayIso();
             return {
               ...sc,
               itens,
               status: all ? ("concluida" as ScStatus) : sc.status,
+              ...(all
+                ? {
+                    recebidoEm: agora,
+                    recebidoPor: sc.solicitante,
+                  }
+                : {}),
             };
           }),
         }));
@@ -351,6 +366,8 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
               ? {
                   ...x,
                   status: "em_andamento" as ScStatus,
+                  atendidoEm: todayIso(),
+                  atendidoPor: "Compras",
                   cotacaoIds: [...x.cotacaoIds, cot.id],
                   itens: x.itens.map((it) => ({
                     ...it,

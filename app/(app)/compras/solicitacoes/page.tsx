@@ -22,7 +22,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { canApprove } from "@/lib/alcadas/check";
-import { scTimeline } from "@/lib/compras/sc-timeline";
+import { scTimelineFromSolicitacao } from "@/lib/compras/sc-timeline";
 import { formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
 import { useObras } from "@/lib/store/obras-store";
@@ -253,7 +253,7 @@ export default function ComprasSolicitacoesPage() {
         {live ? (
           <div className="space-y-3">
             <div className="grid grid-cols-4 gap-1">
-              {scTimeline(live.status).map((p) => (
+              {scTimelineFromSolicitacao(live).map((p) => (
                 <div
                   key={p.id}
                   className={`rounded-md border px-1.5 py-2 text-center text-[10px] leading-tight ${
@@ -264,7 +264,14 @@ export default function ComprasSolicitacoesPage() {
                         : "border-border text-muted-foreground"
                   }`}
                 >
-                  {p.label}
+                  <div>{p.label}</div>
+                  {p.autor || p.quando ? (
+                    <div className="mt-0.5 font-normal opacity-80">
+                      {[p.autor, p.quando ? formatDateBR(p.quando) : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

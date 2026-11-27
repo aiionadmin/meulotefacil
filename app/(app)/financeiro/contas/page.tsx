@@ -11,27 +11,52 @@ import {
 } from "@/components/app/ModulePage";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
+  DetailRow,
+  DetailSheet,
   Field,
   FormDialog,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
 import { SearchSelect } from "@/components/app/SearchSelect";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useEmpresa } from "@/lib/empresa/context";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
+import type { ContaBancaria } from "@/lib/domain/financeiro-types";
 import { parseOfxBytes, type OfxTxn } from "@/lib/import/ofx-parse";
 
+type ConcStatus = "pendente" | "conciliado" | "arquivado";
+
+type ConcLinha = OfxTxn & {
+  key: string;
+  status: ConcStatus;
+  pagamentoId?: string;
+  conciliadoPor?: string;
+  conciliadoEm?: string;
+};
+
+function txnKey(tx: OfxTxn, idx: number) {
+  return `${tx.data}|${tx.valor}|${tx.memo}|${idx}`;
+}
+
 export default function ContasPage() {
-  const { state, addConta, conciliarPagamento } = useFinanceiro();
+  const { state, addConta, conciliarPagamento, desconciliarPagamento } =
+    useFinanceiro();
   const { empresas, selectedId, filterByEmpresa } = useEmpresa();
   const contas = useMemo(
     () => filterByEmpresa(state.contas),
     [filterByEmpresa, state.contas]
   );
-  const [ofxTxns, setOfxTxns] = useState<OfxTxn[]>([]);
+  const [linhas, setLinhas] = useState<ConcLinha[]>([]);
   const [ofxMeta, setOfxMeta] = useState("");
   const [open, setOpen] = useState(false);
+  const [contaSel, setContaSel] = useState<ContaBancaria | null>(null);
+  const [tab, setTab] = useState<ConcStatus>("pendente");
+  const [busca, setBusca] = useState("");
+  const [tipoMov, setTipoMov] = useState<"todas" | "entrada" | "saida">(
+    "todas"
+  );
   const [form, setForm] = useState({
     nome: "",
     banco: "",
@@ -43,6 +68,37 @@ export default function ContasPage() {
     empresaId:
       selectedId === "todas" ? empresas[0]?.id ?? "" : selectedId,
   });
+
+  const filtradas = useMemo(() => {
+    const term = busca.trim().toLowerCase();
+    return linhas.filter((l) => {
+      if (l.status !== tab) return false;
+      if (tipoMov === "entrada" && l.valor < 0) return false;
+      if (tipoMov === "saida" && l.valor >= 0) return false;
+      if (term && !l.memo.toLowerCase().includes(term)) return false;
+      return true;
+    });
+  }, [linhas, tab, busca, tipoMov]);
+
+  const contagens = useMemo(
+    () => ({
+      pendente: linhas.filter((l) => l.status === "pendente").length,
+      conciliado: linhas.filter((l) => l.status === "conciliado").length,
+      arquivado: linhas.filter((l) => l.status === "arquivado").length,
+    }),
+    [linhas]
+  );
+
+  function sugerirMatch(tx: OfxTxn) {
+    return state.pagamentos.find(
+      (p) =>
+        Math.abs(p.valor - Math.abs(tx.valor)) < 0.01 &&
+        !p.conciliado &&
+        (p.status === "em_aberto" ||
+          p.status === "parcial" ||
+          p.status === "pago")
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -92,7 +148,15 @@ export default function ContasPage() {
           ]}
           rows={contas.map((c) => ({
             banco: `${c.banco} · ${c.tipo}`,
-            nome: c.nome,
+            nome: (
+              <button
+                type="button"
+                className="font-medium text-left hover:text-brand-orange"
+                onClick={() => setContaSel(c)}
+              >
+                {c.nome}
+              </button>
+            ),
             emp:
               empresas.find((e) => e.id === c.empresaId)?.nome ??
               (c.empresaId ? c.empresaId.slice(0, 8) : "—"),
@@ -102,80 +166,308 @@ export default function ContasPage() {
           }))}
         />
       </ModuleSection>
-      <ModuleSection title="Conciliação OFX (G14)">
-        <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="file"
-            accept=".ofx,.OFX,text/plain"
-            className="hidden"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              const buf = await f.arrayBuffer();
-              const parsed = parseOfxBytes(buf);
-              if (!parsed.ok) {
-                notify("OFX inválido", parsed.erro ?? "");
-                setOfxTxns([]);
-                return;
-              }
-              setOfxTxns(parsed.transacoes);
-              setOfxMeta(
-                `Banco ${parsed.banco || "—"} · Conta ${parsed.conta || "—"} · ${parsed.transacoes.length} lançamentos · ${parsed.encoding ?? "utf-8"}`
-              );
-              notify("OFX lido", `${parsed.transacoes.length} transações`);
-            }}
-          />
-          <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
-            Enviar OFX / QFX
-          </span>
-        </label>
-        {ofxMeta ? (
-          <p className="mt-2 text-xs text-muted-foreground">{ofxMeta}</p>
-        ) : null}
-        {ofxTxns.length > 0 ? (
-          <div className="mt-3">
-            <PaginatedTable
-              columns={[
-                { key: "data", label: "Data" },
-                { key: "tipo", label: "Tipo" },
-                { key: "valor", label: "Valor" },
-                { key: "memo", label: "Histórico" },
-                { key: "acao", label: "" },
-              ]}
-              rows={ofxTxns.map((tx) => ({
-                data: formatDateBR(tx.data),
-                tipo: tx.tipo,
-                valor: formatBRL(tx.valor),
-                memo: tx.memo,
-                acao: (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const match = state.pagamentos.find(
-                        (p) =>
-                          Math.abs(p.valor - tx.valor) < 0.01 &&
-                          p.status !== "pago"
-                      );
-                      if (match) {
-                        conciliarPagamento(match.id);
-                        notify("Conciliado", match.descricao);
-                      } else {
-                        notify(
-                          "Sem match automático",
-                          "Concilie manualmente em Pagamentos"
-                        );
-                      }
-                    }}
-                  >
-                    Conciliar
-                  </Button>
-                ),
-              }))}
+
+      <DetailSheet
+        open={!!contaSel}
+        onOpenChange={(o) => {
+          if (!o) setContaSel(null);
+        }}
+        title={contaSel?.nome ?? "Conta"}
+        footer={
+          <>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/financeiro/transferencias">Extrato / Transferências</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/financeiro/cobranca-facil">Cobrança Fácil</Link>
+            </Button>
+          </>
+        }
+      >
+        {contaSel ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="rounded-md border border-linha p-2">
+                <div className="text-muted-foreground">Saldo no sistema</div>
+                <div className="mt-1 font-semibold">
+                  {formatBRL(contaSel.saldo)}
+                </div>
+              </div>
+              <div className="rounded-md border border-linha p-2">
+                <div className="text-muted-foreground">Saldo no banco</div>
+                <div className="mt-1 font-semibold">—</div>
+              </div>
+              <div className="rounded-md border border-linha p-2">
+                <div className="text-muted-foreground">Variação</div>
+                <div className="mt-1 font-semibold">—</div>
+              </div>
+            </div>
+            <DetailRow label="Banco" value={`${contaSel.banco} · ${contaSel.tipo}`} />
+            <DetailRow
+              label="Proprietário"
+              value={contaSel.proprietario}
             />
+            <DetailRow
+              label="Data inicial"
+              value={formatDateBR(contaSel.dataInicial)}
+            />
+            <DetailRow
+              label="Saldo inicial"
+              value={formatBRL(contaSel.valorInicial)}
+            />
+
+            <div className="border-t border-linha pt-3">
+              <p className="mb-2 text-sm font-medium">Conciliação</p>
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="file"
+                  accept=".ofx,.OFX,text/plain"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    const buf = await f.arrayBuffer();
+                    const parsed = parseOfxBytes(buf);
+                    if (!parsed.ok) {
+                      notify("OFX inválido", parsed.erro ?? "");
+                      setLinhas([]);
+                      return;
+                    }
+                    setLinhas(
+                      parsed.transacoes.map((tx, idx) => ({
+                        ...tx,
+                        key: txnKey(tx, idx),
+                        status: "pendente" as ConcStatus,
+                      }))
+                    );
+                    setOfxMeta(
+                      `Banco ${parsed.banco || "—"} · Conta ${parsed.conta || "—"} · ${parsed.transacoes.length} lançamentos`
+                    );
+                    setTab("pendente");
+                    notify("OFX lido", `${parsed.transacoes.length} transações`);
+                  }}
+                />
+                <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
+                  Enviar OFX / QFX
+                </span>
+              </label>
+              {ofxMeta ? (
+                <p className="mt-2 text-xs text-muted-foreground">{ofxMeta}</p>
+              ) : null}
+
+              {linhas.length > 0 ? (
+                <div className="mt-3 space-y-3">
+                  <Tabs
+                    value={tab}
+                    onValueChange={(v) => setTab(v as ConcStatus)}
+                  >
+                    <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
+                      <TabsTrigger value="pendente">
+                        Pendentes ({contagens.pendente})
+                      </TabsTrigger>
+                      <TabsTrigger value="conciliado">
+                        Conciliados ({contagens.conciliado})
+                      </TabsTrigger>
+                      <TabsTrigger value="arquivado">
+                        Arquivados ({contagens.arquivado})
+                      </TabsTrigger>
+                    </TabsList>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Input
+                        className="max-w-xs"
+                        placeholder="Buscar por descrição"
+                        value={busca}
+                        onChange={(e) => setBusca(e.target.value)}
+                      />
+                      <select
+                        className={fieldControlClass + " max-w-[160px]"}
+                        value={tipoMov}
+                        onChange={(e) =>
+                          setTipoMov(
+                            e.target.value as "todas" | "entrada" | "saida"
+                          )
+                        }
+                      >
+                        <option value="todas">Todas</option>
+                        <option value="entrada">Entradas</option>
+                        <option value="saida">Saídas</option>
+                      </select>
+                    </div>
+                    <TabsContent value={tab} className="mt-3 space-y-2">
+                      {filtradas.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Nenhuma movimentação nesta aba.
+                        </p>
+                      ) : (
+                        filtradas.map((tx) => {
+                          const match =
+                            tx.status === "pendente"
+                              ? sugerirMatch(tx)
+                              : tx.pagamentoId
+                                ? state.pagamentos.find(
+                                    (p) => p.id === tx.pagamentoId
+                                  )
+                                : undefined;
+                          return (
+                            <div
+                              key={tx.key}
+                              className="grid gap-2 rounded-md border border-linha p-3 text-xs sm:grid-cols-2"
+                            >
+                              <div>
+                                <div className="font-medium text-ink">
+                                  Banco · {formatBRL(tx.valor)}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {tx.memo}
+                                </div>
+                                <div className="mt-1 text-muted-foreground">
+                                  {formatDateBR(tx.data)} · {tx.tipo}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="font-medium text-ink">
+                                  Sistema
+                                  {match
+                                    ? ` · ${formatBRL(match.valor)}`
+                                    : " · —"}
+                                </div>
+                                {match ? (
+                                  <>
+                                    <div>{match.favorecido}</div>
+                                    <div className="text-muted-foreground">
+                                      {match.descricao} · {match.centroLabel}
+                                    </div>
+                                    {tx.conciliadoPor ? (
+                                      <div className="mt-1 text-muted-foreground">
+                                        Conciliado por: {tx.conciliadoPor},{" "}
+                                        {tx.conciliadoEm
+                                          ? formatDateBR(tx.conciliadoEm)
+                                          : ""}
+                                      </div>
+                                    ) : (
+                                      <div className="mt-1 text-brand-green">
+                                        Sugestão automática
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div className="text-muted-foreground">
+                                    Sem par sugerido
+                                  </div>
+                                )}
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {tx.status === "pendente" && match ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        conciliarPagamento(match.id);
+                                        setLinhas((prev) =>
+                                          prev.map((l) =>
+                                            l.key === tx.key
+                                              ? {
+                                                  ...l,
+                                                  status: "conciliado",
+                                                  pagamentoId: match.id,
+                                                  conciliadoPor: "Você",
+                                                  conciliadoEm: new Date()
+                                                    .toISOString()
+                                                    .slice(0, 10),
+                                                }
+                                              : l
+                                          )
+                                        );
+                                        notify("Conciliado", match.descricao);
+                                      }}
+                                    >
+                                      Conciliar
+                                    </Button>
+                                  ) : null}
+                                  {tx.status === "pendente" ? (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() =>
+                                        setLinhas((prev) =>
+                                          prev.map((l) =>
+                                            l.key === tx.key
+                                              ? {
+                                                  ...l,
+                                                  status: "arquivado",
+                                                }
+                                              : l
+                                          )
+                                        )
+                                      }
+                                    >
+                                      Arquivar
+                                    </Button>
+                                  ) : null}
+                                  {tx.status === "conciliado" &&
+                                  tx.pagamentoId ? (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        desconciliarPagamento(tx.pagamentoId!);
+                                        setLinhas((prev) =>
+                                          prev.map((l) =>
+                                            l.key === tx.key
+                                              ? {
+                                                  ...l,
+                                                  status: "pendente",
+                                                  pagamentoId: undefined,
+                                                  conciliadoPor: undefined,
+                                                  conciliadoEm: undefined,
+                                                }
+                                              : l
+                                          )
+                                        );
+                                        notify("Desconciliado");
+                                      }}
+                                    >
+                                      Desconciliar
+                                    </Button>
+                                  ) : null}
+                                  {tx.status === "arquivado" ? (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() =>
+                                        setLinhas((prev) =>
+                                          prev.map((l) =>
+                                            l.key === tx.key
+                                              ? {
+                                                  ...l,
+                                                  status: "pendente",
+                                                }
+                                              : l
+                                          )
+                                        )
+                                      }
+                                    >
+                                      Restaurar
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Importe um OFX para abrir as abas Pendentes, Conciliados e
+                  Arquivados.
+                </p>
+              )}
+            </div>
           </div>
         ) : null}
-      </ModuleSection>
+      </DetailSheet>
 
       <FormDialog
         open={open}

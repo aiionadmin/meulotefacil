@@ -5,6 +5,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   ModuleHeader,
   KpiGrid,
   StatusPill,
@@ -13,7 +19,7 @@ import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
   Field,
   FilterBar,
-  FormDialog,
+  FormSheet,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
@@ -30,6 +36,46 @@ const STATUS_LABEL: Record<ObraStatus, string> = {
   finalizada: "Finalizada",
 };
 
+const EMPTY_FORM = {
+  codigo: "",
+  nome: "",
+  tipo: "infraestrutura",
+  status: "em_orcamento" as ObraStatus,
+  clienteNome: "",
+  developmentId: "",
+  responsavelObra: "",
+  responsavelTecnico: "",
+  art: "",
+  ceiCno: "",
+  areaTotal: 0,
+  unidade: "m²",
+  bdiPct: 0.25,
+  visivelPara: "Administrador",
+  cep: "",
+  logradouro: "",
+  numero: "",
+  complemento: "",
+  bairro: "",
+  cidade: "",
+  uf: "",
+  contatoNome: "",
+  contatoTelefone: "",
+  contatoEmail: "",
+  quemPaga: "empresa" as "empresa" | "cliente",
+  contaPadrao: "",
+  fatTipo: "pj" as "pj" | "pf",
+  fatDocumento: "",
+  fatRazao: "",
+  fatIe: "",
+  fatTelefone: "",
+  fatEmail: "",
+  fatEmailsCopia: "",
+  fatEndereco: "",
+  exibirLancamentos: true,
+  exibirFaturamentos: true,
+  exibirCompras: true,
+};
+
 export default function ObrasPage() {
   const { state, addObra, duplicateObra, softRemoveObra } = useObras();
   const { state: carteira } = useCarteira();
@@ -42,26 +88,7 @@ export default function ObrasPage() {
     pageSize: 25,
     q,
   });
-  const [form, setForm] = useState({
-    codigo: "",
-    nome: "",
-    tipo: "infraestrutura",
-    status: "em_orcamento" as ObraStatus,
-    clienteNome: "",
-    developmentId: "",
-    responsavelObra: "Eng. Paula",
-    responsavelTecnico: "",
-    art: "",
-    ceiCno: "",
-    areaTotal: 0,
-    bdiPct: 0.25,
-    visivelPara: "Administrador",
-    cidade: "Campinas",
-    uf: "SP",
-    exibirLancamentos: true,
-    exibirFaturamentos: true,
-    exibirCompras: true,
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const filtered = useMemo(() => {
     let list = state.obras;
@@ -94,7 +121,13 @@ export default function ObrasPage() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/rdo">RDO</Link>
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setForm(EMPTY_FORM);
+                setOpen(true);
+              }}
+            >
               Nova Obra
             </Button>
           </>
@@ -206,10 +239,12 @@ export default function ObrasPage() {
         }))}
       />
 
-      <FormDialog
+      <FormSheet
         open={open}
         onOpenChange={setOpen}
         title="Nova Obra"
+        submitLabel="Salvar dados da obra"
+        wide
         onSubmit={() => {
           if (!form.nome.trim()) {
             notify("Nome da obra é obrigatório");
@@ -222,6 +257,18 @@ export default function ObrasPage() {
           const emp = carteira.developments.find(
             (d) => d.id === form.developmentId
           );
+          const contatos =
+            form.contatoNome.trim() ||
+            form.contatoTelefone.trim() ||
+            form.contatoEmail.trim()
+              ? [
+                  {
+                    nome: form.contatoNome.trim() || "Contato",
+                    telefone: form.contatoTelefone || undefined,
+                    email: form.contatoEmail || undefined,
+                  },
+                ]
+              : undefined;
           addObra({
             codigo:
               form.codigo.trim() ||
@@ -233,19 +280,44 @@ export default function ObrasPage() {
             developmentId: emp?.id,
             developmentNome: emp?.nome,
             areaTotal: form.areaTotal || undefined,
-            unidade: "m²",
+            unidade: form.unidade || "m²",
             art: form.art || undefined,
             ceiCno: form.ceiCno.slice(0, 20) || undefined,
-            responsavelObra: form.responsavelObra,
+            responsavelObra: form.responsavelObra || undefined,
             responsavelTecnico: form.responsavelTecnico || undefined,
             visivelPara: form.visivelPara
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean),
             bdiPct: form.bdiPct,
-            cidade: form.cidade,
-            uf: form.uf,
-            endereco: { cidade: form.cidade, estado: form.uf },
+            cidade: form.cidade || undefined,
+            uf: form.uf || undefined,
+            endereco: {
+              cep: form.cep || undefined,
+              logradouro: form.logradouro || undefined,
+              numero: form.numero || undefined,
+              complemento: form.complemento || undefined,
+              bairro: form.bairro || undefined,
+              estado: form.uf || undefined,
+              cidade: form.cidade || undefined,
+            },
+            contatos,
+            contaBancariaPadrao: form.contaPadrao
+              ? { quemPaga: form.quemPaga, conta: form.contaPadrao }
+              : undefined,
+            faturamento:
+              form.fatDocumento || form.fatRazao || form.fatEmail
+                ? {
+                    tipo: form.fatTipo,
+                    documento: form.fatDocumento || undefined,
+                    razaoSocial: form.fatRazao || undefined,
+                    ie: form.fatIe || undefined,
+                    telefone: form.fatTelefone || undefined,
+                    email: form.fatEmail || undefined,
+                    emailsCopia: form.fatEmailsCopia || undefined,
+                    endereco: form.fatEndereco || undefined,
+                  }
+                : undefined,
             exibirLancamentos: form.exibirLancamentos,
             exibirFaturamentos: form.exibirFaturamentos,
             exibirCompras: form.exibirCompras,
@@ -255,24 +327,18 @@ export default function ObrasPage() {
           setOpen(false);
         }}
       >
-        <Field label="Código da obra">
-          <Input
-            placeholder="Sugestão automática se vazio"
-            value={form.codigo}
-            onChange={(e) => setForm({ ...form, codigo: e.target.value })}
-          />
-        </Field>
-        <Field label="Nome *">
+        <Field label="Nome da obra *">
           <Input
             value={form.nome}
             maxLength={200}
             onChange={(e) => setForm({ ...form, nome: e.target.value })}
           />
         </Field>
-        <Field label="Tipo">
+        <Field label="Tipo da obra">
           <Input
             value={form.tipo}
             onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+            placeholder="Ex.: infraestrutura, loteamento…"
           />
         </Field>
         <Field label="Status *">
@@ -290,7 +356,7 @@ export default function ObrasPage() {
             ))}
           </select>
         </Field>
-        <Field label="Visível para *">
+        <Field label="Obra visível para *">
           <Input
             value={form.visivelPara}
             onChange={(e) =>
@@ -299,84 +365,388 @@ export default function ObrasPage() {
             placeholder="Admin, Comercial…"
           />
         </Field>
-        <Field label="Cliente">
-          <Input
-            value={form.clienteNome}
-            onChange={(e) =>
-              setForm({ ...form, clienteNome: e.target.value })
-            }
-          />
-        </Field>
-        <Field label="Responsável técnico">
-          <Input
-            value={form.responsavelTecnico}
-            onChange={(e) =>
-              setForm({ ...form, responsavelTecnico: e.target.value })
-            }
-          />
-        </Field>
-        <Field label="Responsável da obra">
-          <Input
-            value={form.responsavelObra}
-            onChange={(e) =>
-              setForm({ ...form, responsavelObra: e.target.value })
-            }
-          />
-        </Field>
-        <Field label="ART / CEI-CNO">
-          <div className="flex gap-2">
-            <Input
-              placeholder="ART"
-              value={form.art}
-              onChange={(e) => setForm({ ...form, art: e.target.value })}
-            />
-            <Input
-              placeholder="CEI/CNO"
-              maxLength={20}
-              value={form.ceiCno}
-              onChange={(e) => setForm({ ...form, ceiCno: e.target.value })}
-            />
-          </div>
-        </Field>
-        <Field label="Empreendimento (opcional)">
-          <select
-            className={fieldControlClass}
-            value={form.developmentId}
-            onChange={(e) =>
-              setForm({ ...form, developmentId: e.target.value })
-            }
-          >
-            <option value="">Sem vínculo</option>
-            {carteira.developments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nome}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Exibir obra para">
-          <div className="flex flex-wrap gap-3 text-sm">
-            {(
-              [
-                ["exibirLancamentos", "Lançamentos"],
-                ["exibirFaturamentos", "Faturamentos"],
-                ["exibirCompras", "Compras"],
-              ] as const
-            ).map(([key, label]) => (
-              <label key={key} className="inline-flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  checked={form[key]}
-                  onChange={(e) =>
-                    setForm({ ...form, [key]: e.target.checked })
+
+        <div className="pt-2">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Dados opcionais
+          </p>
+          <Accordion type="multiple" className="w-full">
+            <AccordionItem value="gerais">
+              <AccordionTrigger className="py-3 text-sm">
+                Dados gerais
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <Field label="Código da obra">
+                  <Input
+                    placeholder="Sugestão automática se vazio"
+                    value={form.codigo}
+                    onChange={(e) =>
+                      setForm({ ...form, codigo: e.target.value })
+                    }
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Área total">
+                    <Input
+                      type="number"
+                      value={form.areaTotal || ""}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          areaTotal: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field label="Unidade">
+                    <Input
+                      value={form.unidade}
+                      onChange={(e) =>
+                        setForm({ ...form, unidade: e.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="ART">
+                    <Input
+                      value={form.art}
+                      onChange={(e) =>
+                        setForm({ ...form, art: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="CEI/CNO">
+                    <Input
+                      maxLength={20}
+                      value={form.ceiCno}
+                      onChange={(e) =>
+                        setForm({ ...form, ceiCno: e.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+                <Field label="Responsável técnico">
+                  <Input
+                    value={form.responsavelTecnico}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        responsavelTecnico: e.target.value,
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Responsável da obra">
+                  <Input
+                    value={form.responsavelObra}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        responsavelObra: e.target.value,
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Empreendimento (opcional)">
+                  <select
+                    className={fieldControlClass}
+                    value={form.developmentId}
+                    onChange={(e) =>
+                      setForm({ ...form, developmentId: e.target.value })
+                    }
+                  >
+                    <option value="">Sem vínculo</option>
+                    {carteira.developments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.nome}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="cliente">
+              <AccordionTrigger className="py-3 text-sm">
+                Dados do cliente
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <Field label="Cliente">
+                  <Input
+                    value={form.clienteNome}
+                    onChange={(e) =>
+                      setForm({ ...form, clienteNome: e.target.value })
+                    }
+                    placeholder="Busca / criação rápida"
+                  />
+                </Field>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="endereco">
+              <AccordionTrigger className="py-3 text-sm">
+                Endereço da obra
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <Field label="CEP">
+                  <Input
+                    value={form.cep}
+                    onChange={(e) =>
+                      setForm({ ...form, cep: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Logradouro">
+                  <Input
+                    value={form.logradouro}
+                    onChange={(e) =>
+                      setForm({ ...form, logradouro: e.target.value })
+                    }
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Número">
+                    <Input
+                      value={form.numero}
+                      onChange={(e) =>
+                        setForm({ ...form, numero: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Complemento">
+                    <Input
+                      value={form.complemento}
+                      onChange={(e) =>
+                        setForm({ ...form, complemento: e.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+                <Field label="Bairro">
+                  <Input
+                    value={form.bairro}
+                    onChange={(e) =>
+                      setForm({ ...form, bairro: e.target.value })
+                    }
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Estado">
+                    <Input
+                      value={form.uf}
+                      maxLength={2}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          uf: e.target.value.toUpperCase(),
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field label="Cidade">
+                    <Input
+                      value={form.cidade}
+                      onChange={(e) =>
+                        setForm({ ...form, cidade: e.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="contatos">
+              <AccordionTrigger className="py-3 text-sm">
+                Contatos
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <Field label="Nome">
+                  <Input
+                    value={form.contatoNome}
+                    onChange={(e) =>
+                      setForm({ ...form, contatoNome: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Telefone">
+                  <Input
+                    value={form.contatoTelefone}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        contatoTelefone: e.target.value,
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="E-mail">
+                  <Input
+                    type="email"
+                    value={form.contatoEmail}
+                    onChange={(e) =>
+                      setForm({ ...form, contatoEmail: e.target.value })
+                    }
+                  />
+                </Field>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="conta">
+              <AccordionTrigger className="py-3 text-sm">
+                Conta bancária padrão
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <Field label="Quem paga">
+                  <select
+                    className={fieldControlClass}
+                    value={form.quemPaga}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        quemPaga: e.target.value as "empresa" | "cliente",
+                      })
+                    }
+                  >
+                    <option value="empresa">Empresa</option>
+                    <option value="cliente">Cliente</option>
+                  </select>
+                </Field>
+                <Field label="Conta">
+                  <Input
+                    value={form.contaPadrao}
+                    onChange={(e) =>
+                      setForm({ ...form, contaPadrao: e.target.value })
+                    }
+                    placeholder="Nome ou número da conta"
+                  />
+                </Field>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="faturamento">
+              <AccordionTrigger className="py-3 text-sm">
+                Dados para Faturamento
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <Field label="Tipo">
+                  <select
+                    className={fieldControlClass}
+                    value={form.fatTipo}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        fatTipo: e.target.value as "pj" | "pf",
+                      })
+                    }
+                  >
+                    <option value="pj">PJ</option>
+                    <option value="pf">PF</option>
+                  </select>
+                </Field>
+                <Field label={form.fatTipo === "pj" ? "CNPJ" : "CPF"}>
+                  <Input
+                    value={form.fatDocumento}
+                    onChange={(e) =>
+                      setForm({ ...form, fatDocumento: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field
+                  label={
+                    form.fatTipo === "pj" ? "Razão Social" : "Nome completo"
                   }
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </Field>
-      </FormDialog>
+                >
+                  <Input
+                    value={form.fatRazao}
+                    onChange={(e) =>
+                      setForm({ ...form, fatRazao: e.target.value })
+                    }
+                  />
+                </Field>
+                {form.fatTipo === "pj" ? (
+                  <Field label="Inscrição Estadual">
+                    <Input
+                      value={form.fatIe}
+                      onChange={(e) =>
+                        setForm({ ...form, fatIe: e.target.value })
+                      }
+                    />
+                  </Field>
+                ) : null}
+                <Field label="Telefone">
+                  <Input
+                    value={form.fatTelefone}
+                    onChange={(e) =>
+                      setForm({ ...form, fatTelefone: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="E-mail">
+                  <Input
+                    type="email"
+                    value={form.fatEmail}
+                    onChange={(e) =>
+                      setForm({ ...form, fatEmail: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="E-mails em cópia">
+                  <Input
+                    value={form.fatEmailsCopia}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        fatEmailsCopia: e.target.value,
+                      })
+                    }
+                    placeholder="sepados por vírgula"
+                  />
+                </Field>
+                <Field label="Endereço completo">
+                  <Input
+                    value={form.fatEndereco}
+                    onChange={(e) =>
+                      setForm({ ...form, fatEndereco: e.target.value })
+                    }
+                  />
+                </Field>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="exibir">
+              <AccordionTrigger className="py-3 text-sm">
+                Exibir obra para
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-wrap gap-3 text-sm">
+                  {(
+                    [
+                      ["exibirLancamentos", "Lançamentos"],
+                      ["exibirFaturamentos", "Faturamentos"],
+                      ["exibirCompras", "Compras"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="inline-flex items-center gap-1.5"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form[key]}
+                        onChange={(e) =>
+                          setForm({ ...form, [key]: e.target.checked })
+                        }
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </FormSheet>
     </div>
   );
 }
