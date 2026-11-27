@@ -385,6 +385,13 @@ if (typeof module !== 'undefined') module.exports = DXF;
       const d = Math.hypot(b[0] - a[0], b[1] - a[1]), label = d.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
       ctx.font = '600 13px system-ui, sans-serif'; const tw = ctx.measureText(label).width + 12, mx = (ax + bx) / 2, my = (ay + by) / 2;
       ctx.fillStyle = '#ff5a3c'; ctx.fillRect(mx - tw / 2, my - 11, tw, 22); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, mx, my); } }
+    if (pickHighlight) {
+      const sx = pickHighlight.x * s + tx, sy = -pickHighlight.y * s + ty;
+      const rad = Math.max(pickHighlight.h * s * 1.2, 10);
+      ctx.beginPath(); ctx.arc(sx, sy, rad, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ed8600'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.fillStyle = 'rgba(237,134,0,.18)'; ctx.fill();
+    }
   }
 
   function setScene(sc, name) {
@@ -396,8 +403,9 @@ if (typeof module !== 'undefined') module.exports = DXF;
         paths.push({ layer: l, fill: false, color: key.slice(0, k), w: parseFloat(key.slice(k + 1)) || 0, path: p }); }
       l.strokes = null; l.fills = null;
     }
-    $('fname').textContent = name; $('drop').hidden = true; mpts = []; buildLayers(); fit();
+    $('fname').textContent = name; $('drop').hidden = true; mpts = []; pickHighlight = null; buildLayers(); fit();
     $('info').textContent = sc.total.toLocaleString('pt-BR') + ' objetos · ' + sc.layers.length + ' camadas';
+    emitLabels();
   }
 
   function buildLayers() {
@@ -413,7 +421,7 @@ if (typeof module !== 'undefined') module.exports = DXF;
   }
   const setAll = v => { if (!scene) return; const q = $('q').value.trim().toLowerCase(); for (const l of scene.layers) if (!q || l.name.toLowerCase().includes(q)) { l.visible = v; l.cb.checked = v; } redraw(); };
 
-  async function loadBuffer(buf, name) {
+  async function loadBuffer(buf, name, opts) {
     $('busy').hidden = false; $('busy').textContent = 'Lendo ' + name + '…';
     await new Promise(r => setTimeout(r, 30));
     try {
@@ -421,6 +429,13 @@ if (typeof module !== 'undefined') module.exports = DXF;
       const doc = DXF.parse(text), sc = DXF.build(doc);
       if (!sc.layers.length) throw new Error('nenhuma entidade desenhável encontrada');
       setScene(sc, name);
+      // Avisa o app (persistência / Abrir DXF no viewer)
+      if (!opts || opts.notifyParent !== false) {
+        try {
+          const copy = buf instanceof ArrayBuffer ? buf.slice(0) : buf;
+          parent.postMessage({ type: 'mlf-dxf-loaded', name, buffer: copy }, '*');
+        } catch (_) { /* noop */ }
+      }
     } catch (err) { alertMsg('Não consegui abrir esse arquivo como DXF: ' + err.message); }
     $('busy').hidden = true;
   }
@@ -441,7 +456,78 @@ if (typeof module !== 'undefined') module.exports = DXF;
     if (ptrs.size === 1) { const dx = e.clientX - p[0], dy = e.clientY - p[1]; moved += Math.abs(dx) + Math.abs(dy); tx += dx; ty += dy; redraw(); }
     ptrs.set(e.pointerId, [e.clientX, e.clientY]);
     if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) zoomAt((a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top, d / pinch); pinch = d; moved = 99; } });
-  const up = e => { if (ptrs.delete(e.pointerId) && moved < 4 && measuring && scene && e.type === 'pointerup') { const r = cv.getBoundingClientRect(), w = world(e.clientX - r.left, e.clientY - r.top); if (mpts.length >= 2) mpts = []; mpts.push(w); redraw(); } pinch = 0; };
+  let pickHighlight = null; // { x, y, h }
+  function collectLotTexts() {
+    if (!scene) return [];
+    const out = [];
+    const isLot = (layer) => {
+      if (/\bpv[pe]\b|pluvial|esgoto|cota|rua|malha|trecho/i.test(layer)) return false;
+      return /numero|n[uú]mero|identif|lote.?id/i.test(layer);
+    };
+    for (const l of scene.layers) {
+      if (!isLot(l.name)) continue;
+      for (const t of l.texts) {
+        if (t.pt || !t.s || !t.s.length) continue;
+        const text = t.s.join(' ').trim();
+        if (!text) continue;
+        out.push({ text, layer: l.name, x: t.x, y: t.y, h: t.h || 1 });
+      }
+    }
+    return out;
+  }
+  function emitLabels() {
+    try {
+      const labels = collectLotTexts().map(({ text, layer, x, y }) => ({ text, layer, x, y }));
+      parent.postMessage({ type: 'mlf-dxf-labels', labels, name: $('fname')?.textContent || '' }, '*');
+    } catch (_) { /* noop */ }
+  }
+  function pickAt(wx, wy) {
+    const labels = collectLotTexts();
+    if (!labels.length) return null;
+    let best = null, bestD = Infinity;
+    for (const t of labels) {
+      const r = Math.max(t.h * 2.5, 1);
+      const d = Math.hypot(t.x - wx, t.y - wy);
+      if (d < r && d < bestD) { bestD = d; best = t; }
+    }
+    // fallback: nearest within generous radius when zoomed out
+    if (!best) {
+      for (const t of labels) {
+        const d = Math.hypot(t.x - wx, t.y - wy);
+        if (d < bestD) { bestD = d; best = t; }
+      }
+      const maxR = Math.max(8 / Math.max(s, 1e-9), 2);
+      if (!best || bestD > maxR) return null;
+    }
+    return best;
+  }
+  const up = e => {
+    const was = ptrs.delete(e.pointerId);
+    if (was && moved < 4 && scene && e.type === 'pointerup') {
+      const r = cv.getBoundingClientRect(), w = world(e.clientX - r.left, e.clientY - r.top);
+      if (measuring) {
+        if (mpts.length >= 2) mpts = [];
+        mpts.push(w);
+        redraw();
+      } else {
+        const hit = pickAt(w[0], w[1]);
+        if (hit) {
+          pickHighlight = { x: hit.x, y: hit.y, h: hit.h || 1 };
+          redraw();
+          try {
+            parent.postMessage({
+              type: 'mlf-dxf-pick',
+              text: hit.text,
+              layer: hit.layer,
+              x: hit.x,
+              y: hit.y,
+            }, '*');
+          } catch (_) { /* noop */ }
+        }
+      }
+    }
+    pinch = 0;
+  };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   cv.addEventListener('dblclick', () => { if (!measuring) fit(); });
   window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'f' || e.key === 'F') fit(); if (e.key === 'Escape') { mpts = []; redraw(); } });
@@ -468,14 +554,14 @@ if (typeof module !== 'undefined') module.exports = DXF;
     if (!buf) return;
     const name = d.name || 'upload.dxf';
     if (/\.dwg$/i.test(name)) return alertMsg('Arquivo DWG não é suportado — exporte como DXF.');
-    loadBuffer(buf instanceof ArrayBuffer ? buf : buf.buffer || buf, name);
+    loadBuffer(buf instanceof ArrayBuffer ? buf : buf.buffer || buf, name, { notifyParent: false });
   });
 
   // auto-load quando há ?arquivo= (amostras em /dxf/) — sem teto de tamanho no fetch
   if (/^https?:$/.test(location.protocol)) {
     const f = new URLSearchParams(location.search).get('arquivo');
     if (f) {
-      fetch(encodeURI(f)).then(r => r.ok ? r.arrayBuffer() : null).then(b => { if (b) loadBuffer(b, f.split('/').pop()); }).catch(() => {});
+      fetch(encodeURI(f)).then(r => r.ok ? r.arrayBuffer() : null).then(b => { if (b) loadBuffer(b, f.split('/').pop(), { notifyParent: true }); }).catch(() => {});
     }
   }
 })();

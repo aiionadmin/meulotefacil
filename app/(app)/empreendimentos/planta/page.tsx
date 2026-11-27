@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader, ModuleSection, StatusPill } from "@/components/app/ModulePage";
@@ -10,7 +10,14 @@ import {
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
-import { DxfViewer } from "@/components/dxf/DxfViewer";
+import { DxfViewer, type DxfPickEvent } from "@/components/dxf/DxfViewer";
+import {
+  labelsToLotRows,
+  matchLotsFromPick,
+  normalizeLotCode,
+  type DxfTextLabel,
+} from "@/lib/dxf/match-lote";
+import { loadDxfBlob, saveDxfBlob } from "@/lib/persist/dxf-blob";
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Lot, LotStatus } from "@/lib/domain/carteira-types";
@@ -36,9 +43,11 @@ const COLORS: Record<LotStatus, string> = {
 type PlantaModo = "grade" | "dxf";
 
 export default function PlantaPage() {
-  const { state, changeLotStatus, setLotPlantaPoligono } = useCarteira();
+  const { state, changeLotStatus, setLotPlantaPoligono, updateDevelopment, importLots } =
+    useCarteira();
   const [devId, setDevId] = useState(state.developments[0]?.id ?? "");
   const [selected, setSelected] = useState<Lot | null>(null);
+  const [pickHint, setPickHint] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfName, setPdfName] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -46,6 +55,11 @@ export default function PlantaPage() {
   const [polyDraft, setPolyDraft] = useState<{ x: number; y: number }[]>([]);
   const [modo, setModo] = useState<PlantaModo>("dxf");
   const [dxfSample, setDxfSample] = useState<string>("MIRASSOL.dxf");
+  const [dxfFile, setDxfFile] = useState<File | null>(null);
+  const [savedBuffer, setSavedBuffer] = useState<ArrayBuffer | null>(null);
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const [labels, setLabels] = useState<DxfTextLabel[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const lots = useMemo(
     () => state.lots.filter((l) => l.developmentId === devId),
@@ -66,12 +80,241 @@ export default function PlantaPage() {
   }, [lots]);
 
   const emp = state.developments.find((d) => d.id === devId);
+  const contractFor = (lot: Lot) =>
+    state.contracts.find((c) => c.lotId === lot.id || c.id === lot.contractId);
+
+  // Carrega planta salva do empreendimento (IndexedDB ou amostra)
+  useEffect(() => {
+    let cancelled = false;
+    setDxfFile(null);
+    setSavedBuffer(null);
+    setSavedName(null);
+    setLabels([]);
+    setPickHint(null);
+
+    const meta = emp?.plantaDxf;
+    if (!meta) {
+      setDxfSample("MIRASSOL.dxf");
+      return;
+    }
+    if (meta.sampleId) {
+      setDxfSample(meta.sampleId);
+      return;
+    }
+    void (async () => {
+      try {
+        const row = await loadDxfBlob(devId);
+        if (cancelled || !row) return;
+        setSavedBuffer(row.buffer);
+        setSavedName(row.name);
+      } catch {
+        /* sem blob — mantém amostra */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [devId, emp?.plantaDxf?.nome, emp?.plantaDxf?.sampleId, emp?.plantaDxf?.savedAt]);
+
+  const onPick = useCallback(
+    (ev: DxfPickEvent) => {
+      const code = normalizeLotCode(ev.text);
+      const matches = matchLotsFromPick(
+        { ...ev, code },
+        lots
+      );
+      if (matches.length === 1) {
+        setSelected(matches[0]);
+        setPickHint(null);
+        notify("Lote na planta", `${matches[0].quadra}/${matches[0].lote}`);
+        return;
+      }
+      if (matches.length > 1) {
+        setSelected(matches[0]);
+        setPickHint(
+          `Vários lotes com nº ${code}: mostrando ${matches[0].quadra}/${matches[0].lote} (${matches.length} candidatos)`
+        );
+        return;
+      }
+      setSelected(null);
+      setPickHint(
+        `Rótulo DXF “${ev.text}” (${ev.layer}) sem lote cadastrado — use Gerar lotes do DXF`
+      );
+      notify("Sem cadastro", `Texto “${ev.text}” não mapeou a um lote`);
+    },
+    [lots]
+  );
+
+  const onLabels = useCallback((labs: DxfTextLabel[]) => {
+    setLabels(labs);
+  }, []);
+
+  async function persistCurrentPlanta(opts?: { generateLots?: boolean }) {
+    if (!emp) return;
+    setSaving(true);
+    try {
+      let nome = dxfFile?.name || savedName || dxfSample;
+      let sampleId: string | undefined;
+      const labelCount = labels.length;
+
+      if (dxfFile) {
+        const buf = await dxfFile.arrayBuffer();
+        await saveDxfBlob(devId, dxfFile.name, buf);
+        setSavedBuffer(buf.slice(0));
+        setSavedName(dxfFile.name);
+        nome = dxfFile.name;
+        sampleId = undefined;
+      } else if (savedBuffer && savedName) {
+        await saveDxfBlob(devId, savedName, savedBuffer);
+        nome = savedName;
+        sampleId = undefined;
+      } else {
+        // amostra pública — só meta
+        sampleId = dxfSample;
+        nome = dxfSample;
+      }
+
+      updateDevelopment(devId, {
+        plantaDxf: {
+          nome,
+          sampleId,
+          savedAt: new Date().toISOString(),
+          labelCount,
+        },
+      });
+
+      let genMsg = "";
+      if (opts?.generateLots && labels.length) {
+        const rows = labelsToLotRows(labels, {
+          area: 250,
+          precoVista: 120000,
+        }).map((r) => ({
+          ...r,
+          situacao: "disponivel" as LotStatus,
+        }));
+        const res = importLots(devId, rows);
+        genMsg = ` · lotes +${res.created}/≈${res.updated}`;
+      }
+
+      notify(
+        "Planta salva no empreendimento",
+        `${nome}${genMsg || ` · ${labelCount} rótulos`}`
+      );
+      setDxfFile(null);
+    } catch (err) {
+      notify(
+        "Falha ao salvar planta",
+        err instanceof Error ? err.message : "erro"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const ficha = (
+    <DetailSheet
+      open={!!selected || !!pickHint}
+      onOpenChange={(o) => {
+        if (!o) {
+          setSelected(null);
+          setPickHint(null);
+        }
+      }}
+      title={
+        selected
+          ? `Lote ${selected.quadra}/${selected.lote}`
+          : pickHint
+            ? "Seleção na planta"
+            : ""
+      }
+    >
+      {pickHint && !selected ? (
+        <p className="text-sm text-muted-foreground">{pickHint}</p>
+      ) : null}
+      {selected ? (
+        <div className="space-y-2">
+          {pickHint ? (
+            <p className="mb-2 text-xs text-amber-800">{pickHint}</p>
+          ) : null}
+          <DetailRow label="Código" value={`${selected.quadra}/${selected.lote}`} />
+          <DetailRow label="Empreendimento" value={selected.empNome} />
+          <DetailRow
+            label="Status"
+            value={<StatusPill tone="info">{selected.status}</StatusPill>}
+          />
+          <DetailRow label="Área" value={`${selected.area} m²`} />
+          <DetailRow label="Valor" value={formatBRL(selected.valor)} />
+          <DetailRow label="Valor m²" value={formatBRL(selected.valorM2)} />
+          <DetailRow
+            label="Matrícula"
+            value={selected.matricula ?? emp?.matriculaNumero ?? "—"}
+          />
+          <DetailRow
+            label="Comprador"
+            value={
+              selected.compradorNome ??
+              contractFor(selected)?.compradorNome ??
+              "—"
+            }
+          />
+          <DetailRow
+            label="Contrato"
+            value={
+              contractFor(selected)
+                ? `${contractFor(selected)!.numero} · ${contractFor(selected)!.status}`
+                : selected.contractId ?? "—"
+            }
+          />
+          {emp?.cartorioNome ? (
+            <DetailRow
+              label="Cartório"
+              value={`${emp.cartorioNome}${emp.cartorioCidade ? ` · ${emp.cartorioCidade}/${emp.cartorioUf ?? ""}` : ""}`}
+            />
+          ) : null}
+          {emp?.certidaoNumero ? (
+            <DetailRow
+              label="Certidão"
+              value={`${emp.certidaoNumero}${emp.certidaoData ? ` · ${emp.certidaoData}` : ""}`}
+            />
+          ) : null}
+          <DetailRow
+            label="Bloqueios"
+            value={[
+              selected.bloqueiaVenda ? "venda" : null,
+              selected.bloqueiaFinanceiro ? "financeiro" : null,
+            ]
+              .filter(Boolean)
+              .join(", ") || "—"}
+          />
+          {selected.status === "disponivel" ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                changeLotStatus(
+                  [selected.id],
+                  "reservado",
+                  "Reserva pela planta"
+                );
+                notify("Reservado");
+                setSelected(null);
+              }}
+            >
+              Reservar
+            </Button>
+          ) : null}
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/vendas/nova?lotId=${selected.id}`}>Ir para venda</Link>
+          </Button>
+        </div>
+      ) : null}
+    </DetailSheet>
+  );
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Planta do loteamento"
-        description="DXF interativo (zoom, pan, camadas, medir) e grade colorida por status."
+        description="DXF interativo (zoom, pan, camadas, medir) e grade colorida por status. Clique no número do lote para abrir a ficha."
         actions={
           <div className="flex flex-wrap gap-2">
             <div className="inline-flex rounded-sm border border-linha p-0.5">
@@ -102,8 +345,9 @@ export default function PlantaPage() {
       {modo === "dxf" ? (
         <ModuleSection title={emp?.nome ? `DXF · ${emp.nome}` : "Visualizador DXF"}>
           <p className="mb-3 text-sm text-muted-foreground">
-            Use <strong>Abrir DXF…</strong> no viewer (sem limite de MB). Roda =
-            zoom, arrastar = mover, F = enquadrar, Medir, camadas.
+            Use <strong>Abrir DXF…</strong> no viewer (sem limite de MB). Clique no
+            número do lote para ver status, área, valor e contrato. Salve a planta
+            no empreendimento para reabrir depois.
           </p>
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <select
@@ -114,6 +358,7 @@ export default function PlantaPage() {
               {state.developments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.nome}
+                  {d.plantaDxf ? " · planta salva" : ""}
                 </option>
               ))}
             </select>
@@ -121,8 +366,15 @@ export default function PlantaPage() {
               <Button
                 key={s.id}
                 size="sm"
-                variant={dxfSample === s.id ? "default" : "outline"}
+                variant={
+                  !dxfFile && !savedBuffer && dxfSample === s.id
+                    ? "default"
+                    : "outline"
+                }
                 onClick={() => {
+                  setDxfFile(null);
+                  setSavedBuffer(null);
+                  setSavedName(null);
                   setDxfSample(s.id);
                   notify("Amostra DXF", s.label);
                 }}
@@ -130,12 +382,58 @@ export default function PlantaPage() {
                 {s.label}
               </Button>
             ))}
+            <Button
+              size="sm"
+              variant="default"
+              disabled={saving || !emp}
+              onClick={() => void persistCurrentPlanta()}
+            >
+              {saving ? "Salvando…" : "Salvar planta no empreendimento"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={saving || !emp || labels.length === 0}
+              onClick={() => void persistCurrentPlanta({ generateLots: true })}
+            >
+              Salvar + gerar lotes do DXF
+            </Button>
+            {emp?.plantaDxf ? (
+              <span className="text-xs text-muted-foreground">
+                Salva: {emp.plantaDxf.nome} ·{" "}
+                {new Date(emp.plantaDxf.savedAt).toLocaleString("pt-BR")}
+                {emp.plantaDxf.labelCount != null
+                  ? ` · ${emp.plantaDxf.labelCount} rótulos`
+                  : ""}
+              </span>
+            ) : null}
           </div>
           <DxfViewer
-            arquivo={dxfSample}
+            arquivo={dxfFile || savedBuffer ? null : dxfSample}
+            file={dxfFile}
+            buffer={dxfFile ? null : savedBuffer}
+            bufferName={savedName}
             height="72vh"
-            title={`DXF · ${dxfSample}`}
+            title={`DXF · ${dxfFile?.name || savedName || dxfSample}`}
+            onPick={onPick}
+            onLabels={onLabels}
+            onLoaded={({ name, buffer }) => {
+              // Abrir DXF no viewer (ou amostra) → buffer disponível p/ salvar
+              setSavedBuffer(buffer);
+              setSavedName(name);
+              if (/MIRASSOL|PARQUE_UNIS/i.test(name)) {
+                setDxfSample(name);
+              } else {
+                setDxfFile(null);
+              }
+            }}
           />
+          <p className="mt-2 text-xs text-muted-foreground">
+            {labels.length
+              ? `${labels.length} rótulos de lote detectados nas camadas Número/Identificação.`
+              : "Aguardando rótulos do desenho…"}
+          </p>
+          {ficha}
         </ModuleSection>
       ) : null}
 
@@ -337,55 +635,7 @@ export default function PlantaPage() {
         ) : null}
       </div>
 
-      <DetailSheet
-        open={!!selected}
-        onOpenChange={(o) => !o && setSelected(null)}
-        title={
-          selected
-            ? `Lote ${selected.quadra}/${selected.lote}`
-            : ""
-        }
-      >
-        {selected ? (
-          <div className="space-y-2">
-            <DetailRow label="Empreendimento" value={selected.empNome} />
-            <DetailRow
-              label="Status"
-              value={<StatusPill tone="info">{selected.status}</StatusPill>}
-            />
-            <DetailRow label="Área" value={`${selected.area} m²`} />
-            <DetailRow label="Valor" value={formatBRL(selected.valor)} />
-            <DetailRow
-              label="Polígono"
-              value={
-                (selected.plantaPoligono?.length ?? 0) >= 3
-                  ? `${selected.plantaPoligono!.length} vértices`
-                  : "—"
-              }
-            />
-            <DetailRow
-              label="Comprador"
-              value={selected.compradorNome ?? "—"}
-            />
-            {selected.status === "disponivel" ? (
-              <Button
-                size="sm"
-                onClick={() => {
-                  changeLotStatus(
-                    [selected.id],
-                    "reservado",
-                    "Reserva pela planta"
-                  );
-                  notify("Reservado");
-                  setSelected(null);
-                }}
-              >
-                Reservar
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </DetailSheet>
+      {ficha}
       </>
       ) : null}
     </div>
