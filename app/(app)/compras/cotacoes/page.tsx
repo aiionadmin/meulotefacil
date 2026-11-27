@@ -12,6 +12,7 @@ import {
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import { Input } from "@/components/ui/input";
 import {
+  AttachDropZone,
   DetailRow,
   DetailSheet,
   Field,
@@ -336,32 +337,26 @@ export default function CotacoesPage() {
                     ))}
                   </select>
                 </Field>
-                <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0];
-                      if (!f) return;
-                      const parsed = await parseCotacaoPdf(f, {
-                        fornecedor: live.fornecedores.find(
-                          (x) => x.id === pdfFornecedor
-                        )?.fornecedor,
-                      });
-                      addArquivoCotacao(
-                        live.id,
-                        f.name,
-                        pdfFornecedor || undefined
-                      );
-                      notify("PDF anexado", parsed.aviso);
-                      e.target.value = "";
-                    }}
-                  />
-                  <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
-                    Enviar PDF do fornecedor
-                  </span>
-                </label>
+                <AttachDropZone
+                  accept=".pdf,application/pdf"
+                  multiple={false}
+                  label="Arraste o PDF do fornecedor ou clique"
+                  onFiles={async (files) => {
+                    const f = files[0];
+                    if (!f) return;
+                    const parsed = await parseCotacaoPdf(f, {
+                      fornecedor: live.fornecedores.find(
+                        (x) => x.id === pdfFornecedor
+                      )?.fornecedor,
+                    });
+                    addArquivoCotacao(
+                      live.id,
+                      f.name,
+                      pdfFornecedor || undefined
+                    );
+                    notify("PDF anexado", parsed.aviso);
+                  }}
+                />
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   {(live.arquivos ?? []).length === 0 ? (
                     <li>Nenhum arquivo.</li>

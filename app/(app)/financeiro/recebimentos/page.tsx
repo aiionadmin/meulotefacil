@@ -59,6 +59,7 @@ export default function RecebimentosPage() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Recebimento | null>(null);
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState({
     descricao: "",
     cliente: "",
@@ -71,6 +72,11 @@ export default function RecebimentosPage() {
     impostosRetidos: 0,
     forma: "boleto" as FormaPagamento,
   });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -98,7 +104,7 @@ export default function RecebimentosPage() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/financeiro/pagamentos">Pagamentos</Link>
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button size="sm" onClick={() => { setFormDirty(false); setOpen(true); }}>
               Novo faturamento
             </Button>
           </>
@@ -307,6 +313,7 @@ export default function RecebimentosPage() {
         open={open}
         onOpenChange={setOpen}
         title="Novo faturamento"
+        dirty={formDirty}
         onSubmit={() => {
           const naturezaId =
             form.naturezaId || state.naturezas[0]?.id;
@@ -340,19 +347,20 @@ export default function RecebimentosPage() {
             return;
           }
           notify("Faturamento + recebimento criados");
+          setFormDirty(false);
           setOpen(false);
         }}
       >
         <Field label="Descrição *">
           <Input
             value={form.descricao}
-            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            onChange={(e) => patchForm({ descricao: e.target.value })}
           />
         </Field>
         <Field label="Cliente *">
           <SearchSelect
             value={form.cliente}
-            onChange={(cliente) => setForm({ ...form, cliente })}
+            onChange={(cliente) => patchForm({ cliente })}
             placeholder="Buscar cliente…"
             options={[
               ...new Set(cart.contracts.map((c) => c.compradorNome).filter(Boolean)),
@@ -362,7 +370,7 @@ export default function RecebimentosPage() {
         <Field label="Natureza *">
           <SearchSelect
             value={form.naturezaId || state.naturezas[0]?.id || ""}
-            onChange={(naturezaId) => setForm({ ...form, naturezaId })}
+            onChange={(naturezaId) => patchForm({ naturezaId })}
             placeholder="Buscar natureza…"
             options={state.naturezas.map((n) => ({
               value: n.id,
@@ -373,7 +381,7 @@ export default function RecebimentosPage() {
         <Field label="Conta *">
           <SearchSelect
             value={form.contaId || state.contas[0]?.id || ""}
-            onChange={(contaId) => setForm({ ...form, contaId })}
+            onChange={(contaId) => patchForm({ contaId })}
             placeholder="Buscar conta…"
             options={state.contas
               .filter((c) => c.ativa)
@@ -387,7 +395,7 @@ export default function RecebimentosPage() {
         <Field label="Centro de custo *">
           <SearchSelect
             value={form.centroLabel}
-            onChange={(centroLabel) => setForm({ ...form, centroLabel })}
+            onChange={(centroLabel) => patchForm({ centroLabel })}
             placeholder="Buscar centro…"
             options={[
               {
@@ -414,9 +422,7 @@ export default function RecebimentosPage() {
               type="number"
               value={form.valorBruto}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  valorBruto: Number(e.target.value) || 0,
+                patchForm({ valorBruto: Number(e.target.value) || 0,
                 })
               }
             />
@@ -426,9 +432,7 @@ export default function RecebimentosPage() {
               type="number"
               value={form.impostosRetidos}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  impostosRetidos: Number(e.target.value) || 0,
+                patchForm({ impostosRetidos: Number(e.target.value) || 0,
                 })
               }
             />

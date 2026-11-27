@@ -47,16 +47,24 @@ export default function AlcadasPage() {
     updateApprovalRule,
   } = useFase1();
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY);
 
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
+
   function openCreate() {
+    setFormDirty(false);
     setEditId(null);
     setForm(EMPTY);
     setOpen(true);
   }
 
   function openEdit(r: ApprovalRule) {
+    setFormDirty(false);
     setEditId(r.id);
     setForm({
       tipo: r.tipo,
@@ -220,6 +228,7 @@ export default function AlcadasPage() {
         onOpenChange={setOpen}
         title={editId ? "Editar alçada" : "Nova alçada"}
         submitLabel="Salvar"
+        dirty={formDirty}
         onSubmit={() => {
           if (!form.perfilNome.trim()) {
             notify("Perfil obrigatório");
@@ -246,6 +255,7 @@ export default function AlcadasPage() {
             addApprovalRule(payload);
             notify("Alçada criada");
           }
+          setFormDirty(false);
           setOpen(false);
         }}
       >
@@ -253,7 +263,7 @@ export default function AlcadasPage() {
           <select
             className={fieldControlClass}
             value={form.tipo}
-            onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+            onChange={(e) => patchForm({ tipo: e.target.value })}
           >
             {TIPOS.map((t) => (
               <option key={t} value={t}>
@@ -267,7 +277,7 @@ export default function AlcadasPage() {
             className={fieldControlClass}
             value={form.perfilNome}
             onChange={(e) =>
-              setForm({ ...form, perfilNome: e.target.value })
+              patchForm({ perfilNome: e.target.value })
             }
           >
             {state.profiles.map((p) => (
@@ -283,7 +293,7 @@ export default function AlcadasPage() {
               type="number"
               value={form.valorMinimo}
               onChange={(e) =>
-                setForm({ ...form, valorMinimo: e.target.value })
+                patchForm({ valorMinimo: e.target.value })
               }
               placeholder="Sem mínimo"
             />
@@ -293,7 +303,7 @@ export default function AlcadasPage() {
               type="number"
               value={form.valorMaximo}
               onChange={(e) =>
-                setForm({ ...form, valorMaximo: e.target.value })
+                patchForm({ valorMaximo: e.target.value })
               }
               placeholder="Sem teto"
             />
@@ -304,9 +314,7 @@ export default function AlcadasPage() {
             className={fieldControlClass}
             value={form.centroTipo}
             onChange={(e) =>
-              setForm({
-                ...form,
-                centroTipo: e.target.value as typeof form.centroTipo,
+              patchForm({ centroTipo: e.target.value as typeof form.centroTipo,
               })
             }
           >
@@ -319,7 +327,7 @@ export default function AlcadasPage() {
           <input
             type="checkbox"
             checked={form.ativo}
-            onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
+            onChange={(e) => patchForm({ ativo: e.target.checked })}
           />
           Ativa
         </label>

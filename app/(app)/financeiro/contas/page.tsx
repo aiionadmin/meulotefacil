@@ -11,6 +11,7 @@ import {
 } from "@/components/app/ModulePage";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
+  AttachDropZone,
   DetailRow,
   DetailSheet,
   Field,
@@ -54,6 +55,7 @@ export default function ContasPage() {
   const [linhas, setLinhas] = useState<ConcLinha[]>([]);
   const [ofxMeta, setOfxMeta] = useState("");
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [contaSel, setContaSel] = useState<ContaBancaria | null>(null);
   const [tab, setTab] = useState<ConcStatus>("pendente");
   const [busca, setBusca] = useState("");
@@ -71,6 +73,11 @@ export default function ContasPage() {
     empresaId:
       selectedId === "todas" ? empresas[0]?.id ?? "" : selectedId,
   });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
 
   const filtradas = useMemo(() => {
     const term = busca.trim().toLowerCase();
@@ -116,7 +123,7 @@ export default function ContasPage() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/financeiro/cobranca-facil">Cobrança Fácil</Link>
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button size="sm" onClick={() => { setFormDirty(false); setOpen(true); }}>
               Nova Conta bancária
             </Button>
           </>
@@ -221,13 +228,12 @@ export default function ContasPage() {
 
             <div className="border-t border-linha pt-3">
               <p className="mb-2 text-sm font-medium">Conciliação</p>
-              <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="file"
-                  accept=".ofx,.OFX,text/plain"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0];
+              <AttachDropZone
+                accept=".ofx,.OFX,text/plain"
+                multiple={false}
+                label="Arraste o extrato OFX ou clique"
+                onFiles={async (files) => {
+                    const f = files[0];
                     if (!f) return;
                     const buf = await f.arrayBuffer();
                     const parsed = parseOfxBytes(buf);
@@ -250,10 +256,6 @@ export default function ContasPage() {
                     notify("OFX lido", `${parsed.transacoes.length} transações`);
                   }}
                 />
-                <span className="rounded-sm border border-border bg-card px-3 py-1.5 hover:bg-paper-muted">
-                  Enviar OFX / QFX
-                </span>
-              </label>
               {ofxMeta ? (
                 <p className="mt-2 text-xs text-muted-foreground">{ofxMeta}</p>
               ) : null}
@@ -501,6 +503,7 @@ export default function ContasPage() {
         open={open}
         onOpenChange={setOpen}
         title="Nova conta"
+        dirty={formDirty}
         onSubmit={() => {
           if (!form.nome.trim()) {
             notify("Nome obrigatório");
@@ -519,13 +522,14 @@ export default function ContasPage() {
               (selectedId === "todas" ? empresas[0]?.id : selectedId),
           });
           notify("Conta criada");
+          setFormDirty(false);
           setOpen(false);
         }}
       >
         <Field label="Empresa *">
           <SearchSelect
             value={form.empresaId}
-            onChange={(empresaId) => setForm({ ...form, empresaId })}
+            onChange={(empresaId) => patchForm({ empresaId })}
             placeholder="Buscar empresa…"
             options={empresas.map((e) => ({
               value: e.id,
@@ -536,13 +540,13 @@ export default function ContasPage() {
         <Field label="Nome *">
           <Input
             value={form.nome}
-            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            onChange={(e) => patchForm({ nome: e.target.value })}
           />
         </Field>
         <Field label="Banco">
           <Input
             value={form.banco}
-            onChange={(e) => setForm({ ...form, banco: e.target.value })}
+            onChange={(e) => patchForm({ banco: e.target.value })}
           />
         </Field>
         <Field label="Tipo">
@@ -550,9 +554,7 @@ export default function ContasPage() {
             className={fieldControlClass}
             value={form.tipo}
             onChange={(e) =>
-              setForm({
-                ...form,
-                tipo: e.target.value as typeof form.tipo,
+              patchForm({ tipo: e.target.value as typeof form.tipo,
               })
             }
           >
@@ -566,9 +568,7 @@ export default function ContasPage() {
             className={fieldControlClass}
             value={form.proprietario}
             onChange={(e) =>
-              setForm({
-                ...form,
-                proprietario: e.target.value as typeof form.proprietario,
+              patchForm({ proprietario: e.target.value as typeof form.proprietario,
               })
             }
           >
@@ -581,9 +581,7 @@ export default function ContasPage() {
             type="number"
             value={form.valorInicial}
             onChange={(e) =>
-              setForm({
-                ...form,
-                valorInicial: Number(e.target.value) || 0,
+              patchForm({ valorInicial: Number(e.target.value) || 0,
               })
             }
           />

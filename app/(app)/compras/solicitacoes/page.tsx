@@ -14,6 +14,7 @@ import { PaginatedTable } from "@/components/app/PaginatedTable";
 import {
   DetailRow,
   DetailSheet,
+  AttachDropZone,
   Field,
   FilterBar,
   FormDialog,
@@ -61,10 +62,10 @@ export default function ComprasSolicitacoesPage() {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("todas");
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [selected, setSelected] = useState<Solicitacao | null>(null);
   const [motivo, setMotivo] = useState("");
   const [comentario, setComentario] = useState("");
-  const [arquivoNome, setArquivoNome] = useState("");
   const [form, setForm] = useState({
     descricao: "",
     centroKey: "",
@@ -75,6 +76,11 @@ export default function ComprasSolicitacoesPage() {
       { descricao: "Item 1", unidade: "un", quantidade: 1 },
     ] as ItemDraft[],
   });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
 
   const centros = useMemo(() => {
     const visiveis = filterObrasVisiveis(obras.obras, currentUser, perfilNome);
@@ -368,27 +374,21 @@ export default function ComprasSolicitacoesPage() {
                   ))
                 )}
               </ul>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nome do arquivo"
-                  value={arquivoNome}
-                  onChange={(e) => setArquivoNome(e.target.value)}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    if (!addArquivoSc(live.id, arquivoNome)) {
-                      notify("Informe o nome");
+              <AttachDropZone
+                onFiles={(files) => {
+                  for (const f of files) {
+                    if (!addArquivoSc(live.id, f.name)) {
+                      notify("Falha ao anexar", f.name);
                       return;
                     }
-                    setArquivoNome("");
-                    notify("Arquivo anexado");
-                  }}
-                >
-                  +
-                </Button>
-              </div>
+                  }
+                  notify(
+                    files.length === 1
+                      ? "Arquivo anexado"
+                      : `${files.length} arquivos anexados`
+                  );
+                }}
+              />
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
               {live.status === "rascunho" ? (
@@ -494,6 +494,7 @@ export default function ComprasSolicitacoesPage() {
         open={open}
         onOpenChange={setOpen}
         title="Nova solicitação de compra"
+        dirty={formDirty}
         onSubmit={() => {
           if (!form.descricao.trim()) {
             notify("Informe a descrição");
@@ -522,6 +523,7 @@ export default function ComprasSolicitacoesPage() {
             return;
           }
           notify(`${sc.numero} criada`);
+          setFormDirty(false);
           setOpen(false);
           setForm({
             descricao: "",
@@ -536,7 +538,7 @@ export default function ComprasSolicitacoesPage() {
         <Field label="Centro de custo *">
           <SearchSelect
             value={form.centroKey}
-            onChange={(centroKey) => setForm({ ...form, centroKey })}
+            onChange={(centroKey) => patchForm({ centroKey })}
             placeholder="Buscar obra ou empresa…"
             options={centros.map((c) => ({
               value: c.key,
@@ -548,7 +550,7 @@ export default function ComprasSolicitacoesPage() {
         <Field label="Descrição *">
           <Input
             value={form.descricao}
-            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            onChange={(e) => patchForm({ descricao: e.target.value })}
           />
         </Field>
         <Field label="Necessidade (receber até)">
@@ -556,7 +558,7 @@ export default function ComprasSolicitacoesPage() {
             type="date"
             value={form.necessidade}
             onChange={(e) =>
-              setForm({ ...form, necessidade: e.target.value })
+              patchForm({ necessidade: e.target.value })
             }
           />
         </Field>
@@ -564,9 +566,7 @@ export default function ComprasSolicitacoesPage() {
           <Input
             value={form.itens[0]?.descricao ?? ""}
             onChange={(e) =>
-              setForm({
-                ...form,
-                itens: [
+              patchForm({ itens: [
                   {
                     ...form.itens[0],
                     descricao: e.target.value,
@@ -583,9 +583,7 @@ export default function ComprasSolicitacoesPage() {
             <Input
               value={form.itens[0]?.unidade ?? "un"}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  itens: [
+                patchForm({ itens: [
                     {
                       ...form.itens[0],
                       unidade: e.target.value,
@@ -602,9 +600,7 @@ export default function ComprasSolicitacoesPage() {
               type="number"
               value={form.itens[0]?.quantidade ?? 1}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  itens: [
+                patchForm({ itens: [
                     {
                       ...form.itens[0],
                       quantidade: Number(e.target.value) || 1,
@@ -622,7 +618,7 @@ export default function ComprasSolicitacoesPage() {
             type="checkbox"
             checked={form.urgente}
             onChange={(e) =>
-              setForm({ ...form, urgente: e.target.checked })
+              patchForm({ urgente: e.target.checked })
             }
           />
           Marcar como urgente

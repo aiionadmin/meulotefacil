@@ -11,7 +11,7 @@ Base: `cursor/replica-leitura-tabelas-fec9` (PR #108).
 ## Pendente
 
 - Upload de blob real (só metadados em `files`)
-- UX aceite (DnD / unsaved amplo / auto-etapas) — PR seguinte
+- UX aceite (DnD / unsaved amplo / auto-etapas) — ver `docs/replica-ux-aceite-pr.md`
 - Sem deploy
 
 ## Como testar

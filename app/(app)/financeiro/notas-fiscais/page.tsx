@@ -9,6 +9,7 @@ import {
   StatusPill,
 } from "@/components/app/ModulePage";
 import {
+  AttachDropZone,
   Field,
   FormSheet,
   fieldControlClass,
@@ -31,6 +32,7 @@ export default function NotasFiscaisPage() {
   } = useFinanceiro();
   const [xmlPreview, setXmlPreview] = useState("");
   const [linkOpen, setLinkOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [notaLink, setNotaLink] = useState<NotaFiscal | null>(null);
   const [lanId, setLanId] = useState("");
 
@@ -59,71 +61,64 @@ export default function NotasFiscaisPage() {
         title="Notas Fiscais"
         description="Upload XML/PDF, vínculo com lançamento. Emissão NFSe e captura Sefaz preparadas (desligadas)."
         actions={
-          <>
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/financeiro/pagamentos">Pagamentos</Link>
-            </Button>
-            <label className="inline-flex cursor-pointer">
-              <input
-                type="file"
-                accept=".xml,.pdf"
-                className="hidden"
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  const meu =
-                    cnpjs[0]?.cnpj ?? "00.000.000/0001-00";
-                  if (f.name.toLowerCase().endsWith(".xml")) {
-                    const text = await f.text();
-                    const p = parseNfeXml(text);
-                    setXmlPreview(
-                      p.ok
-                        ? `${p.tipo.toUpperCase()} ${p.serie ?? ""}-${p.numero ?? ""} · ${p.emissor ?? "—"} · ${p.valor != null ? formatBRL(p.valor) : "—"}`
-                        : `Leitura parcial: ${p.erros.join("; ") || f.name}`
-                    );
-                    addNota({
-                      emissao: p.emissao ?? new Date().toISOString().slice(0, 10),
-                      serie: p.serie ?? "1",
-                      numero: p.numero ?? String(Date.now()).slice(-6),
-                      situacao: p.ok ? "autorizada" : "leitura_parcial",
-                      emissor: p.emissor ?? f.name,
-                      cnpj: "—",
-                      valor: p.valor ?? 0,
-                      lancada: false,
-                      meuCnpj: meu,
-                    });
-                    notify(
-                      p.ok ? "Nota persistida do XML" : "Nota com avisos",
-                      p.numero ?? f.name
-                    );
-                  } else {
-                    setXmlPreview(`PDF recebido: ${f.name}`);
-                    addNota({
-                      emissao: new Date().toISOString().slice(0, 10),
-                      serie: "PDF",
-                      numero: String(Date.now()).slice(-6),
-                      situacao: "arquivo",
-                      emissor: f.name,
-                      cnpj: "—",
-                      valor: 0,
-                      lancada: false,
-                      meuCnpj: meu,
-                    });
-                    notify("PDF anexado como nota", f.name);
-                  }
-                  e.target.value = "";
-                }}
-              />
-              <span className="inline-flex h-8 items-center rounded-md border border-input px-3 text-xs font-medium hover:bg-accent">
-                Upload XML/PDF
-              </span>
-            </label>
-          </>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/financeiro/pagamentos">Pagamentos</Link>
+          </Button>
         }
       />
-      {xmlPreview ? (
-        <p className="text-sm text-muted-foreground">{xmlPreview}</p>
-      ) : null}
+      <ModuleSection title="Importar nota">
+        <AttachDropZone
+          accept=".xml,.pdf,application/pdf,text/xml"
+          multiple={false}
+          label="Arraste XML/PDF da NF ou clique"
+          onFiles={async (files) => {
+            const f = files[0];
+            if (!f) return;
+            const meu = cnpjs[0]?.cnpj ?? "00.000.000/0001-00";
+            if (f.name.toLowerCase().endsWith(".xml")) {
+              const text = await f.text();
+              const p = parseNfeXml(text);
+              setXmlPreview(
+                p.ok
+                  ? `${p.tipo.toUpperCase()} ${p.serie ?? ""}-${p.numero ?? ""} · ${p.emissor ?? "—"} · ${p.valor != null ? formatBRL(p.valor) : "—"}`
+                  : `Leitura parcial: ${p.erros.join("; ") || f.name}`
+              );
+              addNota({
+                emissao: p.emissao ?? new Date().toISOString().slice(0, 10),
+                serie: p.serie ?? "1",
+                numero: p.numero ?? String(Date.now()).slice(-6),
+                situacao: p.ok ? "autorizada" : "leitura_parcial",
+                emissor: p.emissor ?? f.name,
+                cnpj: "—",
+                valor: p.valor ?? 0,
+                lancada: false,
+                meuCnpj: meu,
+              });
+              notify(
+                p.ok ? "Nota persistida do XML" : "Nota com avisos",
+                p.numero ?? f.name
+              );
+            } else {
+              setXmlPreview(`PDF recebido: ${f.name}`);
+              addNota({
+                emissao: new Date().toISOString().slice(0, 10),
+                serie: "PDF",
+                numero: String(Date.now()).slice(-6),
+                situacao: "arquivo",
+                emissor: f.name,
+                cnpj: "—",
+                valor: 0,
+                lancada: false,
+                meuCnpj: meu,
+              });
+              notify("PDF anexado como nota", f.name);
+            }
+          }}
+        />
+        {xmlPreview ? (
+          <p className="mt-2 text-sm text-muted-foreground">{xmlPreview}</p>
+        ) : null}
+      </ModuleSection>
 
       <ModuleSection title="Meus CNPJs">
         <PaginatedTable
@@ -299,6 +294,7 @@ export default function NotasFiscaisPage() {
                       e.stopPropagation();
                       setNotaLink(n);
                       setLanId("");
+                      setFormDirty(false);
                       setLinkOpen(true);
                     }}
                   >
@@ -320,6 +316,7 @@ export default function NotasFiscaisPage() {
             : "Vincular"
         }
         submitLabel="Vincular lançamento"
+        dirty={formDirty}
         onSubmit={() => {
           if (!notaLink || !lanId) {
             notify("Selecione o lançamento");
@@ -330,6 +327,7 @@ export default function NotasFiscaisPage() {
             return;
           }
           notify("Nota vinculada");
+          setFormDirty(false);
           setLinkOpen(false);
         }}
       >
@@ -337,7 +335,7 @@ export default function NotasFiscaisPage() {
           <select
             className={fieldControlClass}
             value={lanId}
-            onChange={(e) => setLanId(e.target.value)}
+            onChange={(e) => { setFormDirty(true); setLanId(e.target.value); }}
           >
             <option value="">Selecione</option>
             {state.lancamentos.map((l) => (

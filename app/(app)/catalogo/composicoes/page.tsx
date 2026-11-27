@@ -22,6 +22,7 @@ export default function ComposicoesPage() {
   const { state, addComposicao } = useObras();
   const [selected, setSelected] = useState<Composicao | null>(null);
   const [open, setOpen] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState({
     codigo: "",
     descricao: "",
@@ -31,6 +32,11 @@ export default function ComposicoesPage() {
     insumoId: state.insumos[0]?.id ?? "",
     coeficiente: 1,
   });
+
+  function patchForm(patch: Partial<typeof form>) {
+    setFormDirty(true);
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
 
   const custoComp = (c: Composicao) =>
     c.itens.reduce((a, it) => {
@@ -44,7 +50,7 @@ export default function ComposicoesPage() {
         title="Composições"
         description="Insumos com coeficiente, totais por grupo e BDI — lista filtrável (C14)."
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={() => { setFormDirty(false); setOpen(true); }}>
             Nova composição
           </Button>
         }
@@ -163,6 +169,7 @@ export default function ComposicoesPage() {
         open={open}
         onOpenChange={setOpen}
         title="Nova composição"
+        dirty={formDirty}
         onSubmit={() => {
           if (!form.codigo || !form.descricao || !form.insumoId) {
             notify("Preencha código, descrição e um insumo");
@@ -185,32 +192,33 @@ export default function ComposicoesPage() {
             ],
           });
           notify("Composição criada");
+          setFormDirty(false);
           setOpen(false);
         }}
       >
         <Field label="Código *">
           <Input
             value={form.codigo}
-            onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+            onChange={(e) => patchForm({ codigo: e.target.value })}
           />
         </Field>
         <Field label="Descrição *">
           <Input
             value={form.descricao}
-            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            onChange={(e) => patchForm({ descricao: e.target.value })}
           />
         </Field>
         <Field label="Unidade *">
           <Input
             value={form.unidade}
-            onChange={(e) => setForm({ ...form, unidade: e.target.value })}
+            onChange={(e) => patchForm({ unidade: e.target.value })}
           />
         </Field>
         <Field label="Insumo inicial">
           <select
             className={fieldControlClass}
             value={form.insumoId}
-            onChange={(e) => setForm({ ...form, insumoId: e.target.value })}
+            onChange={(e) => patchForm({ insumoId: e.target.value })}
           >
             {state.insumos.map((i) => (
               <option key={i.id} value={i.id}>
@@ -224,9 +232,7 @@ export default function ComposicoesPage() {
             type="number"
             value={form.coeficiente}
             onChange={(e) =>
-              setForm({
-                ...form,
-                coeficiente: Number(e.target.value) || 0,
+              patchForm({ coeficiente: Number(e.target.value) || 0,
               })
             }
           />

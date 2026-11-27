@@ -62,6 +62,7 @@ export default function PlanoContasPage() {
   } = useFinanceiro();
 
   const [kind, setKind] = useState<SheetKind>(null);
+  const [formDirty, setFormDirty] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [planoForm, setPlanoForm] = useState({
     nome: "",
@@ -81,7 +82,21 @@ export default function PlanoContasPage() {
     ativo: true,
   });
 
+  function patchPlano(patch: Partial<typeof planoForm>) {
+    setFormDirty(true);
+    setPlanoForm((prev) => ({ ...prev, ...patch }));
+  }
+  function patchCat(patch: Partial<typeof catForm>) {
+    setFormDirty(true);
+    setCatForm((prev) => ({ ...prev, ...patch }));
+  }
+  function patchNat(patch: Partial<typeof natForm>) {
+    setFormDirty(true);
+    setNatForm((prev) => ({ ...prev, ...patch }));
+  }
+
   function openPlano(p?: PlanoConta) {
+    setFormDirty(false);
     setKind("plano");
     setEditId(p?.id ?? null);
     setPlanoForm(
@@ -102,6 +117,7 @@ export default function PlanoContasPage() {
   }
 
   function openCat(id?: string) {
+    setFormDirty(false);
     const c = id ? state.categorias.find((x) => x.id === id) : undefined;
     setKind("categoria");
     setEditId(c?.id ?? null);
@@ -123,6 +139,7 @@ export default function PlanoContasPage() {
   }
 
   function openNat(n?: NaturezaReceita) {
+    setFormDirty(false);
     setKind("natureza");
     setEditId(n?.id ?? null);
     setNatForm(
@@ -301,6 +318,7 @@ export default function PlanoContasPage() {
         onOpenChange={(o) => !o && setKind(null)}
         title={editId ? "Editar plano" : "Novo plano"}
         submitLabel="Salvar"
+        dirty={formDirty}
         onSubmit={() => {
           if (!planoForm.nome.trim()) {
             notify("Nome obrigatório");
@@ -309,6 +327,7 @@ export default function PlanoContasPage() {
           if (editId) updatePlano(editId, planoForm);
           else addPlano(planoForm);
           notify(editId ? "Plano atualizado" : "Plano criado");
+          setFormDirty(false);
           setKind(null);
         }}
       >
@@ -316,7 +335,7 @@ export default function PlanoContasPage() {
           <Input
             value={planoForm.nome}
             onChange={(e) =>
-              setPlanoForm({ ...planoForm, nome: e.target.value })
+              patchPlano({ nome: e.target.value })
             }
           />
         </Field>
@@ -325,9 +344,7 @@ export default function PlanoContasPage() {
             className={fieldControlClass}
             value={planoForm.fluxo}
             onChange={(e) =>
-              setPlanoForm({
-                ...planoForm,
-                fluxo: e.target.value as "receitas" | "despesas",
+              patchPlano({ fluxo: e.target.value as "receitas" | "despesas",
               })
             }
           >
@@ -340,9 +357,7 @@ export default function PlanoContasPage() {
             className={fieldControlClass}
             value={planoForm.grupoResultados}
             onChange={(e) =>
-              setPlanoForm({
-                ...planoForm,
-                grupoResultados: e.target.value as ResultadoGrupo,
+              patchPlano({ grupoResultados: e.target.value as ResultadoGrupo,
               })
             }
           >
@@ -360,6 +375,7 @@ export default function PlanoContasPage() {
         onOpenChange={(o) => !o && setKind(null)}
         title={editId ? "Editar categoria" : "Nova categoria"}
         submitLabel="Salvar"
+        dirty={formDirty}
         onSubmit={() => {
           if (!catForm.nome.trim() || !catForm.planoId) {
             notify("Nome e plano obrigatórios");
@@ -368,6 +384,7 @@ export default function PlanoContasPage() {
           if (editId) updateCategoria(editId, catForm);
           else addCategoria(catForm);
           notify(editId ? "Categoria atualizada" : "Categoria criada");
+          setFormDirty(false);
           setKind(null);
         }}
       >
@@ -375,7 +392,7 @@ export default function PlanoContasPage() {
           <Input
             value={catForm.nome}
             onChange={(e) =>
-              setCatForm({ ...catForm, nome: e.target.value })
+              patchCat({ nome: e.target.value })
             }
           />
         </Field>
@@ -384,7 +401,7 @@ export default function PlanoContasPage() {
             className={fieldControlClass}
             value={catForm.planoId}
             onChange={(e) =>
-              setCatForm({ ...catForm, planoId: e.target.value })
+              patchCat({ planoId: e.target.value })
             }
           >
             {state.planos
@@ -401,9 +418,7 @@ export default function PlanoContasPage() {
             className={fieldControlClass}
             value={catForm.classificacaoObra}
             onChange={(e) =>
-              setCatForm({
-                ...catForm,
-                classificacaoObra: e.target.value as ClassificacaoObra,
+              patchCat({ classificacaoObra: e.target.value as ClassificacaoObra,
               })
             }
           >
@@ -421,6 +436,7 @@ export default function PlanoContasPage() {
         onOpenChange={(o) => !o && setKind(null)}
         title={editId ? "Editar natureza" : "Nova natureza"}
         submitLabel="Salvar"
+        dirty={formDirty}
         onSubmit={() => {
           if (!natForm.nome.trim()) {
             notify("Nome obrigatório");
@@ -429,6 +445,7 @@ export default function PlanoContasPage() {
           if (editId) updateNatureza(editId, natForm);
           else addNatureza(natForm);
           notify(editId ? "Natureza atualizada" : "Natureza criada");
+          setFormDirty(false);
           setKind(null);
         }}
       >
@@ -436,7 +453,7 @@ export default function PlanoContasPage() {
           <Input
             value={natForm.nome}
             onChange={(e) =>
-              setNatForm({ ...natForm, nome: e.target.value })
+              patchNat({ nome: e.target.value })
             }
           />
         </Field>
@@ -444,7 +461,7 @@ export default function PlanoContasPage() {
           <Input
             value={natForm.linhaResultados}
             onChange={(e) =>
-              setNatForm({ ...natForm, linhaResultados: e.target.value })
+              patchNat({ linhaResultados: e.target.value })
             }
           />
         </Field>
