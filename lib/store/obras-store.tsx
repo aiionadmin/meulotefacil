@@ -19,6 +19,7 @@ import type {
   RdoStatus,
 } from "@/lib/domain/obras-types";
 import { custoLinha, totaisOrcamento } from "@/lib/money/orcamento";
+import { dualWriteObra } from "@/lib/persist/dual-write";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
@@ -212,13 +213,18 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
           propostaStatus: data.propostaStatus ?? "em_elaboracao",
         };
         setState((s) => ({ ...s, obras: [obra, ...s.obras] }));
+        void dualWriteObra(obra);
         return obra;
       },
       updateObra: (id, patch) => {
-        setState((s) => ({
-          ...s,
-          obras: s.obras.map((o) => (o.id === id ? { ...o, ...patch } : o)),
-        }));
+        setState((s) => {
+          const obras = s.obras.map((o) =>
+            o.id === id ? { ...o, ...patch } : o
+          );
+          const next = obras.find((o) => o.id === id);
+          if (next) void dualWriteObra(next);
+          return { ...s, obras };
+        });
       },
       duplicateObra: (id) => {
         const src = state.obras.find((o) => o.id === id);

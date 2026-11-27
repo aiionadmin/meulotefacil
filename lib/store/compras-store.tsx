@@ -11,6 +11,7 @@ import {
   contadoresItens,
   seedCompras,
 } from "@/lib/domain/compras-seed";
+import { dualWriteComprasConfig } from "@/lib/persist/dual-write";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
@@ -708,9 +709,8 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
         return true;
       },
       updateConfig: (patch) => {
-        setState((s) => ({
-          ...s,
-          config: {
+        setState((s) => {
+          const config = {
             ...s.config,
             ...patch,
             cotacaoNumeroInicial: Math.max(
@@ -721,8 +721,10 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
               1,
               patch.ocNumeroInicial ?? s.config.ocNumeroInicial
             ),
-          },
-        }));
+          };
+          void dualWriteComprasConfig(config);
+          return { ...s, config };
+        });
       },
     }),
     [state, ready]
