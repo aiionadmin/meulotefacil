@@ -104,6 +104,12 @@ type FluxoApi = {
   ) => boolean;
   marcarPerdido: (id: string, motivo: string) => void;
   addProposal: (data: Omit<Proposal, "id" | "status">) => Proposal;
+  updateProposal: (
+    id: string,
+    patch: Partial<Omit<Proposal, "id">>
+  ) => Proposal | null;
+  /** Remove proposta. Bloqueia se já convertida em contrato. */
+  removeProposal: (id: string) => { ok: boolean; reason?: string; proposal?: Proposal };
   converterProposal: (id: string) => Proposal | null;
   registrarContato: (
     caseId: string,
@@ -393,6 +399,37 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return p;
+      },
+      updateProposal: (id, patch) => {
+        let updated: Proposal | null = null;
+        setState((s) => {
+          const current = s.proposals.find((x) => x.id === id);
+          if (!current) return s;
+          if (current.status === "convertida" && patch.status && patch.status !== "convertida") {
+            return s;
+          }
+          updated = { ...current, ...patch, id: current.id };
+          return {
+            ...s,
+            proposals: s.proposals.map((x) => (x.id === id ? updated! : x)),
+          };
+        });
+        return updated;
+      },
+      removeProposal: (id) => {
+        const p = state.proposals.find((x) => x.id === id);
+        if (!p) return { ok: false, reason: "Proposta não encontrada" };
+        if (p.status === "convertida") {
+          return {
+            ok: false,
+            reason: "Proposta convertida em contrato — não pode excluir",
+          };
+        }
+        setState((s) => ({
+          ...s,
+          proposals: s.proposals.filter((x) => x.id !== id),
+        }));
+        return { ok: true, proposal: p };
       },
       converterProposal: (id) => {
         let converted: Proposal | null = null;
