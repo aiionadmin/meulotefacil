@@ -28,6 +28,10 @@ import {
   type EmpReportSections,
   type EmpresaReportInfo,
 } from "@/lib/export/empreendimento-report";
+import {
+  empresaFromEmitente,
+  fetchAsDataUrl,
+} from "@/lib/export/print-document";
 
 const STEPS = ["Emitente", "Empreendimento", "Conteúdo", "Gerar"] as const;
 
@@ -60,46 +64,47 @@ export default function RelatorioEmpreendimentoPage() {
     [state.socios, devId]
   );
 
-  /** Dados formais: catálogo emitente + overrides da org/seleção. */
+  /** Dados formais: catálogo emitente (completo) + overrides da org/seleção. */
   const empresa: EmpresaReportInfo = useMemo(() => {
     const org = f1.organization;
     const fromList = empresas.find(
       (e) => e.cnpj.replace(/\D/g, "") === emitente.cnpjDigits
     );
-    if (emitenteId === "mlf") {
-      return {
-        razaoSocial: org.razaoSocial || emitente.razaoSocial,
-        nomeFantasia: org.nomeFantasia || emitente.nomeFantasia,
-        cnpj: org.cnpj || emitente.cnpj,
-        telefone: org.telefone || emitente.telefone,
-        email: org.email || emitente.email,
-        endereco: org.endereco || emitente.endereco,
-        bairro: org.bairro || emitente.bairro,
-        cidade: org.cidade || emitente.cidade,
-        uf: org.uf || emitente.uf,
-        cep: org.cep || emitente.cep,
-        inscricaoEstadual: org.inscricaoEstadual,
-      };
-    }
-    return {
-      razaoSocial: fromList?.razaoSocial ?? emitente.razaoSocial,
-      nomeFantasia: fromList?.nome ?? emitente.nomeFantasia,
-      cnpj: fromList?.cnpj ?? emitente.cnpj,
-      telefone: fromList?.telefone ?? emitente.telefone,
-      email: fromList?.email ?? emitente.email,
-      endereco: fromList?.endereco ?? emitente.endereco,
-      bairro: fromList?.bairro ?? emitente.bairro,
-      cidade: fromList?.cidade ?? emitente.cidade,
-      uf: fromList?.uf ?? emitente.uf,
-      cep: fromList?.cep ?? emitente.cep,
-    };
+    const overlay =
+      emitenteId === "mlf"
+        ? {
+            razaoSocial: org.razaoSocial,
+            nomeFantasia: org.nomeFantasia,
+            cnpj: org.cnpj,
+            telefone: org.telefone,
+            email: org.email,
+            endereco: org.endereco,
+            bairro: org.bairro,
+            cidade: org.cidade,
+            uf: org.uf,
+            cep: org.cep,
+            inscricaoEstadual: org.inscricaoEstadual,
+          }
+        : {
+            razaoSocial: fromList?.razaoSocial,
+            nomeFantasia: fromList?.nome,
+            cnpj: fromList?.cnpj,
+            telefone: fromList?.telefone,
+            email: fromList?.email,
+            endereco: fromList?.endereco,
+            bairro: fromList?.bairro,
+            cidade: fromList?.cidade,
+            uf: fromList?.uf,
+            cep: fromList?.cep,
+          };
+    return empresaFromEmitente(emitente, overlay);
   }, [emitente, emitenteId, empresas, f1.organization]);
 
   const selectedCount = (
     Object.keys(sections) as (keyof EmpReportSections)[]
   ).filter((k) => sections[k]).length;
 
-  function gerar() {
+  async function gerar() {
     if (!development) {
       notify("Selecione um empreendimento");
       return;
@@ -108,8 +113,13 @@ export default function RelatorioEmpreendimentoPage() {
       notify("Marque ao menos uma seção");
       return;
     }
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
+    // Embutir logo em data URL — blob:print não carrega /brand/... a tempo.
+    const logoDataUrl = sections.logo
+      ? await fetchAsDataUrl(emitente.logoDocumentoPath)
+      : null;
+    if (sections.logo && !logoDataUrl) {
+      notify("Logo não carregou", "Gerando com dados da empresa sem imagem");
+    }
     const html = buildEmpreendimentoReportHtml({
       empresa,
       development,
@@ -117,15 +127,18 @@ export default function RelatorioEmpreendimentoPage() {
       contracts,
       socios,
       sections,
-      logoUrl: sections.logo
-        ? `${origin}${emitente.logoDocumentoPath}`
-        : undefined,
+      logoUrl: logoDataUrl ?? undefined,
     });
     openEmpreendimentoReport(
       html,
       `relatorio-${emitenteId}-${development.codigo.toLowerCase()}`
     );
-    notify("Relatório gerado", "Janela de impressão / PDF do navegador");
+    notify(
+      "Relatório gerado",
+      logoDataUrl
+        ? "PDF com logo e dados da empresa"
+        : "Janela de impressão / PDF do navegador"
+    );
   }
 
   return (

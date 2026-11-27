@@ -22,9 +22,17 @@ const c = {
   ],
 };
 
-assert(buildContratoDocText("contrato", c).includes("Ana Souza"), "ctr");
-assert(buildContratoDocText("promissoria", c).includes("NP 001"), "np");
-assert(buildContratoDocText("mala_direta", c).includes("Saldo atualizado"), "md");
-assert(buildContratoDocHtml("contrato", c).includes("Contrato de compra"), "html");
+async function main() {
+  assert(buildContratoDocText("contrato", c).includes("Ana Souza"), "ctr");
+  assert(buildContratoDocText("promissoria", c).includes("NP 001"), "np");
+  assert(buildContratoDocText("mala_direta", c).includes("Saldo atualizado"), "md");
+  const html = await buildContratoDocHtml("contrato", c);
+  assert(html.includes("Contrato de compra"), "html");
+  assert(html.includes("Meu Lote Fácil Ltda"), "empresa no cabeçalho");
+  console.log("ok: contrato-docs");
+}
 
-console.log("ok: contrato-docs");
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
