@@ -61,6 +61,8 @@ type FinanceiroApi = {
     centros: CentroFin[];
     numeroDoc?: string;
     marcarPago?: boolean;
+    observacoes?: string;
+    retencoes?: { tipo: string; valor: number }[];
   }) => { ok: boolean; lancamento?: Lancamento; pagamentos?: Pagamento[] };
   baixarPagamento: (
     id: string,
@@ -201,6 +203,8 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           forma: input.forma,
           condicao: input.condicao,
           centros: input.centros,
+          observacoes: input.observacoes,
+          retencoes: input.retencoes?.filter((r) => r.tipo && r.valor > 0),
           criadoEm: todayIso(),
         };
         const pags: Pagamento[] = [];

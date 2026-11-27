@@ -78,6 +78,11 @@ export type FormaPagamento =
 
 export type PagamentoStatus = "em_aberto" | "pago" | "vencido" | "parcial";
 
+export type RetencaoLancamento = {
+  tipo: string;
+  valor: number;
+};
+
 export type Lancamento = {
   id: string;
   descricao: string;
@@ -94,6 +99,7 @@ export type Lancamento = {
   centros: CentroFin[];
   orderId?: string;
   observacoes?: string;
+  retencoes?: RetencaoLancamento[];
   criadoEm: string;
 };
 

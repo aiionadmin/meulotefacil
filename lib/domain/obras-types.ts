@@ -100,6 +100,8 @@ export type Obra = {
     ie?: string;
     telefone?: string;
     email?: string;
+    emailsCopia?: string;
+    endereco?: string;
   };
   exibirLancamentos: boolean;
   exibirFaturamentos: boolean;

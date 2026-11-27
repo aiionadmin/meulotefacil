@@ -78,6 +78,13 @@ export type Solicitacao = {
   ordemIds: string[];
   comentarios?: ScComentario[];
   arquivos?: ScArquivo[];
+  /** Eventos da linha do tempo (autor + data). */
+  aprovadoEm?: string;
+  aprovadoPor?: string;
+  atendidoEm?: string;
+  atendidoPor?: string;
+  recebidoEm?: string;
+  recebidoPor?: string;
 };
 
 export type CotacaoFornecedor = {

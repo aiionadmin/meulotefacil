@@ -14,7 +14,7 @@ import {
   DetailSheet,
   Field,
   FilterBar,
-  FormDialog,
+  FormSheet,
   fieldControlClass,
   notify,
 } from "@/components/app/ModuleToolkit";
@@ -24,7 +24,9 @@ import { canApprove } from "@/lib/alcadas/check";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useFase1 } from "@/lib/store/fase1-store";
+import { useObras } from "@/lib/store/obras-store";
 import type {
+  CentroFin,
   CondicaoPagamento,
   FormaPagamento,
   Pagamento,
@@ -47,8 +49,13 @@ export default function PagamentosPage() {
     setPagamentoStatus,
   } = useFinanceiro();
   const { currentUser, state: f1 } = useFase1();
+  const { state: obrasState } = useObras();
   const perfilNome =
     f1.profiles.find((p) => p.id === currentUser?.profileId)?.nome ?? "—";
+  const tiposRetencao =
+    f1.lookups
+      .find((l) => l.codigo === "tipos_retencao")
+      ?.itens.filter((i) => i.ativo) ?? [];
 
   const STATUS_COLS = [
     { id: "em_aberto", label: "Em aberto" },
@@ -78,17 +85,32 @@ export default function PagamentosPage() {
     categoriaId: "",
     competencia: new Date().toISOString().slice(0, 7) + "-01",
     vencimento: new Date().toISOString().slice(0, 10),
-    pagador: "Meu Lote Fácil",
+    pagador: "Empresa",
     contaId: "",
     valor: 1000,
     forma: "pix" as FormaPagamento,
     condicao: "a_vista" as CondicaoPagamento,
     parcelas: 2,
     centroTipo: "obra" as "obra" | "empresa",
-    centroLabel: "Infraestrutura Residencial Horizonte",
-    rateioEmpresaPct: 40,
-    rateioObraPct: 60,
+    obraId: "",
+    centroLabel: "",
     usarRateio: false,
+    rateioMode: "pct" as "pct" | "valor",
+    rateios: [
+      { obraId: "", label: "", pct: 60, valor: 600 },
+      { obraId: "", label: "Empresa", pct: 40, valor: 400, empresa: true },
+    ] as {
+      obraId: string;
+      label: string;
+      pct: number;
+      valor: number;
+      empresa?: boolean;
+    }[],
+    usarRetencao: false,
+    retencaoTipo: "",
+    retencaoValor: 0,
+    observacoes: "",
+    marcarPago: false,
   });
 
   const filtered = useMemo(() => {
@@ -451,10 +473,12 @@ export default function PagamentosPage() {
         ) : null}
       </DetailSheet>
 
-      <FormDialog
+      <FormSheet
         open={open}
         onOpenChange={setOpen}
         title="Criar lançamento"
+        submitLabel="Confirmar Lançamento"
+        wide
         onSubmit={() => {
           const contaId = form.contaId || state.contas[0]?.id;
           const categoriaId =
@@ -465,35 +489,64 @@ export default function PagamentosPage() {
             notify("Preencha os campos obrigatórios");
             return;
           }
-          const centros = form.usarRateio
-            ? [
-                {
-                  tipo: "obra" as const,
-                  obraId: "obr-1",
-                  label: "Infraestrutura Residencial Horizonte",
-                  pct: form.rateioObraPct,
-                  valor:
-                    Math.round(form.valor * (form.rateioObraPct / 100) * 100) /
-                    100,
-                },
-                {
-                  tipo: "empresa" as const,
-                  label: "Meu Lote Fácil",
-                  pct: form.rateioEmpresaPct,
-                  valor:
-                    Math.round(
-                      form.valor * (form.rateioEmpresaPct / 100) * 100
-                    ) / 100,
-                },
-              ]
-            : [
-                {
-                  tipo: form.centroTipo,
-                  obraId: form.centroTipo === "obra" ? "obr-1" : undefined,
-                  label: form.centroLabel,
-                  valor: form.valor,
-                },
-              ];
+          let centros: CentroFin[];
+          if (form.usarRateio) {
+            const sumPct = form.rateios.reduce((a, r) => a + (r.pct || 0), 0);
+            if (form.rateioMode === "pct" && Math.abs(sumPct - 100) > 0.01) {
+              notify("Rateio inválido", "A soma dos % deve ser 100");
+              return;
+            }
+            const sumVal = form.rateios.reduce((a, r) => a + (r.valor || 0), 0);
+            if (
+              form.rateioMode === "valor" &&
+              Math.abs(sumVal - form.valor) > 0.01
+            ) {
+              notify(
+                "Rateio inválido",
+                "A soma dos valores deve igualar o total"
+              );
+              return;
+            }
+            centros = form.rateios
+              .filter((r) => r.label.trim())
+              .map((r) => ({
+                tipo: r.empresa ? ("empresa" as const) : ("obra" as const),
+                obraId: r.empresa ? undefined : r.obraId || undefined,
+                label: r.label,
+                pct:
+                  form.rateioMode === "pct"
+                    ? r.pct
+                    : Math.round((r.valor / form.valor) * 10000) / 100,
+                valor:
+                  form.rateioMode === "valor"
+                    ? r.valor
+                    : Math.round(form.valor * (r.pct / 100) * 100) / 100,
+              }));
+          } else if (form.centroTipo === "empresa") {
+            centros = [
+              { tipo: "empresa", label: "Empresa", valor: form.valor },
+            ];
+          } else {
+            const obra =
+              obrasState.obras.find((o) => o.id === form.obraId) ??
+              obrasState.obras[0];
+            if (!obra && !form.centroLabel.trim()) {
+              notify("Informe o centro de custo");
+              return;
+            }
+            centros = [
+              {
+                tipo: "obra",
+                obraId: obra?.id,
+                label: form.centroLabel || obra?.nome || "Obra",
+                valor: form.valor,
+              },
+            ];
+          }
+          if (!centros.length) {
+            notify("Informe ao menos um centro de custo");
+            return;
+          }
           const r = addLancamento({
             descricao: form.descricao,
             favorecido: form.favorecido,
@@ -507,6 +560,17 @@ export default function PagamentosPage() {
             condicao: form.condicao,
             parcelas: form.parcelas,
             centros,
+            observacoes: form.observacoes || undefined,
+            marcarPago: form.marcarPago,
+            retencoes:
+              form.usarRetencao && form.retencaoTipo && form.retencaoValor > 0
+                ? [
+                    {
+                      tipo: form.retencaoTipo,
+                      valor: form.retencaoValor,
+                    },
+                  ]
+                : undefined,
           });
           if (!r.ok) {
             notify("Não foi possível criar (centro/categoria)");
@@ -518,6 +582,15 @@ export default function PagamentosPage() {
           setOpen(false);
         }}
       >
+        <Field label="Valor *">
+          <Input
+            type="number"
+            value={form.valor}
+            onChange={(e) =>
+              setForm({ ...form, valor: Number(e.target.value) || 0 })
+            }
+          />
+        </Field>
         <Field label="Descrição *">
           <Input
             value={form.descricao}
@@ -542,6 +615,12 @@ export default function PagamentosPage() {
                 label: c.nome,
                 meta: c.planoId,
               }))}
+          />
+        </Field>
+        <Field label="Pagador *">
+          <Input
+            value={form.pagador}
+            onChange={(e) => setForm({ ...form, pagador: e.target.value })}
           />
         </Field>
         <Field label="Conta *">
@@ -578,15 +657,6 @@ export default function PagamentosPage() {
             />
           </Field>
         </div>
-        <Field label="Valor *">
-          <Input
-            type="number"
-            value={form.valor}
-            onChange={(e) =>
-              setForm({ ...form, valor: Number(e.target.value) || 0 })
-            }
-          />
-        </Field>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Forma">
             <select
@@ -624,7 +694,7 @@ export default function PagamentosPage() {
           </Field>
         </div>
         {form.condicao === "parcelado" ? (
-          <Field label="Parcelas">
+          <Field label="Parcelas *">
             <Input
               type="number"
               value={form.parcelas}
@@ -637,27 +707,230 @@ export default function PagamentosPage() {
             />
           </Field>
         ) : null}
+
+        <div className="space-y-2 rounded-lg border border-linha p-3">
+          <p className="text-sm font-medium">Centro de custo</p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.usarRateio}
+              onChange={(e) =>
+                setForm({ ...form, usarRateio: e.target.checked })
+              }
+            />
+            Adicionar obras (rateio)
+          </label>
+          {!form.usarRateio ? (
+            <>
+              <Field label="Apropriar por">
+                <select
+                  className={fieldControlClass}
+                  value={form.centroTipo}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      centroTipo: e.target.value as "obra" | "empresa",
+                    })
+                  }
+                >
+                  <option value="obra">Obra</option>
+                  <option value="empresa">Empresa</option>
+                </select>
+              </Field>
+              {form.centroTipo === "obra" ? (
+                <Field label="Obra *">
+                  <SearchSelect
+                    value={form.obraId}
+                    onChange={(obraId) => {
+                      const o = obrasState.obras.find((x) => x.id === obraId);
+                      setForm({
+                        ...form,
+                        obraId,
+                        centroLabel: o?.nome ?? form.centroLabel,
+                      });
+                    }}
+                    placeholder="Buscar obra…"
+                    options={obrasState.obras.map((o) => ({
+                      value: o.id,
+                      label: o.nome,
+                      meta: o.codigo,
+                    }))}
+                  />
+                </Field>
+              ) : null}
+            </>
+          ) : (
+            <div className="space-y-2">
+              <Field label="Rateio por">
+                <select
+                  className={fieldControlClass}
+                  value={form.rateioMode}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      rateioMode: e.target.value as "pct" | "valor",
+                    })
+                  }
+                >
+                  <option value="pct">Percentual (%)</option>
+                  <option value="valor">Valor (R$)</option>
+                </select>
+              </Field>
+              {form.rateios.map((r, idx) => (
+                <div
+                  key={idx}
+                  className="grid grid-cols-[1fr_5rem_auto] items-end gap-2"
+                >
+                  <Field label={r.empresa ? "Empresa" : `Obra ${idx + 1}`}>
+                    {r.empresa ? (
+                      <Input value="Empresa" disabled />
+                    ) : (
+                      <SearchSelect
+                        value={r.obraId}
+                        onChange={(obraId) => {
+                          const o = obrasState.obras.find(
+                            (x) => x.id === obraId
+                          );
+                          const next = [...form.rateios];
+                          next[idx] = {
+                            ...r,
+                            obraId,
+                            label: o?.nome ?? "",
+                          };
+                          setForm({ ...form, rateios: next });
+                        }}
+                        placeholder="Obra…"
+                        options={obrasState.obras.map((o) => ({
+                          value: o.id,
+                          label: o.nome,
+                        }))}
+                      />
+                    )}
+                  </Field>
+                  <Field label={form.rateioMode === "pct" ? "%" : "R$"}>
+                    <Input
+                      type="number"
+                      value={
+                        form.rateioMode === "pct" ? r.pct : r.valor
+                      }
+                      onChange={(e) => {
+                        const n = Number(e.target.value) || 0;
+                        const next = [...form.rateios];
+                        next[idx] =
+                          form.rateioMode === "pct"
+                            ? { ...r, pct: n }
+                            : { ...r, valor: n };
+                        setForm({ ...form, rateios: next });
+                      }}
+                    />
+                  </Field>
+                  {!r.empresa ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          rateios: form.rateios.filter((_, i) => i !== idx),
+                        })
+                      }
+                    >
+                      ×
+                    </Button>
+                  ) : (
+                    <span className="h-9 w-8" />
+                  )}
+                </div>
+              ))}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setForm({
+                    ...form,
+                    rateios: [
+                      ...form.rateios.filter((x) => !x.empresa),
+                      {
+                        obraId: "",
+                        label: "",
+                        pct: 0,
+                        valor: 0,
+                      },
+                      ...form.rateios.filter((x) => x.empresa),
+                    ],
+                  })
+                }
+              >
+                Adicionar obra
+              </Button>
+            </div>
+          )}
+        </div>
+
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={form.usarRateio}
+            checked={form.usarRetencao}
             onChange={(e) =>
-              setForm({ ...form, usarRateio: e.target.checked })
+              setForm({ ...form, usarRetencao: e.target.checked })
             }
           />
-          Rateio em duas obras/centros (60% obra / 40% empresa)
+          Retenções
         </label>
-        {!form.usarRateio ? (
-          <Field label="Centro de custo *">
-            <Input
-              value={form.centroLabel}
-              onChange={(e) =>
-                setForm({ ...form, centroLabel: e.target.value })
-              }
-            />
-          </Field>
+        {form.usarRetencao ? (
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Tipo de retenção">
+              <select
+                className={fieldControlClass}
+                value={form.retencaoTipo}
+                onChange={(e) =>
+                  setForm({ ...form, retencaoTipo: e.target.value })
+                }
+              >
+                <option value="">Selecione</option>
+                {tiposRetencao.map((t) => (
+                  <option key={t.codigo} value={t.nome}>
+                    {t.nome}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Valor">
+              <Input
+                type="number"
+                value={form.retencaoValor}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    retencaoValor: Number(e.target.value) || 0,
+                  })
+                }
+              />
+            </Field>
+          </div>
         ) : null}
-      </FormDialog>
+
+        <Field label="Observações">
+          <Input
+            value={form.observacoes}
+            onChange={(e) =>
+              setForm({ ...form, observacoes: e.target.value })
+            }
+          />
+        </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.marcarPago}
+            onChange={(e) =>
+              setForm({ ...form, marcarPago: e.target.checked })
+            }
+          />
+          Marcar como pago
+        </label>
+      </FormSheet>
     </div>
   );
 }

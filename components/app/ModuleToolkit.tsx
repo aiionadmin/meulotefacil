@@ -179,6 +179,64 @@ export function FormDialog({
   );
 }
 
+/** Painel lateral com formulário (réplica Mais Controle). */
+export function FormSheet({
+  open,
+  onOpenChange,
+  title,
+  children,
+  onSubmit,
+  submitLabel = "Salvar",
+  busy,
+  wide,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: ReactNode;
+  onSubmit: () => void;
+  submitLabel?: string;
+  busy?: boolean;
+  wide?: boolean;
+}) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className={cn(
+          "flex w-full flex-col bg-paper text-ink",
+          wide ? "sm:max-w-xl" : "sm:max-w-lg"
+        )}
+      >
+        <SheetHeader>
+          <SheetTitle>{title}</SheetTitle>
+        </SheetHeader>
+        <form
+          className="mt-4 flex min-h-0 flex-1 flex-col"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+        >
+          <div className="flex-1 space-y-4 overflow-y-auto pr-1">{children}</div>
+          <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-linha pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {submitLabel}
+            </Button>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export function ActionButton({
   children,
   onClick,
