@@ -77,6 +77,23 @@ export type Development = {
   diaMulta: number;
   observacoes?: string;
   empresaId?: string;
+  /**
+   * Planta DXF persistida no empreendimento (meta).
+   * O arquivo sobe no IndexedDB (`lib/persist/dxf-blob`); amostras usam `sampleId`.
+   */
+  plantaDxf?: {
+    nome: string;
+    sampleId?: string;
+    savedAt: string;
+    labelCount?: number;
+  };
+  /** Cartório / registro (cadastro completo). */
+  cartorioNome?: string;
+  cartorioCidade?: string;
+  cartorioUf?: string;
+  certidaoNumero?: string;
+  certidaoData?: string;
+  certidaoObs?: string;
 };
 
 export type EmpSocio = {
