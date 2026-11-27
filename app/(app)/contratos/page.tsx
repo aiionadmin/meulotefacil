@@ -43,6 +43,7 @@ import {
   type GeoEmpFilterValues,
 } from "@/components/app/GeoEmpFilters";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
 
 const STATUS_COLS = [
   { id: "ativo", label: "Ativo" },
@@ -65,6 +66,7 @@ export default function ContratosPage() {
 
 function ContratosInner() {
   const { state, saldoDevedor, addContract, registrarOperacao } = useCarteira();
+  const { indicePadrao } = useSystemSettings();
   const { filterByDevelopmentEmpresa } = useEmpresa();
   const { openClient } = useClientCard();
   const search = useSearchParams();
@@ -364,6 +366,7 @@ function ContratosInner() {
             permutaDescricao: isPermuta
               ? form.permutaDescricao.trim()
               : undefined,
+            tipoReajuste: indicePadrao,
           });
           if (!ct) {
             notify(

@@ -10,9 +10,16 @@ export type StatusProcesso =
 export type Processo = {
   id: string;
   protocolo: string;
+  /** Núcleo/bairro (obrigatório no REURB). */
+  nucleoId?: string;
   nucleoNome: string;
   nucleoSlug: string;
   cidade: string;
+  /** Empreendimento vinculado ao processo (opcional em REURB puro). */
+  developmentId?: string;
+  empNome?: string;
+  /** Morador/cliente cadastrado. */
+  moradorPersonId?: string;
   moradorNome: string;
   fase: FaseProcesso;
   status: StatusProcesso;
@@ -24,9 +31,11 @@ export const processos: Processo[] = [
   {
     id: "proc-1",
     protocolo: "MLF-2026-0142",
+    nucleoId: "n-mafhuz",
     nucleoNome: "Jardim Mafhuz (1ª fase)",
     nucleoSlug: "jardim-mafhuz-1a-fase-campinas",
     cidade: "Campinas",
+    moradorPersonId: "p-ana",
     moradorNome: "Ana Souza",
     fase: "projetos",
     status: "projetos",
@@ -36,9 +45,11 @@ export const processos: Processo[] = [
   {
     id: "proc-2",
     protocolo: "MLF-2025-0891",
+    nucleoId: "n-paula",
     nucleoNome: "Vila Paula",
     nucleoSlug: "vila-paula-campinas",
     cidade: "Campinas",
+    moradorPersonId: "p1",
     moradorNome: "Bruno Lima",
     fase: "registro",
     status: "registro",
@@ -48,10 +59,12 @@ export const processos: Processo[] = [
   {
     id: "proc-3",
     protocolo: "MLF-2026-0033",
+    nucleoId: "n-kairos",
     nucleoNome: "Kairos",
     nucleoSlug: "kairos-campinas",
     cidade: "Campinas",
-    moradorNome: "Carla Mendes",
+    moradorPersonId: "p3",
+    moradorNome: "Ana Paula Corretores",
     fase: "planta",
     status: "projetos",
     atualizadoEm: "2026-03-10",
@@ -60,10 +73,12 @@ export const processos: Processo[] = [
   {
     id: "proc-4",
     protocolo: "MLF-2024-1204",
+    nucleoId: "n-diva2",
     nucleoNome: "Vila Diva (2ª fase)",
     nucleoSlug: "vila-diva-2a-fase-campinas",
     cidade: "Campinas",
-    moradorNome: "Diego Rocha",
+    moradorPersonId: "p4",
+    moradorNome: "José Favorecido Silva",
     fase: "registro",
     status: "concluido",
     atualizadoEm: "2025-08-01",

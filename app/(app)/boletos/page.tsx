@@ -12,9 +12,16 @@ import {
 import {
   DetailRow,
   DetailSheet,
+  FilterBar,
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import {
+  EMPTY_GEO_EMP,
+  GeoEmpFilters,
+  developmentIdsMatching,
+  type GeoEmpFilterValues,
+} from "@/components/app/GeoEmpFilters";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { downloadExcel, downloadTextTemplate } from "@/lib/export/list-export";
 import { parseCnab400Retorno } from "@/lib/cnab/retorno";
@@ -31,6 +38,7 @@ export default function BoletosPage() {
     cancelarBoletosPorIds,
   } = useCarteira();
   const [q, setQ] = useState("");
+  const [geo, setGeo] = useState<GeoEmpFilterValues>(EMPTY_GEO_EMP);
   const [selected, setSelected] = useState<BankSlip | null>(null);
   const novoRan = useRef(false);
   useEffect(() => {
@@ -56,16 +64,35 @@ export default function BoletosPage() {
     q,
   });
 
+  const geoIds = useMemo(
+    () => developmentIdsMatching(state.developments, geo),
+    [state.developments, geo]
+  );
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return state.bankSlips;
-    return state.bankSlips.filter((b) =>
-      [b.nossoNumero, b.contratoNumero, b.status, b.banco]
+    return state.bankSlips.filter((b) => {
+      if (geoIds) {
+        const ct = state.contracts.find((c) => c.id === b.contractId);
+        if (!ct || !geoIds.has(ct.developmentId)) return false;
+      }
+      if (!term) return true;
+      return [b.nossoNumero, b.contratoNumero, b.status, b.banco]
         .join(" ")
         .toLowerCase()
-        .includes(term)
-    );
-  }, [state.bankSlips, q]);
+        .includes(term);
+    });
+  }, [state.bankSlips, q, geoIds, state.contracts]);
+
+  const boletoSuggestions = useMemo(
+    () =>
+      state.bankSlips.flatMap((b) => [
+        b.nossoNumero,
+        b.contratoNumero,
+        b.banco,
+      ]),
+    [state.bankSlips]
+  );
 
   const toCard = useCallback(
     (b: BankSlip) => ({
@@ -194,6 +221,19 @@ export default function BoletosPage() {
           },
         ]}
       />
+
+      <FilterBar
+        value={q}
+        onChange={setQ}
+        placeholder="Buscar nosso número, contrato, banco…"
+        suggestions={boletoSuggestions}
+      >
+        <GeoEmpFilters
+          developments={state.developments}
+          value={geo}
+          onChange={setGeo}
+        />
+      </FilterBar>
 
       <ProcessBoard
         storageKey="boletos"

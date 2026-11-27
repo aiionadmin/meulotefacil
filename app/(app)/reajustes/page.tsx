@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +20,10 @@ import { SearchSelect } from "@/components/app/SearchSelect";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useSystemSettings } from "@/lib/store/system-settings-store";
 import { formatBRL } from "@/lib/masks/br";
+import {
+  competenciaFromMesBase,
+  findIndexQuote,
+} from "@/lib/money/index-quote";
 
 export default function ReajustesPage() {
   const {
@@ -35,6 +39,7 @@ export default function ReajustesPage() {
     fator: 1.045,
     mesBase: settings.reajuste.baseAnualMes || new Date().getMonth() + 1,
     gerarResiduo: settings.reajuste.gerarResiduo,
+    verificarMercado: true,
   });
   const [opOpen, setOpOpen] = useState(false);
   const [opForm, setOpForm] = useState({
@@ -44,6 +49,16 @@ export default function ReajustesPage() {
   });
 
   const residuos = state.installments.filter((p) => p.tipo === "Resíduo");
+
+  const cotacao = useMemo(
+    () =>
+      findIndexQuote(
+        state.indices,
+        form.indice,
+        competenciaFromMesBase(form.mesBase)
+      ),
+    [state.indices, form.indice, form.mesBase]
+  );
 
   return (
     <div className="space-y-6">
@@ -65,7 +80,27 @@ export default function ReajustesPage() {
             >
               Desfazer reajuste
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button
+              size="sm"
+              onClick={() => {
+                const q = findIndexQuote(
+                  state.indices,
+                  form.indice || indicePadrao,
+                  competenciaFromMesBase(
+                    form.mesBase ||
+                      settings.reajuste.baseAnualMes ||
+                      new Date().getMonth() + 1
+                  )
+                );
+                setForm((f) => ({
+                  ...f,
+                  indice: f.indice || indicePadrao,
+                  fator: q?.fator ?? f.fator,
+                  verificarMercado: true,
+                }));
+                setOpen(true);
+              }}
+            >
               Aplicar reajuste
             </Button>
           </>
@@ -234,11 +269,32 @@ export default function ReajustesPage() {
         onOpenChange={setOpen}
         title="Aplicar reajuste anual"
         onSubmit={() => {
+          if (form.verificarMercado) {
+            if (!cotacao) {
+              notify(
+                "Sem cotação de mercado",
+                `Cadastre ${form.indice} em /indices para a competência`
+              );
+              return;
+            }
+            if (Math.abs(cotacao.fator - form.fator) > 0.00005) {
+              notify(
+                "Fator divergente do mercado",
+                `Cotação ${cotacao.competencia}: ${cotacao.fator.toFixed(4)}`
+              );
+              return;
+            }
+          }
           const n = aplicarReajuste(form.fator, form.indice, {
             mesBase: form.mesBase,
             gerarResiduo: form.gerarResiduo,
           });
-          notify(`${n} parcelas reajustadas`, `mês-base ${form.mesBase}`);
+          notify(
+            `${n} parcelas reajustadas`,
+            `${form.indice} · mês-base ${form.mesBase}${
+              cotacao ? ` · mercado ${cotacao.fator.toFixed(4)}` : ""
+            }`
+          );
           setOpen(false);
         }}
       >
@@ -246,7 +302,19 @@ export default function ReajustesPage() {
           <select
             className={fieldControlClass}
             value={form.indice}
-            onChange={(e) => setForm({ ...form, indice: e.target.value })}
+            onChange={(e) => {
+              const indice = e.target.value;
+              const q = findIndexQuote(
+                state.indices,
+                indice,
+                competenciaFromMesBase(form.mesBase)
+              );
+              setForm({
+                ...form,
+                indice,
+                fator: q?.fator ?? form.fator,
+              });
+            }}
           >
             {settings.indices
               .filter((i) => i.ativo)
@@ -263,15 +331,25 @@ export default function ReajustesPage() {
             min={1}
             max={12}
             value={form.mesBase}
-            onChange={(e) =>
+            onChange={(e) => {
+              const mesBase = Math.min(
+                12,
+                Math.max(1, Number(e.target.value) || 1)
+              );
+              const q = findIndexQuote(
+                state.indices,
+                form.indice,
+                competenciaFromMesBase(mesBase)
+              );
               setForm({
                 ...form,
-                mesBase: Math.min(12, Math.max(1, Number(e.target.value) || 1)),
-              })
-            }
+                mesBase,
+                fator: q?.fator ?? form.fator,
+              });
+            }}
           />
         </Field>
-        <Field label="Fator (ex.: 1.045 = +4,5%)">
+        <Field label="Fator (preenchido pela cotação de mercado)">
           <Input
             type="number"
             step="0.0001"
@@ -280,7 +358,22 @@ export default function ReajustesPage() {
               setForm({ ...form, fator: Number(e.target.value) || 1 })
             }
           />
+          <p className="mt-1 text-xs text-muted-foreground">
+            {cotacao
+              ? `Mercado ${cotacao.indice} ${cotacao.competencia}: ${cotacao.fator.toFixed(4)}`
+              : "Nenhuma cotação para este índice/competência — cadastre em Índices."}
+          </p>
         </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.verificarMercado}
+            onChange={(e) =>
+              setForm({ ...form, verificarMercado: e.target.checked })
+            }
+          />
+          Verificar taxa com cotação de mercado antes de aplicar
+        </label>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

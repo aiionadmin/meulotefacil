@@ -19,6 +19,7 @@ import type {
   ContractOperation,
   Development,
   Escritura,
+  IndexQuote,
   Installment,
   Lot,
   LotStatus,
@@ -119,7 +120,16 @@ type CarteiraApi = {
     formaPagamento?: string;
     permutaDescricao?: string;
     paymentPlanId?: string;
+    /** Índice de reajuste (padrão do sistema). */
+    tipoReajuste?: string;
   }) => Contract | null;
+  upsertIndexQuote: (data: {
+    id?: string;
+    indice: string;
+    competencia: string;
+    fator: number;
+  }) => IndexQuote;
+  removeIndexQuote: (id: string) => boolean;
   updateInstallment: (
     id: string,
     patch: Partial<{
@@ -908,6 +918,33 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           };
         });
       },
+      upsertIndexQuote: ({ id, indice, competencia, fator }) => {
+        const quote: IndexQuote = {
+          id: id || uid("ix"),
+          indice: indice.trim().toUpperCase(),
+          competencia: competencia.trim(),
+          fator: Number(fator) || 1,
+        };
+        setState((s) => {
+          const exists = s.indices.some((q) => q.id === quote.id);
+          return {
+            ...s,
+            indices: exists
+              ? s.indices.map((q) => (q.id === quote.id ? quote : q))
+              : [quote, ...s.indices],
+          };
+        });
+        return quote;
+      },
+      removeIndexQuote: (id) => {
+        let ok = false;
+        setState((s) => {
+          if (!s.indices.some((q) => q.id === id)) return s;
+          ok = true;
+          return { ...s, indices: s.indices.filter((q) => q.id !== id) };
+        });
+        return ok;
+      },
       addContract: ({
         developmentId,
         lotId,
@@ -919,6 +956,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         formaPagamento,
         permutaDescricao,
         paymentPlanId,
+        tipoReajuste,
       }) => {
         const emp = state.developments.find((d) => d.id === developmentId);
         const lot = state.lots.find((l) => l.id === lotId);
@@ -959,7 +997,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           descontoPontualidadePct: 0,
           diaLimiteDesconto: 5,
           emiteBoleto: formaPagamento !== "permuta",
-          tipoReajuste: "IGPM",
+          tipoReajuste: (tipoReajuste || "IGPM").trim().toUpperCase(),
           mesBase: new Date().getMonth() + 1,
           formaPagamento: formaPagamento || "plano",
           permutaDescricao:

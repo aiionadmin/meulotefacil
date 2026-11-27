@@ -31,22 +31,77 @@ export function FilterBar({
   onChange,
   placeholder = "Buscar…",
   children,
+  suggestions,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   children?: ReactNode;
+  /** Autocomplete: sugestões ao digitar (MLF-139). */
+  suggestions?: string[];
 }) {
+  const [open, setOpen] = useState(false);
+  const matches = useMemo(() => {
+    if (!suggestions?.length) return [];
+    const q = value.trim().toLowerCase();
+    if (!q) return [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const s of suggestions) {
+      const t = s.trim();
+      if (!t) continue;
+      const key = t.toLowerCase();
+      if (seen.has(key)) continue;
+      if (!key.includes(q)) continue;
+      seen.add(key);
+      out.push(t);
+      if (out.length >= 8) break;
+    }
+    return out;
+  }, [suggestions, value]);
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="relative max-w-md flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => {
+            // delay so click on suggestion registers
+            window.setTimeout(() => setOpen(false), 120);
+          }}
           placeholder={placeholder}
           className="pl-9"
+          autoComplete="off"
+          aria-autocomplete="list"
         />
+        {open && matches.length > 0 ? (
+          <ul
+            role="listbox"
+            className="absolute z-40 mt-1 max-h-48 w-full overflow-y-auto rounded-sm border border-border bg-card py-1 text-sm shadow-md"
+          >
+            {matches.map((m) => (
+              <li key={m}>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left hover:bg-muted"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onChange(m);
+                    setOpen(false);
+                  }}
+                >
+                  {m}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
       {children ? <div className="flex flex-wrap gap-2">{children}</div> : null}
     </div>

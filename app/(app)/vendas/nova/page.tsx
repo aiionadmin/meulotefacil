@@ -21,6 +21,7 @@ import {
 import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
 
 const STEPS = [
   "Lotes",
@@ -44,6 +45,7 @@ export default function NovaVendaPage() {
     unlockLotsForSale,
   } = useCarteira();
   const { state: f1, currentUser } = useFase1();
+  const { indicePadrao } = useSystemSettings();
   const vendedor = {
     userId: currentUser?.id ?? "u-anon",
     nome: currentUser?.nome ?? "Usuário",
@@ -225,6 +227,7 @@ export default function NovaVendaPage() {
         formaPagamento,
         permutaDescricao: isPermuta ? permutaDescricao.trim() : undefined,
         paymentPlanId: planId || undefined,
+        tipoReajuste: indicePadrao,
       });
       if (ct) {
         changeLotStatus(

@@ -370,6 +370,9 @@ export function seedCarteira(): CarteiraState {
     indices: [
       { id: "ix-1", indice: "IGPM", competencia: "2026-10", fator: 1.0042 },
       { id: "ix-2", indice: "IGPM", competencia: "2026-11", fator: 1.0031 },
+      { id: "ix-3", indice: "IPCA", competencia: "2026-10", fator: 1.0024 },
+      { id: "ix-4", indice: "IPCA", competencia: "2026-11", fator: 1.0018 },
+      { id: "ix-5", indice: "INCC", competencia: "2026-11", fator: 1.0027 },
     ],
     cartorios: [
       {
