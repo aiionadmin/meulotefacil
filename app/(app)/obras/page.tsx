@@ -25,7 +25,6 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
 import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
-import { useServerPage } from "@/lib/ui/use-server-page";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
 import type { ObraStatus } from "@/lib/domain/obras-types";
@@ -86,12 +85,6 @@ export default function ObrasPage() {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [open, setOpen] = useState(false);
   const [formDirty, setFormDirty] = useState(false);
-  const server = useServerPage({
-    url: "/api/list/obras",
-    page: 1,
-    pageSize: 25,
-    q,
-  });
   const [form, setForm] = useState(EMPTY_FORM);
 
   function patchForm(patch: Partial<typeof EMPTY_FORM>) {
@@ -159,12 +152,10 @@ export default function ObrasPage() {
             ),
           },
           {
-            label: "API B17",
-            value: server.loading
-              ? "…"
-              : server.data
-                ? `${server.data.total} · ${Math.round(server.data.elapsedMs ?? 0)}ms`
-                : server.error ?? "—",
+            label: "Realizado",
+            value: formatBRL(
+              state.obras.reduce((a, o) => a + o.realizado, 0)
+            ),
           },
         ]}
       />
