@@ -295,11 +295,17 @@ export function ClientCardSheet() {
         if (!next) closeClient();
       }}
     >
-      {open && data ? (
+      {/* SheetContent must stay mounted so Radix can clear body pointer-events */}
       <SheetContent
         side="right"
         className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl"
       >
+        {!open || !data ? (
+          <SheetHeader className="border-b border-border px-6 py-4">
+            <SheetTitle className="text-left text-lg">Card do cliente</SheetTitle>
+          </SheetHeader>
+        ) : (
+          <>
         <SheetHeader className="border-b border-border px-6 py-4">
           <SheetTitle className="text-left text-lg">{titulo}</SheetTitle>
           <p className="text-left text-xs text-muted-foreground">
@@ -740,8 +746,9 @@ export function ClientCardSheet() {
             </TabsContent>
           </div>
         </Tabs>
+          </>
+        )}
       </SheetContent>
-      ) : null}
     </Sheet>
   );
 }

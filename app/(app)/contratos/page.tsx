@@ -280,14 +280,22 @@ function ContratosInner() {
             <DetailRow label="Reajuste" value={selected.tipoReajuste} />
             <div className="flex flex-wrap gap-2 border-b border-linha pb-3 text-xs">
               {fichaFinanceiraNav(selected.id).map((l) => (
-                <Link key={l.label} className="underline" href={l.href}>
+                <Link
+                  key={l.label}
+                  className="underline"
+                  href={l.href}
+                  onClick={() => setSelected(null)}
+                >
                   {l.label}
                 </Link>
               ))}
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
               <Button size="sm" asChild>
-                <Link href={carteiraContratoHref(selected.id)}>
+                <Link
+                  href={carteiraContratoHref(selected.id)}
+                  onClick={() => setSelected(null)}
+                >
                   Ficha financeira
                 </Link>
               </Button>

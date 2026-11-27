@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { releaseDialogLock } from "@/lib/ui/release-dialog-lock";
 
 const MAX_ATTACH_BYTES = 10 * 1024 * 1024;
 
@@ -154,10 +155,16 @@ export function DetailSheet({
   footer?: ReactNode;
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) queueMicrotask(releaseDialogLock);
+      }}
+    >
       <SheetContent side="right" className="flex w-full flex-col sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
+          <SheetTitle>{title || "Detalhe"}</SheetTitle>
         </SheetHeader>
         <div className="mt-4 flex-1 space-y-4 overflow-y-auto text-sm text-ink">
           {children}

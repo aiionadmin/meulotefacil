@@ -552,7 +552,12 @@ function CarteiraInner() {
             />
             <div className="flex flex-wrap gap-2 border-b border-linha pb-3 text-xs">
               {fichaFinanceiraNav(selected.contractId).map((l) => (
-                <Link key={l.label} className="underline" href={l.href}>
+                <Link
+                  key={l.label}
+                  className="underline"
+                  href={l.href}
+                  onClick={() => setSelected(null)}
+                >
                   {l.label}
                 </Link>
               ))}

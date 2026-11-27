@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { DemoStoreProvider } from "@/lib/store/demo-store";
@@ -17,6 +18,7 @@ import { SystemSettingsStoreProvider } from "@/lib/store/system-settings-store";
 import { ClientCardProvider } from "@/lib/client/client-card-context";
 import { ClientCardSheet } from "@/components/client/ClientCardSheet";
 import { EmpresaProvider } from "@/lib/empresa/context";
+import { releaseDialogLock } from "@/lib/ui/release-dialog-lock";
 import { AppSidebar } from "./AppSidebar";
 import { AppTopbar } from "./AppTopbar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -24,6 +26,16 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Link inside an open Sheet (ex.: "Ficha financeira") unmounts the page
+  // while Radix still has pointer-events:none on <body>. Clear on route change.
+  useEffect(() => {
+    setMobileOpen(false);
+    releaseDialogLock();
+    const t = window.setTimeout(releaseDialogLock, 50);
+    return () => window.clearTimeout(t);
+  }, [pathname]);
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>

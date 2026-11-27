@@ -281,7 +281,11 @@ export default function RecebimentosPage() {
                     ? carteiraContratoHref(ct.id)
                     : `/carteira?numero=${encodeURIComponent(live.contratoRef)}`;
                   return (
-                    <Link className="underline" href={href}>
+                    <Link
+                      className="underline"
+                      href={href}
+                      onClick={() => setSelected(null)}
+                    >
                       {`${live.contratoRef} (ficha financeira)`}
                     </Link>
                   );
@@ -292,7 +296,12 @@ export default function RecebimentosPage() {
               {fichaFinanceiraNav(
                 resolveContract(cart.contracts, live.contratoRef)?.id
               ).map((l) => (
-                <Link key={l.href + l.label} className="underline" href={l.href}>
+                <Link
+                  key={l.href + l.label}
+                  className="underline"
+                  href={l.href}
+                  onClick={() => setSelected(null)}
+                >
                   {l.label}
                 </Link>
               ))}
