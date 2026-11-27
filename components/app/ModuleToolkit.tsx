@@ -195,19 +195,22 @@ export function FormDialog({
   );
 }
 
-/** Anexo por arrastar e soltar (até 10 MB). */
+/** Anexo por arrastar e soltar (padrão 10 MB; `maxBytes={null}` = sem teto). */
 export function AttachDropZone({
   onFiles,
   label = "Arraste arquivos ou clique para anexar",
   hint = "Até 10 MB por arquivo",
   accept,
   multiple = true,
+  /** Limite em bytes. `null` desliga o teto (ex.: planta DXF). */
+  maxBytes = MAX_ATTACH_BYTES,
 }: {
   onFiles: (files: File[]) => void;
   label?: string;
   hint?: string;
   accept?: string;
   multiple?: boolean;
+  maxBytes?: number | null;
 }) {
   const [dragging, setDragging] = useState(false);
 
@@ -215,9 +218,9 @@ export function AttachDropZone({
     if (!list?.length) return;
     const ok: File[] = [];
     for (const f of Array.from(list)) {
-      if (f.size > MAX_ATTACH_BYTES) {
+      if (maxBytes != null && f.size > maxBytes) {
         toast.error("Arquivo muito grande", {
-          description: `${f.name} excede 10 MB`,
+          description: `${f.name} excede ${Math.round(maxBytes / (1024 * 1024))} MB`,
         });
         continue;
       }

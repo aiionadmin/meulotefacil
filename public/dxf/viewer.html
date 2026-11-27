@@ -460,10 +460,23 @@ if (typeof module !== 'undefined') module.exports = DXF;
   window.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
   new ResizeObserver(resize).observe(wrap); resize();
 
-  // auto-load when served over http (e.g. Live Server / Live Preview in Cursor)
+  // Parent app (DxfViewer) pode enviar upload sem limite de MB via postMessage
+  window.addEventListener('message', (ev) => {
+    const d = ev.data;
+    if (!d || d.type !== 'mlf-dxf-load') return;
+    const buf = d.buffer;
+    if (!buf) return;
+    const name = d.name || 'upload.dxf';
+    if (/\.dwg$/i.test(name)) return alertMsg('Arquivo DWG não é suportado — exporte como DXF.');
+    loadBuffer(buf instanceof ArrayBuffer ? buf : buf.buffer || buf, name);
+  });
+
+  // auto-load quando há ?arquivo= (amostras em /dxf/) — sem teto de tamanho no fetch
   if (/^https?:$/.test(location.protocol)) {
-    const f = new URLSearchParams(location.search).get('arquivo') || 'MIRASSOL.dxf';
-    fetch(encodeURI(f)).then(r => r.ok ? r.arrayBuffer() : null).then(b => { if (b && !scene) loadBuffer(b, f.split('/').pop()); }).catch(() => {});
+    const f = new URLSearchParams(location.search).get('arquivo');
+    if (f) {
+      fetch(encodeURI(f)).then(r => r.ok ? r.arrayBuffer() : null).then(b => { if (b) loadBuffer(b, f.split('/').pop()); }).catch(() => {});
+    }
   }
 })();
 

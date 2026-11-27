@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader, ModuleSection, StatusPill } from "@/components/app/ModulePage";
 import {
+  AttachDropZone,
   DetailRow,
   DetailSheet,
   fieldControlClass,
@@ -15,6 +16,11 @@ import { formatBRL } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { cn } from "@/lib/utils";
+
+const DXF_SAMPLES = [
+  { id: "MIRASSOL.dxf", label: "Mirassol (amostra)" },
+  { id: "PARQUE_UNIS.dxf", label: "Parque Unis (amostra)" },
+] as const;
 
 const COLORS: Record<LotStatus, string> = {
   disponivel: "bg-emerald-600/90 hover:bg-emerald-600",
@@ -40,6 +46,8 @@ export default function PlantaPage() {
   const [editMode, setEditMode] = useState(false);
   const [polyDraft, setPolyDraft] = useState<{ x: number; y: number }[]>([]);
   const [modo, setModo] = useState<PlantaModo>("dxf");
+  const [dxfSample, setDxfSample] = useState<string>("MIRASSOL.dxf");
+  const [dxfFile, setDxfFile] = useState<File | null>(null);
 
   const lots = useMemo(
     () => state.lots.filter((l) => l.developmentId === devId),
@@ -96,11 +104,77 @@ export default function PlantaPage() {
       {modo === "dxf" ? (
         <ModuleSection title={emp?.nome ? `DXF · ${emp.nome}` : "Visualizador DXF"}>
           <p className="mb-3 text-sm text-muted-foreground">
-            Amostra Mirassol carrega automaticamente. Use Abrir DXF… ou arraste
-            outro arquivo. Controles: roda = zoom, arrastar = mover, F =
-            enquadrar, Medir, painel Camadas. Nada é enviado à internet.
+            Planta interativa só em <strong>.dxf</strong> — sem limite de MB.
+            Controles: roda = zoom, arrastar = mover, F = enquadrar, Medir,
+            camadas. Leitura só no navegador.
           </p>
-          <DxfViewer arquivo="MIRASSOL.dxf" height="72vh" />
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <select
+              className={fieldControlClass + " max-w-xs"}
+              value={devId}
+              onChange={(e) => setDevId(e.target.value)}
+            >
+              {state.developments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.nome}
+                </option>
+              ))}
+            </select>
+            {DXF_SAMPLES.map((s) => (
+              <Button
+                key={s.id}
+                size="sm"
+                variant={
+                  !dxfFile && dxfSample === s.id ? "default" : "outline"
+                }
+                onClick={() => {
+                  setDxfFile(null);
+                  setDxfSample(s.id);
+                  notify("Amostra DXF", s.label);
+                }}
+              >
+                {s.label}
+              </Button>
+            ))}
+            {dxfFile ? (
+              <span className="text-xs text-muted-foreground">
+                Upload: {dxfFile.name} (
+                {(dxfFile.size / (1024 * 1024)).toFixed(1)} MB)
+              </span>
+            ) : null}
+          </div>
+          <div className="mb-4 max-w-xl">
+            <AttachDropZone
+              accept=".dxf,.DXF"
+              multiple={false}
+              maxBytes={null}
+              label="Arraste a planta DXF ou clique para enviar"
+              hint="Somente .dxf · sem limite de tamanho"
+              onFiles={(files) => {
+                const f = files[0];
+                if (!f) return;
+                if (!/\.dxf$/i.test(f.name)) {
+                  notify("Arquivo inválido", "Envie apenas .dxf");
+                  return;
+                }
+                setDxfFile(f);
+                notify(
+                  "Planta DXF carregada",
+                  `${f.name} · ${(f.size / (1024 * 1024)).toFixed(1)} MB`
+                );
+              }}
+            />
+          </div>
+          <DxfViewer
+            arquivo={dxfFile ? undefined : dxfSample}
+            file={dxfFile}
+            height="72vh"
+            title={
+              dxfFile
+                ? `DXF · ${dxfFile.name}`
+                : `DXF · ${dxfSample}`
+            }
+          />
         </ModuleSection>
       ) : null}
 
