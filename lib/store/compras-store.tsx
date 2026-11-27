@@ -11,7 +11,12 @@ import {
   contadoresItens,
   seedCompras,
 } from "@/lib/domain/compras-seed";
-import { dualWriteComprasConfig } from "@/lib/persist/dual-write";
+import {
+  dualWriteComprasConfig,
+  dualWriteCotacao,
+  dualWriteOrdem,
+  dualWriteSolicitacao,
+} from "@/lib/persist/dual-write";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
 import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
@@ -153,55 +158,58 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
           ...s,
           solicitacoes: [sc, ...s.solicitacoes],
         }));
+        void dualWriteSolicitacao(sc);
         return sc;
       },
       enviarSolicitacao: (id) => {
         const sc = state.solicitacoes.find((x) => x.id === id);
         if (!sc || sc.status !== "rascunho") return false;
         if (!sc.centro?.label) return false;
+        const next = { ...sc, status: "em_aprovacao" as ScStatus };
         setState((s) => ({
           ...s,
           solicitacoes: s.solicitacoes.map((x) =>
-            x.id === id ? { ...x, status: "em_aprovacao" as ScStatus } : x
+            x.id === id ? next : x
           ),
         }));
+        void dualWriteSolicitacao(next);
         return true;
       },
       aprovarSolicitacao: (id) => {
         const sc = state.solicitacoes.find((x) => x.id === id);
         if (!sc || sc.status !== "em_aprovacao") return false;
         const agora = todayIso();
+        const next = {
+          ...sc,
+          status: "a_atender" as ScStatus,
+          aprovadoEm: agora,
+          aprovadoPor: "Aprovador",
+        };
         setState((s) => ({
           ...s,
           solicitacoes: s.solicitacoes.map((x) =>
-            x.id === id
-              ? {
-                  ...x,
-                  status: "a_atender" as ScStatus,
-                  aprovadoEm: agora,
-                  aprovadoPor: "Aprovador",
-                }
-              : x
+            x.id === id ? next : x
           ),
         }));
+        void dualWriteSolicitacao(next);
         return true;
       },
       recusarSolicitacao: (id, motivo) => {
         if (!motivo.trim()) return false;
         const sc = state.solicitacoes.find((x) => x.id === id);
         if (!sc || sc.status !== "em_aprovacao") return false;
+        const next = {
+          ...sc,
+          status: "recusada" as ScStatus,
+          motivoRecusa: motivo.trim(),
+        };
         setState((s) => ({
           ...s,
           solicitacoes: s.solicitacoes.map((x) =>
-            x.id === id
-              ? {
-                  ...x,
-                  status: "recusada" as ScStatus,
-                  motivoRecusa: motivo.trim(),
-                }
-              : x
+            x.id === id ? next : x
           ),
         }));
+        void dualWriteSolicitacao(next);
         return true;
       },
       addComentarioSc: (id, texto, autor) => {
@@ -372,26 +380,27 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
           precos,
           ordemIds: [],
         };
+        const scNext: Solicitacao = {
+          ...sc,
+          status: "em_andamento",
+          atendidoEm: todayIso(),
+          atendidoPor: "Compras",
+          cotacaoIds: [...sc.cotacaoIds, cot.id],
+          itens: sc.itens.map((it) => ({
+            ...it,
+            quantidadeCotada: it.quantidade,
+            status: "em_cotacao",
+          })),
+        };
         setState((s) => ({
           ...s,
           cotacoes: [cot, ...s.cotacoes],
           solicitacoes: s.solicitacoes.map((x) =>
-            x.id === sc.id
-              ? {
-                  ...x,
-                  status: "em_andamento" as ScStatus,
-                  atendidoEm: todayIso(),
-                  atendidoPor: "Compras",
-                  cotacaoIds: [...x.cotacaoIds, cot.id],
-                  itens: x.itens.map((it) => ({
-                    ...it,
-                    quantidadeCotada: it.quantidade,
-                    status: "em_cotacao",
-                  })),
-                }
-              : x
+            x.id === sc.id ? scNext : x
           ),
         }));
+        void dualWriteCotacao(cot);
+        void dualWriteSolicitacao(scNext);
         return cot;
       },
       setVencedor: (cotacaoId, itemId, supplierId) => {
@@ -541,23 +550,22 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
           created.push(oc);
         }
         if (!created.length) return [];
+        const orderIds = created.map((o) => o.id);
+        const cotNext = {
+          ...cot,
+          status: "finalizado" as CotacaoStatus,
+          ordemIds: [...cot.ordemIds, ...orderIds],
+        };
         setState((s) => {
-          const orderIds = created.map((o) => o.id);
           return {
             ...s,
             ordens: [...created, ...s.ordens],
             cotacoes: s.cotacoes.map((c) =>
-              c.id === cotacaoId
-                ? {
-                    ...c,
-                    status: "finalizado" as CotacaoStatus,
-                    ordemIds: [...c.ordemIds, ...orderIds],
-                  }
-                : c
+              c.id === cotacaoId ? cotNext : c
             ),
             solicitacoes: s.solicitacoes.map((sc) => {
               if (sc.id !== cot.requestId) return sc;
-              return {
+              const nextSc = {
                 ...sc,
                 ordemIds: [...sc.ordemIds, ...orderIds],
                 itens: sc.itens.map((it) => {
@@ -580,9 +588,13 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
                   };
                 }),
               };
+              void dualWriteSolicitacao(nextSc);
+              return nextSc;
             }),
           };
         });
+        void dualWriteCotacao(cotNext);
+        for (const o of created) void dualWriteOrdem(o);
         return created;
       },
       aprovarOrdem: (id) => {
@@ -596,19 +608,17 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
         const payableId = uid("pay");
         const total =
           oc.valor + oc.frete + oc.outrasDespesas + oc.impostos - oc.desconto;
+        const next = {
+          ...oc,
+          aprovacaoStatus: "aprovado" as OcAprovacao,
+          compraStatus: "comprado" as const,
+          payableId,
+        };
         setState((s) => ({
           ...s,
-          ordens: s.ordens.map((o) =>
-            o.id === id
-              ? {
-                  ...o,
-                  aprovacaoStatus: "aprovado" as OcAprovacao,
-                  compraStatus: "comprado",
-                  payableId,
-                }
-              : o
-          ),
+          ordens: s.ordens.map((o) => (o.id === id ? next : o)),
         }));
+        void dualWriteOrdem(next);
         return {
           ok: true,
           payable: {
@@ -621,14 +631,14 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
         };
       },
       negarOrdem: (id) => {
+        const oc = state.ordens.find((o) => o.id === id);
+        if (!oc) return false;
+        const next = { ...oc, aprovacaoStatus: "negado" as OcAprovacao };
         setState((s) => ({
           ...s,
-          ordens: s.ordens.map((o) =>
-            o.id === id
-              ? { ...o, aprovacaoStatus: "negado" as OcAprovacao }
-              : o
-          ),
+          ordens: s.ordens.map((o) => (o.id === id ? next : o)),
         }));
+        void dualWriteOrdem(next);
         return true;
       },
       aprovarOrdensLote: (ids) => {

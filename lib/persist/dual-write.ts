@@ -4,15 +4,22 @@
  * Falhas só logam — nunca bloqueiam a UI.
  */
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import type { ComprasConfig } from "@/lib/domain/compras-types";
+import type {
+  ComprasConfig,
+  Cotacao,
+  OrdemCompra,
+  Solicitacao,
+} from "@/lib/domain/compras-types";
 import type {
   Categoria,
   CentroFin,
   ContaBancaria,
+  Faturamento,
   Lancamento,
   NaturezaReceita,
   Pagamento,
   PlanoConta,
+  Recebimento,
 } from "@/lib/domain/financeiro-types";
 import type { Obra } from "@/lib/domain/obras-types";
 import { DEMO_ORG_ID } from "./store-keys";
@@ -249,5 +256,208 @@ export async function dualWritePagamento(
     { onConflict: "id" }
   );
   warn("pagamentos", error);
+  return { ok: !error };
+}
+
+export async function dualWriteSolicitacao(
+  sc: Solicitacao,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const id = stableUuid(sc.id);
+  const { error } = await sb.from("purchase_requests").upsert(
+    {
+      id,
+      organization_id: orgId,
+      numero: sc.numero,
+      descricao: sc.descricao,
+      solicitante: sc.solicitante,
+      necessidade: sc.necessidade,
+      urgente: sc.urgente,
+      status: sc.status,
+      obra_id:
+        sc.centro.tipo === "obra" && sc.centro.obraId
+          ? stableUuid(sc.centro.obraId)
+          : null,
+      centro_tipo: sc.centro.tipo,
+      aprovado_por: sc.aprovadoPor ?? null,
+      aprovado_em: sc.aprovadoEm ?? null,
+      motivo_recusa: sc.motivoRecusa ?? null,
+      criado_em: sc.criadoEm,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("purchase_requests", error);
+  if (!error) {
+    await sb.from("purchase_request_items").delete().eq("request_id", id);
+    if (sc.itens.length) {
+      const { error: ie } = await sb.from("purchase_request_items").insert(
+        sc.itens.map((it, i) => ({
+          id: stableUuid(it.id),
+          request_id: id,
+          descricao: it.descricao,
+          unidade: it.unidade,
+          quantidade: it.quantidade,
+          quantidade_cotada: it.quantidadeCotada,
+          quantidade_comprada: it.quantidadeComprada,
+          quantidade_recebida: it.quantidadeRecebida,
+          status: it.status,
+          ordem: i,
+        })) as never
+      );
+      warn("purchase_request_items", ie);
+    }
+  }
+  return { ok: !error };
+}
+
+export async function dualWriteCotacao(
+  cot: Cotacao,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const id = stableUuid(cot.id);
+  const { error } = await sb.from("quotations").upsert(
+    {
+      id,
+      organization_id: orgId,
+      numero: cot.numero,
+      descricao: cot.descricao,
+      request_id: cot.requestId ? stableUuid(cot.requestId) : null,
+      obra_id:
+        cot.centro.tipo === "obra" && "obraId" in cot.centro
+          ? stableUuid(cot.centro.obraId)
+          : null,
+      centro_tipo: cot.centro.tipo,
+      centro_label: cot.centro.label,
+      status: cot.status,
+      prioridade: cot.prioridade,
+      necessidade: cot.necessidade ?? null,
+      solicitante: cot.solicitante,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("quotations", error);
+  return { ok: !error };
+}
+
+export async function dualWriteOrdem(
+  oc: OrdemCompra,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const id = stableUuid(oc.id);
+  const { error } = await sb.from("purchase_orders").upsert(
+    {
+      id,
+      organization_id: orgId,
+      numero: oc.numero,
+      request_id: oc.requestId ? stableUuid(oc.requestId) : null,
+      quotation_id: oc.quotationId ? stableUuid(oc.quotationId) : null,
+      fornecedor: oc.fornecedor,
+      descricao: oc.descricao,
+      obra_id:
+        oc.centro.tipo === "obra" && "obraId" in oc.centro
+          ? stableUuid(oc.centro.obraId)
+          : null,
+      valor: oc.valor,
+      status: oc.compraStatus,
+      aprovacao_status: oc.aprovacaoStatus,
+      compra_status: oc.compraStatus,
+      frete: oc.frete,
+      outras_despesas: oc.outrasDespesas,
+      impostos: oc.impostos,
+      desconto: oc.desconto,
+      previsao_entrega: oc.previsaoEntrega ?? null,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("purchase_orders", error);
+  if (!error && oc.itens.length) {
+    await sb.from("purchase_order_items").delete().eq("order_id", id);
+    const { error: ie } = await sb.from("purchase_order_items").insert(
+      oc.itens.map((it, i) => ({
+        id: stableUuid(it.id),
+        order_id: id,
+        quotation_item_id: it.quotationItemId
+          ? stableUuid(it.quotationItemId)
+          : null,
+        descricao: it.descricao,
+        unidade: it.unidade,
+        quantidade: it.quantidade,
+        valor_unitario: it.valorUnitario,
+        valor: it.valor,
+        ordem: i,
+      })) as never
+    );
+    warn("purchase_order_items", ie);
+  }
+  return { ok: !error };
+}
+
+export async function dualWriteFaturamento(
+  fat: Faturamento,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const { error } = await sb.from("faturamentos").upsert(
+    {
+      id: stableUuid(fat.id),
+      organization_id: orgId,
+      descricao: fat.descricao,
+      cliente: fat.cliente,
+      natureza_id: stableUuid(fat.naturezaId),
+      competencia: fat.competencia,
+      vencimento: fat.vencimento,
+      centro_tipo: fat.centro.tipo,
+      obra_id: fat.centro.obraId ? stableUuid(fat.centro.obraId) : null,
+      centro_label: fat.centro.label,
+      conta_id: stableUuid(fat.contaId),
+      valor_bruto: fat.valorBruto,
+      impostos_retidos: fat.impostosRetidos,
+      valor_liquido: fat.valorLiquido,
+      forma: fat.forma,
+      vendedor: fat.vendedor ?? null,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("faturamentos", error);
+  return { ok: !error };
+}
+
+export async function dualWriteRecebimento(
+  rec: Recebimento,
+  orgId: string = DEMO_ORG_ID
+): Promise<SoftResult> {
+  const sb = client();
+  if (!sb) return { ok: true, skipped: true };
+  const { error } = await sb.from("recebimentos").upsert(
+    {
+      id: stableUuid(rec.id),
+      organization_id: orgId,
+      faturamento_id: rec.faturamentoId
+        ? stableUuid(rec.faturamentoId)
+        : null,
+      parcela: rec.parcela,
+      vencimento: rec.vencimento,
+      valor: rec.valor,
+      valor_recebido: rec.valorRecebido,
+      status: rec.status,
+      cliente: rec.cliente,
+      descricao: rec.descricao,
+      natureza_id: rec.naturezaId ? stableUuid(rec.naturezaId) : null,
+      conta_id: stableUuid(rec.contaId),
+      centro_label: rec.centroLabel,
+      forma: rec.forma,
+      recebido_em: rec.recebidoEm ?? null,
+      conciliado: rec.conciliado,
+    } as never,
+    { onConflict: "id" }
+  );
+  warn("recebimentos", error);
   return { ok: !error };
 }
