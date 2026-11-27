@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ModuleHeader, ModuleSection, StatusPill } from "@/components/app/ModulePage";
 import {
-  AttachDropZone,
   DetailRow,
   DetailSheet,
   fieldControlClass,
@@ -47,7 +46,6 @@ export default function PlantaPage() {
   const [polyDraft, setPolyDraft] = useState<{ x: number; y: number }[]>([]);
   const [modo, setModo] = useState<PlantaModo>("dxf");
   const [dxfSample, setDxfSample] = useState<string>("MIRASSOL.dxf");
-  const [dxfFile, setDxfFile] = useState<File | null>(null);
 
   const lots = useMemo(
     () => state.lots.filter((l) => l.developmentId === devId),
@@ -104,9 +102,8 @@ export default function PlantaPage() {
       {modo === "dxf" ? (
         <ModuleSection title={emp?.nome ? `DXF · ${emp.nome}` : "Visualizador DXF"}>
           <p className="mb-3 text-sm text-muted-foreground">
-            Planta interativa só em <strong>.dxf</strong> — sem limite de MB.
-            Controles: roda = zoom, arrastar = mover, F = enquadrar, Medir,
-            camadas. Leitura só no navegador.
+            Use <strong>Abrir DXF…</strong> no viewer (sem limite de MB). Roda =
+            zoom, arrastar = mover, F = enquadrar, Medir, camadas.
           </p>
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <select
@@ -124,11 +121,8 @@ export default function PlantaPage() {
               <Button
                 key={s.id}
                 size="sm"
-                variant={
-                  !dxfFile && dxfSample === s.id ? "default" : "outline"
-                }
+                variant={dxfSample === s.id ? "default" : "outline"}
                 onClick={() => {
-                  setDxfFile(null);
                   setDxfSample(s.id);
                   notify("Amostra DXF", s.label);
                 }}
@@ -136,44 +130,11 @@ export default function PlantaPage() {
                 {s.label}
               </Button>
             ))}
-            {dxfFile ? (
-              <span className="text-xs text-muted-foreground">
-                Upload: {dxfFile.name} (
-                {(dxfFile.size / (1024 * 1024)).toFixed(1)} MB)
-              </span>
-            ) : null}
-          </div>
-          <div className="mb-4 max-w-xl">
-            <AttachDropZone
-              accept=".dxf,.DXF"
-              multiple={false}
-              maxBytes={null}
-              label="Arraste a planta DXF ou clique para enviar"
-              hint="Somente .dxf · sem limite de tamanho"
-              onFiles={(files) => {
-                const f = files[0];
-                if (!f) return;
-                if (!/\.dxf$/i.test(f.name)) {
-                  notify("Arquivo inválido", "Envie apenas .dxf");
-                  return;
-                }
-                setDxfFile(f);
-                notify(
-                  "Planta DXF carregada",
-                  `${f.name} · ${(f.size / (1024 * 1024)).toFixed(1)} MB`
-                );
-              }}
-            />
           </div>
           <DxfViewer
-            arquivo={dxfFile ? undefined : dxfSample}
-            file={dxfFile}
+            arquivo={dxfSample}
             height="72vh"
-            title={
-              dxfFile
-                ? `DXF · ${dxfFile.name}`
-                : `DXF · ${dxfSample}`
-            }
+            title={`DXF · ${dxfSample}`}
           />
         </ModuleSection>
       ) : null}
