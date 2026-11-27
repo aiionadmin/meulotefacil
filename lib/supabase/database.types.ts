@@ -1,6 +1,6 @@
 /**
- * Tipos gerados (stub Bloco A). Regenerar com `supabase gen types` quando o
- * projeto remoto estiver ligado. Cobre as tabelas tocadas em A01–A05.
+ * Tipos gerados (stub Bloco A + D/E/G cores da réplica).
+ * Regenerar com `supabase gen types` quando o projeto remoto estiver ligado.
  */
 
 export type Json =
@@ -85,6 +85,118 @@ export type Database = {
         };
         Update: Partial<
           Database["public"]["Tables"]["profile_permissions"]["Insert"]
+        >;
+      };
+      obras: {
+        Row: {
+          id: string;
+          organization_id: string;
+          codigo: string;
+          nome: string;
+          status: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          codigo: string;
+          nome: string;
+          status?: string;
+          deleted_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["obras"]["Insert"]>;
+      };
+      planos_conta: {
+        Row: {
+          id: string;
+          organization_id: string;
+          nome: string;
+          fluxo: string;
+          grupo_resultados: string;
+          ativo: boolean;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          nome: string;
+          fluxo: string;
+          grupo_resultados: string;
+          ativo?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["planos_conta"]["Insert"]>;
+      };
+      categorias_financeiras: {
+        Row: {
+          id: string;
+          organization_id: string;
+          nome: string;
+          plano_id: string;
+          classificacao_obra: string | null;
+          ativo: boolean;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          nome: string;
+          plano_id: string;
+          classificacao_obra?: string | null;
+          ativo?: boolean;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["categorias_financeiras"]["Insert"]
+        >;
+      };
+      naturezas_receita: {
+        Row: {
+          id: string;
+          organization_id: string;
+          nome: string;
+          ativo: boolean;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          nome: string;
+          ativo?: boolean;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["naturezas_receita"]["Insert"]
+        >;
+      };
+      lancamentos: {
+        Row: {
+          id: string;
+          organization_id: string;
+          descricao: string;
+          favorecido: string;
+          categoria_id: string | null;
+          valor: number;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          descricao: string;
+          favorecido: string;
+          categoria_id?: string | null;
+          valor: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["lancamentos"]["Insert"]>;
+      };
+      compras_config: {
+        Row: {
+          organization_id: string;
+          cotacao_numero_inicial: number;
+          oc_numero_inicial: number;
+          permitir_oc_sem_cotacao: boolean;
+        };
+        Insert: {
+          organization_id: string;
+          cotacao_numero_inicial?: number;
+          oc_numero_inicial?: number;
+          permitir_oc_sem_cotacao?: boolean;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["compras_config"]["Insert"]
         >;
       };
     };

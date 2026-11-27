@@ -17,6 +17,7 @@ import { saveSnapshot } from "@/lib/persist/snapshots";
 import { DEMO_ORG_ID } from "@/lib/persist/store-keys";
 import { isDemoToolsAllowed } from "@/lib/runtime/demo-mode";
 import type {
+  Categoria,
   CentroFin,
   CondicaoPagamento,
   ContaBancaria,
@@ -26,9 +27,11 @@ import type {
   FormaPagamento,
   Lancamento,
   MeuCnpj,
+  NaturezaReceita,
   NotaFiscal,
   Pagamento,
   PagamentoStatus,
+  PlanoConta,
   PreLancamento,
   Recebimento,
   Transferencia,
@@ -146,6 +149,15 @@ type FinanceiroApi = {
       >
     >
   ) => boolean;
+  addPlano: (data: Omit<PlanoConta, "id">) => PlanoConta;
+  updatePlano: (id: string, patch: Partial<PlanoConta>) => boolean;
+  removePlano: (id: string) => { ok: boolean; reason?: string };
+  addCategoria: (data: Omit<Categoria, "id">) => Categoria;
+  updateCategoria: (id: string, patch: Partial<Categoria>) => boolean;
+  removeCategoria: (id: string) => { ok: boolean; reason?: string };
+  addNatureza: (data: Omit<NaturezaReceita, "id">) => NaturezaReceita;
+  updateNatureza: (id: string, patch: Partial<NaturezaReceita>) => boolean;
+  removeNatureza: (id: string) => { ok: boolean; reason?: string };
 };
 
 const Ctx = createContext<FinanceiroApi | null>(null);
@@ -1007,6 +1019,98 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           };
         });
         return ok;
+      },
+      addPlano: (data) => {
+        const plano: PlanoConta = { ...data, id: uid("pla") };
+        setState((s) => ({ ...s, planos: [plano, ...s.planos] }));
+        return plano;
+      },
+      updatePlano: (id, patch) => {
+        if (!state.planos.some((p) => p.id === id)) return false;
+        setState((s) => ({
+          ...s,
+          planos: s.planos.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+        }));
+        return true;
+      },
+      removePlano: (id) => {
+        if (state.categorias.some((c) => c.planoId === id && c.ativo)) {
+          return { ok: false, reason: "Há categorias vinculadas" };
+        }
+        if (!state.planos.some((p) => p.id === id)) {
+          return { ok: false, reason: "Plano não encontrado" };
+        }
+        setState((s) => ({
+          ...s,
+          planos: s.planos.map((p) =>
+            p.id === id ? { ...p, ativo: false } : p
+          ),
+        }));
+        return { ok: true };
+      },
+      addCategoria: (data) => {
+        const cat: Categoria = { ...data, id: uid("cat") };
+        setState((s) => ({ ...s, categorias: [cat, ...s.categorias] }));
+        return cat;
+      },
+      updateCategoria: (id, patch) => {
+        if (!state.categorias.some((c) => c.id === id)) return false;
+        setState((s) => ({
+          ...s,
+          categorias: s.categorias.map((c) =>
+            c.id === id ? { ...c, ...patch } : c
+          ),
+        }));
+        return true;
+      },
+      removeCategoria: (id) => {
+        const usada =
+          state.lancamentos.some((l) => l.categoriaId === id) ||
+          state.pagamentos.some((p) => p.categoriaId === id);
+        if (usada) {
+          return { ok: false, reason: "Há lançamentos/pagamentos vinculados" };
+        }
+        if (!state.categorias.some((c) => c.id === id)) {
+          return { ok: false, reason: "Categoria não encontrada" };
+        }
+        setState((s) => ({
+          ...s,
+          categorias: s.categorias.map((c) =>
+            c.id === id ? { ...c, ativo: false } : c
+          ),
+        }));
+        return { ok: true };
+      },
+      addNatureza: (data) => {
+        const nat: NaturezaReceita = { ...data, id: uid("nat") };
+        setState((s) => ({ ...s, naturezas: [nat, ...s.naturezas] }));
+        return nat;
+      },
+      updateNatureza: (id, patch) => {
+        if (!state.naturezas.some((n) => n.id === id)) return false;
+        setState((s) => ({
+          ...s,
+          naturezas: s.naturezas.map((n) =>
+            n.id === id ? { ...n, ...patch } : n
+          ),
+        }));
+        return true;
+      },
+      removeNatureza: (id) => {
+        const usada = state.faturamentos.some((f) => f.naturezaId === id);
+        if (usada) {
+          return { ok: false, reason: "Há faturamentos vinculados" };
+        }
+        if (!state.naturezas.some((n) => n.id === id)) {
+          return { ok: false, reason: "Natureza não encontrada" };
+        }
+        setState((s) => ({
+          ...s,
+          naturezas: s.naturezas.map((n) =>
+            n.id === id ? { ...n, ativo: false } : n
+          ),
+        }));
+        return { ok: true };
       },
     }),
     [state, ready]
