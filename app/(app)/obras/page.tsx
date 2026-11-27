@@ -51,7 +51,7 @@ const EMPTY_FORM = {
   areaTotal: 0,
   unidade: "m²",
   bdiPct: 0.25,
-  visivelPara: "Administrador",
+  visivelPara: ["Administrador"] as string[],
   cep: "",
   logradouro: "",
   numero: "",
@@ -79,8 +79,14 @@ const EMPTY_FORM = {
 
 export default function ObrasPage() {
   const { state, addObra, duplicateObra, softRemoveObra } = useObras();
-  const { currentUser, currentProfileName: perfilNome } = useFase1();
+  const {
+    state: fase1,
+    currentUser,
+    currentProfileName: perfilNome,
+  } = useFase1();
   const { state: carteira } = useCarteira();
+  const perfisAtivos = fase1.profiles;
+  const usuariosAtivos = fase1.users.filter((u) => u.status === "ativo");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [open, setOpen] = useState(false);
@@ -252,8 +258,8 @@ export default function ObrasPage() {
             notify("Nome da obra é obrigatório");
             return;
           }
-          if (!form.visivelPara.trim()) {
-            notify("Visível para é obrigatório");
+          if (!form.visivelPara.length) {
+            notify("Selecione ao menos um perfil ou usuário");
             return;
           }
           const emp = carteira.developments.find(
@@ -287,10 +293,7 @@ export default function ObrasPage() {
             ceiCno: form.ceiCno.slice(0, 20) || undefined,
             responsavelObra: form.responsavelObra || undefined,
             responsavelTecnico: form.responsavelTecnico || undefined,
-            visivelPara: form.visivelPara
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
+            visivelPara: form.visivelPara,
             bdiPct: form.bdiPct,
             cidade: form.cidade || undefined,
             uf: form.uf || undefined,
@@ -360,13 +363,75 @@ export default function ObrasPage() {
           </select>
         </Field>
         <Field label="Obra visível para *">
-          <Input
-            value={form.visivelPara}
-            onChange={(e) =>
-              patchForm({visivelPara: e.target.value })
-            }
-            placeholder="Admin, Comercial…"
-          />
+          <div className="space-y-3 rounded-lg border border-linha bg-white p-3">
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Perfis
+              </p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {perfisAtivos.map((p) => {
+                  const checked = form.visivelPara.includes(p.nome);
+                  return (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-2 text-sm text-ink"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const next = checked
+                            ? form.visivelPara.filter((v) => v !== p.nome)
+                            : [...form.visivelPara, p.nome];
+                          patchForm({ visivelPara: next });
+                        }}
+                      />
+                      {p.nome}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Usuários
+              </p>
+              <div className="flex max-h-36 flex-col gap-1.5 overflow-y-auto">
+                {usuariosAtivos.map((u) => {
+                  const checked = form.visivelPara.includes(u.nome);
+                  return (
+                    <label
+                      key={u.id}
+                      className="flex items-center gap-2 text-sm text-ink"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const next = checked
+                            ? form.visivelPara.filter((v) => v !== u.nome)
+                            : [...form.visivelPara, u.nome];
+                          patchForm({ visivelPara: next });
+                        }}
+                      />
+                      <span>
+                        {u.nome}
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {u.email}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            {form.visivelPara.length ? (
+              <p className="text-xs text-muted-foreground">
+                Selecionados: {form.visivelPara.join(", ")}
+              </p>
+            ) : null}
+          </div>
         </Field>
 
         <div className="pt-2">
