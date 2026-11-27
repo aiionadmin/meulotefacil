@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +50,23 @@ export default function RelatoriosPage() {
       <ModuleHeader
         title="Central de relatórios"
         description="favoritos, execução em tela e histórico recente."
+        actions={
+          <Button size="sm" asChild>
+            <Link href="/relatorios/empreendimento">
+              Relatório do empreendimento
+            </Link>
+          </Button>
+        }
       />
+
+      <ModuleSection
+        title="Relatório do empreendimento"
+        description="Wizard com dados da empresa, logomarca do site e seções configuráveis (cartório, lotes, contratos…)."
+      >
+        <Button size="sm" asChild>
+          <Link href="/relatorios/empreendimento">Abrir wizard</Link>
+        </Button>
+      </ModuleSection>
 
       <ModuleSection title="Relatórios financeiros LoteWin (H26)">
         <div className="flex flex-wrap gap-2">

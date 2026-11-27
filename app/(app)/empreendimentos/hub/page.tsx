@@ -115,6 +115,9 @@ export default function EmpreendimentoHubPage() {
             <Button size="sm" variant="outline" asChild>
               <Link href="/empreendimentos/planta">Planta</Link>
             </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/relatorios/empreendimento">Relatório</Link>
+            </Button>
           </>
         }
       />

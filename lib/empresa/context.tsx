@@ -16,6 +16,13 @@ export type EmpresaOption = {
   nome: string;
   razaoSocial: string;
   cnpj: string;
+  endereco?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+  telefone?: string;
+  email?: string;
 };
 
 type EmpresaApi = {
@@ -48,17 +55,33 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   );
 
   const empresas: EmpresaOption[] = useMemo(() => {
+    const org = state.organization;
     const primary: EmpresaOption = {
-      id: state.organization.id,
-      nome: state.organization.nomeFantasia,
-      razaoSocial: state.organization.razaoSocial,
-      cnpj: state.organization.cnpj,
+      id: org.id,
+      nome: org.nomeFantasia,
+      razaoSocial: org.razaoSocial,
+      cnpj: org.cnpj,
+      endereco: org.endereco,
+      bairro: org.bairro,
+      cidade: org.cidade,
+      uf: org.uf,
+      cep: org.cep,
+      telefone: org.telefone,
+      email: org.email,
     };
+    /** Segunda empresa emitente: LA (CNPJ oficial). Id estável org-demo-2. */
     const secondary: EmpresaOption = {
       id: "org-demo-2",
-      nome: "MLF Regularizações",
-      razaoSocial: "MLF Regularizações Ltda",
-      cnpj: "98.765.432/0001-10",
+      nome: "LA",
+      razaoSocial: "LA Regularizações Ltda",
+      cnpj: "22.930.670/0001-40",
+      endereco: "Av. Albino José B. Oliveira, 2270",
+      bairro: "Jd. Afife, Barão Geraldo",
+      cidade: "Campinas",
+      uf: "SP",
+      cep: "13084-120",
+      telefone: "(19) 99164-5334",
+      email: "contato@laregularizacoes.com.br",
     };
     return [primary, secondary];
   }, [state.organization]);

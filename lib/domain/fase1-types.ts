@@ -31,6 +31,13 @@ export type Organization = {
   cnpj: string;
   telefone: string;
   email: string;
+  /** Endereço completo para documentos formais / PDFs. */
+  endereco?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+  inscricaoEstadual?: string;
   advogadoNome: string;
   advogadoOab: string;
 };
