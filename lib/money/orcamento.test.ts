@@ -1,5 +1,10 @@
 /** npx tsx lib/money/orcamento.test.ts */
-import { custoLinha, precoComBdi, totaisOrcamento } from "./orcamento";
+import {
+  custoLinha,
+  precoComBdi,
+  totaisOrcamento,
+  valorMedicaoItens,
+} from "./orcamento";
 
 function assert(cond: boolean, msg: string) {
   if (!cond) {
@@ -20,5 +25,15 @@ const tot = totaisOrcamento(
 );
 assert(tot.custo === 2000, "custo total");
 assert(tot.preco === 2500, "preço 10*100*1.2 + 2*500*1.3");
+
+assert(
+  valorMedicaoItens([
+    { orcado: 54000, pctPeriodo: 20 },
+    { orcado: 22400, pctPeriodo: 10 },
+  ]) === 13040,
+  "medição 20% de 54k + 10% de 22.4k"
+);
+assert(valorMedicaoItens([{ orcado: 100, pctPeriodo: 150 }]) === 100, "cap 100%");
+assert(valorMedicaoItens([{ orcado: 100, pctPeriodo: -5 }]) === 0, "pct negativo");
 
 console.log("OK orcamento", tot);

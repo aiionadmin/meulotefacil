@@ -64,6 +64,12 @@ type ObrasApi = {
       fisicoPct?: number;
     }
   ) => OrcamentoNode;
+  updateNode: (id: string, patch: Partial<OrcamentoNode>) => void;
+  removeNode: (id: string) => boolean;
+  /** Aplica medição nos itens do orçamento (realizado + % físico). */
+  aplicarMedicao: (
+    itens: { nodeId: string; valorMedido: number; pctPeriodo: number }[]
+  ) => boolean;
   recomputeObraTotais: (obraId: string) => void;
   apropriarDespesa: (nodeId: string, valor: number) => boolean;
   addRdo: (data: {
@@ -274,6 +280,7 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
         setState((s) => ({
           ...s,
           obras: s.obras.filter((o) => o.id !== id),
+          nodes: s.nodes.filter((n) => n.obraId !== id),
         }));
       },
       addNode: (data) => {
@@ -296,6 +303,84 @@ export function ObrasStoreProvider({ children }: { children: ReactNode }) {
         void dualWriteOrcamentoNode(node);
         queueMicrotask(() => recomputeObraTotais(data.obraId));
         return node;
+      },
+      updateNode: (id, patch) => {
+        const current = state.nodes.find((n) => n.id === id);
+        if (!current) return;
+        setState((s) => {
+          const nodes = s.nodes.map((n) => {
+            if (n.id !== id) return n;
+            const next = { ...n, ...patch };
+            if (
+              next.kind === "item" &&
+              (patch.quantidade != null || patch.custoUnit != null)
+            ) {
+              next.orcado = custoLinha({
+                quantidade: next.quantidade,
+                custoUnit: next.custoUnit,
+              });
+            }
+            void dualWriteOrcamentoNode(next);
+            return next;
+          });
+          return { ...s, nodes };
+        });
+        queueMicrotask(() => recomputeObraTotais(current.obraId));
+      },
+      removeNode: (id) => {
+        const current = state.nodes.find((n) => n.id === id);
+        if (!current) return false;
+        const obraId = current.obraId;
+        setState((s) => {
+          const ban = new Set<string>([id]);
+          let changed = true;
+          while (changed) {
+            changed = false;
+            for (const n of s.nodes) {
+              if (n.parentId && ban.has(n.parentId) && !ban.has(n.id)) {
+                ban.add(n.id);
+                changed = true;
+              }
+            }
+          }
+          return { ...s, nodes: s.nodes.filter((n) => !ban.has(n.id)) };
+        });
+        queueMicrotask(() => recomputeObraTotais(obraId));
+        return true;
+      },
+      aplicarMedicao: (itens) => {
+        if (!itens.length) return false;
+        const valid = itens.filter(
+          (i) => i.valorMedido > 0 || i.pctPeriodo > 0
+        );
+        if (!valid.length) return false;
+        const obraIds = new Set<string>();
+        setState((s) => {
+          const nodes = s.nodes.map((n) => {
+            const hit = valid.find((i) => i.nodeId === n.id);
+            if (!hit || n.kind !== "item") return n;
+            obraIds.add(n.obraId);
+            const next: OrcamentoNode = {
+              ...n,
+              realizado:
+                Math.round((n.realizado + Math.max(0, hit.valorMedido)) * 100) /
+                100,
+              fisicoPct: Math.min(
+                100,
+                Math.round(
+                  (n.fisicoPct + Math.max(0, hit.pctPeriodo)) * 100
+                ) / 100
+              ),
+            };
+            void dualWriteOrcamentoNode(next);
+            return next;
+          });
+          return { ...s, nodes };
+        });
+        queueMicrotask(() => {
+          for (const oid of obraIds) recomputeObraTotais(oid);
+        });
+        return true;
       },
       recomputeObraTotais,
       apropriarDespesa: (nodeId, valor) => {
