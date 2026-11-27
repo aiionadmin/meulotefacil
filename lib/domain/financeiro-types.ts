@@ -41,6 +41,20 @@ export type NaturezaReceita = {
   id: string;
   nome: string;
   ativo: boolean;
+  /** Linha nos Resultados (§5.9). */
+  linhaResultados?: string;
+};
+
+export type MeuCnpj = {
+  id: string;
+  cnpj: string;
+  razaoSocial: string;
+  certificadoNome?: string;
+  certificadoValidade?: string;
+  /** Preparado; emissão real desligada. */
+  emissaoNfse: boolean;
+  /** Preparado; captura Sefaz desligada. */
+  capturaAutomatica: boolean;
 };
 
 export type ContaBancaria = {
@@ -216,4 +230,5 @@ export type FinanceiroState = {
   preLancamentos: PreLancamento[];
   transferencias: Transferencia[];
   notas: NotaFiscal[];
+  meusCnpjs: MeuCnpj[];
 };

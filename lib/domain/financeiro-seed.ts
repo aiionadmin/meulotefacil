@@ -28,7 +28,7 @@ const PLANOS_DESPESA: { nome: string; grupo: ResultadoGrupo }[] = [
 ];
 
 const PLANOS_RECEITA: { nome: string; grupo: ResultadoGrupo }[] = [
-  { nome: "Receitas Operacionais", grupo: "Receita Operacional Bruta" },
+  { nome: "Receita Operacional Bruta", grupo: "Receita Operacional Bruta" },
   { nome: "Receitas Financeiras", grupo: "Resultado Financeiro" },
 ];
 
@@ -57,6 +57,11 @@ const CATS_CONF: { nome: string; plano: string; classif: ClassificacaoObra }[] =
     classif: "Oculta na Gestão",
   },
   { nome: "Distrato", plano: "Outras Despesas", classif: "Oculta na Gestão" },
+  {
+    nome: "Despesas Financeiras (JUROS e MULTAS)",
+    plano: "Despesas Financeiras",
+    classif: "a classificar",
+  },
   {
     nome: "Distribuição de Lucros",
     plano: "Distribuição de Lucros",
@@ -89,7 +94,6 @@ const DEMAIS = [
   "Condomínio",
   "Contabilidade",
   "Cursos e Treinamentos",
-  "Despesas Financeiras",
   "DOAÇÃO",
   "Encargos Mão de Obra",
   "Encargos Pessoal Administrativo",
@@ -101,7 +105,6 @@ const DEMAIS = [
   "Internet",
   "IPTU",
   "Juros",
-  "JUROS e MULTAS",
   "Limpeza",
   "Manutenção",
   "Manutenção de Equipamentos",
@@ -125,18 +128,22 @@ const DEMAIS = [
   "Água e Esgoto",
 ];
 
-const NATUREZAS = [
-  "Juros de Contrato",
-  "Licitação",
-  "Medição",
-  "Outras receitas",
-  "Prestação de Serviços",
-  "Projetos",
-  "Reembolso",
-  "Taxa de Administração",
-  "Venda",
-  "Venda de Imóveis",
-  "Juros de Aplicação Financeira",
+const NATUREZAS: { nome: string; linha: string }[] = [
+  { nome: "Outras receitas", linha: "Outras receitas" },
+  { nome: "Contrato", linha: "Contrato" },
+  { nome: "Execução de Obras", linha: "Execução de Obras" },
+  { nome: "Venda de Imóveis", linha: "Venda de Imóveis" },
+  { nome: "Prestação de Serviços", linha: "Prestação de Serviços" },
+  { nome: "Venda de Bens", linha: "Venda de Bens" },
+  { nome: "Aluguel", linha: "Aluguel" },
+  { nome: "Juros de Contrato", linha: "Juros de Recebimentos" },
+  { nome: "Licitação", linha: "Outras receitas" },
+  { nome: "Medição", linha: "Execução de Obras" },
+  { nome: "Projetos", linha: "Prestação de Serviços" },
+  { nome: "Reembolso", linha: "Outras receitas" },
+  { nome: "Taxa de Administração", linha: "Prestação de Serviços" },
+  { nome: "Venda", linha: "Venda de Bens" },
+  { nome: "Juros de Aplicação Financeira", linha: "Juros de Aplicações Financeiras" },
 ];
 
 function inferPlanoClassif(
@@ -218,7 +225,8 @@ export function seedFinanceiro(): FinanceiroState {
     categorias,
     naturezas: NATUREZAS.map((n, i) => ({
       id: `nat-${i + 1}`,
-      nome: n,
+      nome: n.nome,
+      linhaResultados: n.linha,
       ativo: true,
     })),
     contas: [
@@ -425,6 +433,27 @@ export function seedFinanceiro(): FinanceiroState {
         lancada: true,
         lancamentoId: "lan-1",
         meuCnpj: "00.000.000/0001-00",
+      },
+      {
+        id: "nf-2",
+        emissao: "2026-11-22",
+        serie: "1",
+        numero: "4602",
+        situacao: "autorizada",
+        emissor: "Materiais Centro",
+        cnpj: "98.765.432/0001-10",
+        valor: 2150,
+        lancada: false,
+        meuCnpj: "00.000.000/0001-00",
+      },
+    ],
+    meusCnpjs: [
+      {
+        id: "cnpj-1",
+        cnpj: "00.000.000/0001-00",
+        razaoSocial: "Meu Lote Fácil Ltda",
+        emissaoNfse: false,
+        capturaAutomatica: false,
       },
     ],
   };

@@ -1,19 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   ModuleHeader,
   KpiGrid,
   ModuleSection,
+  DataTable,
 } from "@/components/app/ModulePage";
+import { fieldControlClass } from "@/components/app/ModuleToolkit";
 import { formatBRL } from "@/lib/masks/br";
 import {
   aReceberContratos,
   aReceberFinanceiroTitulos,
   emAtrasoFinanceiroTitulos,
 } from "@/lib/indicators/receivables";
+import { agingPorConta } from "@/lib/financeiro/aging-faixas";
 import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
@@ -22,6 +25,7 @@ import { useCompras } from "@/lib/store/compras-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useParte5 } from "@/lib/store/parte5-store";
 import { useFluxo } from "@/lib/store/fluxo-store";
+import type { ObraStatus } from "@/lib/domain/obras-types";
 
 function daysFromToday(iso: string) {
   const t = new Date(iso + "T12:00:00").getTime();
@@ -35,7 +39,7 @@ export default function DashboardOperacionalPage() {
   const { state: f1 } = useFase1();
   const { state: obras } = useObras();
   const { state: compras } = useCompras();
-  const { state: fin } = useFinanceiro();
+  const { state: fin, fluxoMensal } = useFinanceiro();
   const { state: p5 } = useParte5();
   const { state: fluxo } = useFluxo();
   const { selectedId, filterByEmpresa, filterByDevelopmentEmpresa } =
@@ -105,6 +109,60 @@ export default function DashboardOperacionalPage() {
       (p) => p.status === "em_aberto" || p.status === "parcial"
     ).length,
   };
+
+  const [obraTab, setObraTab] = useState<
+    "em_andamento" | "paralisada" | "finalizada"
+  >("em_andamento");
+  const [centroFiltro, setCentroFiltro] = useState("todos");
+
+  const obrasGestao = useMemo(() => {
+    const map: Record<"em_andamento" | "paralisada" | "finalizada", ObraStatus> =
+      {
+        em_andamento: "em_andamento",
+        paralisada: "paralisada",
+        finalizada: "finalizada",
+      };
+    return obras.obras.filter((o) => o.status === map[obraTab]);
+  }, [obras.obras, obraTab]);
+
+  const agingPag = useMemo(
+    () =>
+      agingPorConta(
+        fin.pagamentos.map((p) => ({
+          contaId: p.contaId,
+          vencimento: p.vencimento,
+          valor: p.valor - p.valorPago,
+          aberto: p.status !== "pago",
+        })),
+        fin.contas.map((c) => ({ id: c.id, nome: c.nome }))
+      ),
+    [fin.pagamentos, fin.contas]
+  );
+
+  const agingRec = useMemo(
+    () =>
+      agingPorConta(
+        fin.recebimentos.map((r) => ({
+          contaId: r.contaId,
+          vencimento: r.vencimento,
+          valor: r.valor - r.valorRecebido,
+          aberto: r.status !== "recebido",
+        })),
+        fin.contas.map((c) => ({ id: c.id, nome: c.nome }))
+      ),
+    [fin.recebimentos, fin.contas]
+  );
+
+  const prePend = fin.preLancamentos.filter((p) => p.status === "pendente");
+  const preRec = fin.preLancamentos.filter((p) => p.status === "recusado");
+  const nfsSemVinculo = fin.notas.filter((n) => !n.lancada);
+  const fluxoVisao =
+    centroFiltro === "empresa"
+      ? "empresa"
+      : centroFiltro === "obra"
+        ? "obra"
+        : "geral";
+  const fluxoResumo = fluxoMensal(fluxoVisao);
 
   return (
     <div className="space-y-6">
@@ -207,6 +265,158 @@ export default function DashboardOperacionalPage() {
         ]}
       />
 
+      <ModuleSection title="Gestão de obras">
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {(
+            [
+              ["em_andamento", "Em andamento"],
+              ["paralisada", "Paralisada"],
+              ["finalizada", "Finalizada"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setObraTab(id)}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                obraTab === id
+                  ? "bg-brand-green text-white"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <DataTable
+          columns={[
+            { key: "obra", label: "Obra" },
+            { key: "cli", label: "Cliente" },
+            { key: "fis", label: "Físico %" },
+            { key: "orc", label: "Orçado" },
+            { key: "rea", label: "Realizado" },
+            { key: "sal", label: "Saldo" },
+          ]}
+          rows={obrasGestao.map((o) => {
+            const pct =
+              o.orcado > 0
+                ? Math.round((o.realizado / o.orcado) * 1000) / 10
+                : 0;
+            return {
+              obra: (
+                <Link
+                  href={`/obras/${o.id}`}
+                  className="font-medium hover:text-brand-orange"
+                >
+                  {o.nome}
+                </Link>
+              ),
+              cli: o.clienteNome,
+              fis: `${o.fisicoPct}%`,
+              orc: formatBRL(o.orcado),
+              rea: `${formatBRL(o.realizado)} (${pct}%)`,
+              sal: formatBRL(o.orcado - o.realizado),
+            };
+          })}
+        />
+      </ModuleSection>
+
+      <ModuleSection title="Pagamentos em aberto por conta">
+        <DataTable
+          columns={[
+            { key: "cta", label: "Conta" },
+            { key: "v90", label: "Venc. 90d" },
+            { key: "hoje", label: "Hoje" },
+            { key: "d7", label: "7 dias" },
+            { key: "d30", label: "30 dias" },
+          ]}
+          rows={agingPag.map((a) => ({
+            cta: a.contaNome,
+            v90: `${a.faixas[0].qtd} · ${formatBRL(a.faixas[0].valor)}`,
+            hoje: `${a.faixas[1].qtd} · ${formatBRL(a.faixas[1].valor)}`,
+            d7: `${a.faixas[2].qtd} · ${formatBRL(a.faixas[2].valor)}`,
+            d30: `${a.faixas[3].qtd} · ${formatBRL(a.faixas[3].valor)}`,
+          }))}
+        />
+      </ModuleSection>
+
+      <ModuleSection title="Recebimentos em aberto por conta">
+        <DataTable
+          columns={[
+            { key: "cta", label: "Conta" },
+            { key: "v90", label: "Venc. 90d" },
+            { key: "hoje", label: "Hoje" },
+            { key: "d7", label: "7 dias" },
+            { key: "d30", label: "30 dias" },
+          ]}
+          rows={agingRec.map((a) => ({
+            cta: a.contaNome,
+            v90: `${a.faixas[0].qtd} · ${formatBRL(a.faixas[0].valor)}`,
+            hoje: `${a.faixas[1].qtd} · ${formatBRL(a.faixas[1].valor)}`,
+            d7: `${a.faixas[2].qtd} · ${formatBRL(a.faixas[2].valor)}`,
+            d30: `${a.faixas[3].qtd} · ${formatBRL(a.faixas[3].valor)}`,
+          }))}
+        />
+      </ModuleSection>
+
+      <KpiGrid
+        items={[
+          {
+            label: "Pré-lançamentos pendentes",
+            value: prePend.length,
+            hint: formatBRL(prePend.reduce((a, p) => a + p.valor, 0)),
+          },
+          {
+            label: "Pré-lançamentos recusados",
+            value: preRec.length,
+          },
+          {
+            label: "NFs sem vínculo",
+            value: nfsSemVinculo.length,
+            hint: formatBRL(
+              nfsSemVinculo.reduce((a, n) => a + n.valor, 0)
+            ),
+          },
+        ]}
+      />
+
+      <ModuleSection title="Fluxo de caixa (resumo)">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <select
+            className={fieldControlClass + " max-w-[200px]"}
+            value={centroFiltro}
+            onChange={(e) => setCentroFiltro(e.target.value)}
+          >
+            <option value="todos">Centro: Geral</option>
+            <option value="empresa">Centro: Empresa</option>
+            <option value="obra">Centro: Obras</option>
+          </select>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/financeiro/fluxo-de-caixa">Abrir fluxo</Link>
+          </Button>
+        </div>
+        <div className="grid grid-cols-3 gap-3 text-center text-sm">
+          <div className="rounded-md border border-linha p-3">
+            <div className="text-muted-foreground">Receitas</div>
+            <div className="mt-1 font-semibold text-brand-green">
+              {formatBRL(fluxoResumo.receitas)}
+            </div>
+          </div>
+          <div className="rounded-md border border-linha p-3">
+            <div className="text-muted-foreground">Despesas</div>
+            <div className="mt-1 font-semibold">
+              {formatBRL(fluxoResumo.despesas)}
+            </div>
+          </div>
+          <div className="rounded-md border border-linha p-3">
+            <div className="text-muted-foreground">Saldo</div>
+            <div className="mt-1 font-semibold">
+              {formatBRL(fluxoResumo.saldo)}
+            </div>
+          </div>
+        </div>
+      </ModuleSection>
+
       <p className="text-xs text-muted-foreground">
         Atalhos:{" "}
         <Link className="underline" href="/demandas">
@@ -221,12 +431,16 @@ export default function DashboardOperacionalPage() {
           Recebimentos
         </Link>
         {" · "}
-        <Link className="underline" href="/obras">
-          Obras
+        <Link className="underline" href="/financeiro/pre-lancamentos">
+          Pré-lançamentos
         </Link>
         {" · "}
-        <Link className="underline" href="/compras/solicitacoes">
-          Compras
+        <Link className="underline" href="/financeiro/notas-fiscais">
+          Notas
+        </Link>
+        {" · "}
+        <Link className="underline" href="/obras">
+          Obras
         </Link>
       </p>
     </div>
