@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,21 @@ const STEPS = [
 
 export default function NovaVendaPage() {
   const router = useRouter();
-  const { state, addContract, changeLotStatus, addComissao } = useCarteira();
-  const { state: f1 } = useFase1();
+  const {
+    state,
+    addContract,
+    changeLotStatus,
+    addComissao,
+    lockLotForSale,
+    unlockLotForSale,
+    unlockLotsForSale,
+  } = useCarteira();
+  const { state: f1, currentUser } = useFase1();
+  const vendedor = {
+    userId: currentUser?.id ?? "u-anon",
+    nome: currentUser?.nome ?? "Usuário",
+  };
+
   const [step, setStep] = useState(0);
   const [developmentId, setDevelopmentId] = useState(
     state.developments[0]?.id ?? ""
@@ -39,28 +52,58 @@ export default function NovaVendaPage() {
   const [compradorNome, setCompradorNome] = useState("");
   const [promitentes, setPromitentes] = useState<string[]>([]);
   const [promitenteDraft, setPromitenteDraft] = useState("");
-  const [planId, setPlanId] = useState(state.paymentPlans[0]?.id ?? "");
+  const [planId, setPlanId] = useState("");
   const [copyFromContractId, setCopyFromContractId] = useState("");
   const [entradaPct, setEntradaPct] = useState(20);
   const [comissaoPct, setComissaoPct] = useState(3);
   const [corretor, setCorretor] = useState("Carla Corretora");
   const [recado, setRecado] = useState("");
   const [obsLote, setObsLote] = useState("");
+  const lotIdsRef = useRef<string[]>([]);
+  lotIdsRef.current = lotIds;
+  const unlockRef = useRef(unlockLotsForSale);
+  unlockRef.current = unlockLotsForSale;
+
+  const planosAtivos = useMemo(
+    () =>
+      state.paymentPlans.filter(
+        (p) =>
+          p.ativo &&
+          (!p.developmentId || p.developmentId === developmentId)
+      ),
+    [state.paymentPlans, developmentId]
+  );
+
+  const plan = state.paymentPlans.find((p) => p.id === planId);
+
+  // Liberar travas ao sair da página sem finalizar
+  useEffect(() => {
+    return () => {
+      const ids = lotIdsRef.current;
+      if (ids.length) unlockRef.current(ids);
+    };
+  }, []);
 
   const disponiveis = useMemo(
     () =>
-      state.lots.filter(
-        (l) =>
-          l.developmentId === developmentId &&
-          l.status === "disponivel" &&
-          !l.bloqueiaVenda
-      ),
-    [state.lots, developmentId]
+      state.lots.filter((l) => {
+        if (l.developmentId !== developmentId) return false;
+        if (lotIds.includes(l.id)) return true;
+        if (l.status === "disponivel" && !l.bloqueiaVenda) return true;
+        if (
+          l.vendaEmAndamento &&
+          l.vendedorUserId === vendedor.userId &&
+          l.status === "reservado"
+        ) {
+          return true;
+        }
+        return false;
+      }),
+    [state.lots, developmentId, lotIds, vendedor.userId]
   );
 
   const selectedLots = state.lots.filter((l) => lotIds.includes(l.id));
   const total = selectedLots.reduce((a, l) => a + l.valor, 0);
-  const plan = state.paymentPlans.find((p) => p.id === planId);
   const compradores = f1.people.filter(
     (p) =>
       p.papeis.includes("comprador") ||
@@ -70,9 +113,18 @@ export default function NovaVendaPage() {
   const corretores = f1.people.filter((p) => p.papeis.includes("corretor"));
 
   const toggleLot = (id: string) => {
-    setLotIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    if (lotIds.includes(id)) {
+      unlockLotForSale(id);
+      setLotIds((prev) => prev.filter((x) => x !== id));
+      return;
+    }
+    const res = lockLotForSale(id, vendedor);
+    if (!res.ok) {
+      notify("Lote indisponível", res.reason ?? "");
+      return;
+    }
+    setLotIds((prev) => [...prev, id]);
+    notify("Lote travado", `Vendedor: ${vendedor.nome}`);
   };
 
   const next = () => {
@@ -84,11 +136,36 @@ export default function NovaVendaPage() {
       notify("Informe o comprador");
       return;
     }
+    if (step === 4) {
+      if (!planId || !plan) {
+        notify(
+          "Plano de pagamento obrigatório",
+          "Cadastre/selecione um plano ativo antes de continuar"
+        );
+        return;
+      }
+      if (!plan.ativo) {
+        notify("Plano inativo", "Escolha um plano ativo");
+        return;
+      }
+    }
     setStep((s) => Math.min(STEPS.length - 1, s + 1));
   };
 
   const finalizar = () => {
-    const prestacoes = plan?.prestacoes ?? 60;
+    if (!planId || !plan?.ativo) {
+      notify(
+        "Plano de pagamento obrigatório",
+        "Não é possível gerar venda sem plano cadastrado/ativo"
+      );
+      setStep(4);
+      return;
+    }
+    if (lotIds.length === 0) {
+      notify("Selecione ao menos um lote");
+      return;
+    }
+    const prestacoes = plan.prestacoes;
     const entrada = Math.round(total * (entradaPct / 100) * 100) / 100;
     const resto = total - entrada;
     const valorParcela =
@@ -118,6 +195,8 @@ export default function NovaVendaPage() {
       notify("Nenhum contrato gerado", "Verifique disponibilidade dos lotes");
       return;
     }
+    // limpa lista local para o unmount não “destravar” lotes já vendidos
+    setLotIds([]);
     const comissaoValor = Math.round(((total * comissaoPct) / 100) * 100) / 100;
     addComissao({
       corretorNome: corretor,
@@ -126,9 +205,7 @@ export default function NovaVendaPage() {
     });
     notify(
       `${ok} contrato(s)`,
-      `Comissão ${comissaoPct}% · ${corretor}${recado ? ` · ${recado}` : ""}${
-        obsLote ? ` · ${obsLote}` : ""
-      }`
+      `Vendedor ${vendedor.nome} · plano ${plan.nome} · comissão ${comissaoPct}%`
     );
     router.push("/contratos");
   };
@@ -137,13 +214,25 @@ export default function NovaVendaPage() {
     <div className="space-y-6">
       <ModuleHeader
         title="Nova venda"
-        description="H10 — multi-lote: lotes → comprador → promitentes → dados → plano → comissão → finalizar."
+        description="H10 — lote travado ao selecionar (mostra vendedor). Plano de pagamento obrigatório antes de gerar a venda."
         actions={
           <Button size="sm" variant="outline" asChild>
             <Link href="/vendas">Voltar</Link>
           </Button>
         }
       />
+
+      <div className="rounded-sm border border-linha bg-paper-muted/40 px-3 py-2 text-sm">
+        Vendendo como: <strong>{vendedor.nome}</strong>
+        {planosAtivos.length === 0 ? (
+          <span className="ml-2 text-amber-800">
+            · Sem plano ativo neste empreendimento —{" "}
+            <Link className="underline" href="/planos-pagamento">
+              cadastrar plano
+            </Link>
+          </span>
+        ) : null}
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {STEPS.map((label, i) => (
@@ -162,8 +251,10 @@ export default function NovaVendaPage() {
             <SearchSelect
               value={developmentId}
               onChange={(id) => {
-                setDevelopmentId(id);
+                unlockLotsForSale(lotIds);
                 setLotIds([]);
+                setDevelopmentId(id);
+                setPlanId("");
               }}
               placeholder="Buscar empreendimento…"
               options={state.developments.map((d) => ({
@@ -173,20 +264,26 @@ export default function NovaVendaPage() {
             />
           </Field>
           <p className="mt-2 text-xs text-muted-foreground">
-            {lotIds.length} selecionado(s) · {formatBRL(total)}
+            {lotIds.length} selecionado(s) · {formatBRL(total)} · clique trava o
+            lote para você
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {disponiveis.map((l) => {
               const on = lotIds.includes(l.id);
+              const travaOutro =
+                l.vendaEmAndamento &&
+                l.vendedorUserId &&
+                l.vendedorUserId !== vendedor.userId;
               return (
                 <button
                   key={l.id}
                   type="button"
+                  disabled={!!travaOutro}
                   className={`rounded-md border px-3 py-2 text-left text-sm ${
                     on
                       ? "border-brand-orange bg-brand-orange/10"
                       : "border-border"
-                  }`}
+                  } ${travaOutro ? "opacity-50" : ""}`}
                   onClick={() => toggleLot(l.id)}
                 >
                   <span className="font-medium">
@@ -195,6 +292,16 @@ export default function NovaVendaPage() {
                   <span className="ml-2 text-muted-foreground">
                     {formatBRL(l.valor)} · {l.area} m²
                   </span>
+                  {on || l.vendaEmAndamento ? (
+                    <div className="mt-1 text-xs text-amber-800">
+                      Travado · {l.vendedorNome ?? vendedor.nome}
+                    </div>
+                  ) : null}
+                  {travaOutro ? (
+                    <div className="mt-1 text-xs text-destructive">
+                      Em venda por {l.vendedorNome}
+                    </div>
+                  ) : null}
                 </button>
               );
             })}
@@ -220,81 +327,69 @@ export default function NovaVendaPage() {
               placeholder="Buscar comprador…"
               options={compradores.map((p) => ({
                 value: p.id,
-                label: `${p.nome} · ${p.documento}`,
+                label: p.nome,
               }))}
             />
           </Field>
-          <Field label="Nome do comprador *">
+          <Field label="Nome do comprador">
             <Input
               value={compradorNome}
               onChange={(e) => setCompradorNome(e.target.value)}
             />
           </Field>
-          <Button size="sm" variant="outline" asChild>
-            <Link href="/cadastros/pre-cadastro">Pré-cadastro</Link>
-          </Button>
         </ModuleSection>
       ) : null}
 
       {step === 2 ? (
-        <ModuleSection title="Demais promitentes">
-          <Field label="Adicionar promitente">
-            <div className="flex gap-2">
-              <Input
-                value={promitenteDraft}
-                onChange={(e) => setPromitenteDraft(e.target.value)}
-                placeholder="Nome"
-              />
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  if (!promitenteDraft.trim()) return;
-                  setPromitentes((p) => [...p, promitenteDraft.trim()]);
-                  setPromitenteDraft("");
-                }}
-              >
-                Incluir
-              </Button>
-            </div>
-          </Field>
+        <ModuleSection title="Promitentes">
+          <div className="flex gap-2">
+            <Input
+              value={promitenteDraft}
+              onChange={(e) => setPromitenteDraft(e.target.value)}
+              placeholder="Nome do promitente"
+            />
+            <Button
+              size="sm"
+              type="button"
+              onClick={() => {
+                if (!promitenteDraft.trim()) return;
+                setPromitentes((p) => [...p, promitenteDraft.trim()]);
+                setPromitenteDraft("");
+              }}
+            >
+              Adicionar
+            </Button>
+          </div>
           <ul className="mt-2 space-y-1 text-sm">
-            {promitentes.map((n, i) => (
-              <li key={`${n}-${i}`} className="flex justify-between gap-2">
-                <span>{n}</span>
+            {promitentes.map((p) => (
+              <li key={p} className="flex justify-between">
+                {p}
                 <button
                   type="button"
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  className="text-xs underline"
                   onClick={() =>
-                    setPromitentes((p) => p.filter((_, j) => j !== i))
+                    setPromitentes((list) => list.filter((x) => x !== p))
                   }
                 >
                   Remover
                 </button>
               </li>
             ))}
-            {promitentes.length === 0 ? (
-              <li className="text-muted-foreground">Nenhum promitente extra.</li>
-            ) : null}
           </ul>
         </ModuleSection>
       ) : null}
 
       {step === 3 ? (
-        <ModuleSection title="Dados do(s) lote(s)">
+        <ModuleSection title="Dados do lote">
           <ul className="space-y-2 text-sm">
             {selectedLots.map((l) => (
-              <li
-                key={l.id}
-                className="rounded-md border border-border px-3 py-2"
-              >
+              <li key={l.id} className="rounded-md border border-border p-2">
                 <div className="font-medium">
                   {l.empNome} · {l.quadra}/{l.lote}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Área {l.area} m² · {formatBRL(l.valor)} · m²{" "}
-                  {formatBRL(l.valorM2)}
-                  {l.matricula ? ` · matrícula ${l.matricula}` : ""}
+                  {formatBRL(l.valor)} · {l.area} m² · travado por{" "}
+                  {l.vendedorNome ?? vendedor.nome}
                 </div>
                 {(l.frente || l.fundo || l.direita || l.esquerda) && (
                   <div className="text-xs text-muted-foreground">
@@ -316,7 +411,16 @@ export default function NovaVendaPage() {
       ) : null}
 
       {step === 4 ? (
-        <ModuleSection title="Plano de pagamento">
+        <ModuleSection title="Plano de pagamento (obrigatório)">
+          {planosAtivos.length === 0 ? (
+            <p className="mb-3 text-sm text-amber-800">
+              Não há plano ativo para este empreendimento.{" "}
+              <Link className="underline" href="/planos-pagamento">
+                Cadastre um plano
+              </Link>{" "}
+              antes de gerar a venda.
+            </p>
+          ) : null}
           <Field label="Copiar plano de contrato existente">
             <SearchSelect
               value={copyFromContractId}
@@ -324,7 +428,7 @@ export default function NovaVendaPage() {
                 setCopyFromContractId(id);
                 const c = state.contracts.find((x) => x.id === id);
                 if (!c) return;
-                const match = state.paymentPlans.find(
+                const match = planosAtivos.find(
                   (p) =>
                     p.developmentId === c.developmentId ||
                     p.nome.toLowerCase().includes(c.tipoReajuste.toLowerCase())
@@ -339,12 +443,12 @@ export default function NovaVendaPage() {
               }))}
             />
           </Field>
-          <Field label="Plano">
+          <Field label="Plano *">
             <SearchSelect
               value={planId}
               onChange={setPlanId}
-              placeholder="Buscar plano…"
-              options={state.paymentPlans.map((p) => ({
+              placeholder="Buscar plano ativo…"
+              options={planosAtivos.map((p) => ({
                 value: p.id,
                 label: `${p.nome} · ${p.prestacoes}x · ${p.moedaRef}`,
               }))}
@@ -370,9 +474,7 @@ export default function NovaVendaPage() {
         <ModuleSection title="Comissão">
           <Field label="Corretor">
             <SearchSelect
-              value={
-                corretores.find((c) => c.nome === corretor)?.id ?? ""
-              }
+              value={corretores.find((c) => c.nome === corretor)?.id ?? ""}
               onChange={(id) => {
                 const p = corretores.find((x) => x.id === id);
                 if (p) setCorretor(p.nome);
@@ -406,17 +508,18 @@ export default function NovaVendaPage() {
       {step === 6 ? (
         <ModuleSection title="Resumo">
           <p className="text-sm">
+            Vendedor: <strong>{vendedor.nome}</strong>
+          </p>
+          <p className="text-sm">
             {selectedLots.length} lote(s) · {formatBRL(total)}
           </p>
           <p className="text-sm">Comprador: {compradorNome}</p>
           {promitentes.length ? (
-            <p className="text-sm">
-              Promitentes: {promitentes.join(", ")}
-            </p>
+            <p className="text-sm">Promitentes: {promitentes.join(", ")}</p>
           ) : null}
           <p className="text-sm">
-            Plano: {plan?.nome ?? "—"} · entrada {entradaPct}% · comissão{" "}
-            {comissaoPct}% ({corretor})
+            Plano: {plan?.nome ?? "— (obrigatório)"} · entrada {entradaPct}% ·
+            comissão {comissaoPct}% ({corretor})
           </p>
           {obsLote ? (
             <p className="text-sm text-muted-foreground">Obs.: {obsLote}</p>
@@ -424,7 +527,8 @@ export default function NovaVendaPage() {
           <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
             {selectedLots.map((l) => (
               <li key={l.id}>
-                {l.empNome} {l.quadra}/{l.lote} · {formatBRL(l.valor)}
+                {l.empNome} {l.quadra}/{l.lote} · {formatBRL(l.valor)} · travado
+                por {l.vendedorNome ?? vendedor.nome}
               </li>
             ))}
           </ul>
@@ -445,10 +549,23 @@ export default function NovaVendaPage() {
             Continuar
           </Button>
         ) : (
-          <Button size="sm" onClick={finalizar}>
+          <Button size="sm" onClick={finalizar} disabled={!planId || !plan}>
             Finalizar venda
           </Button>
         )}
+        {lotIds.length ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              unlockLotsForSale(lotIds);
+              setLotIds([]);
+              notify("Travas liberadas");
+            }}
+          >
+            Liberar lotes
+          </Button>
+        ) : null}
       </div>
     </div>
   );
