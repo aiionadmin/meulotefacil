@@ -52,6 +52,10 @@ type CarteiraApi = {
     data: Omit<Development, "id" | "qtdLotes"> & { qtdLotes?: number }
   ) => Development;
   updateDevelopment: (id: string, patch: Partial<Development>) => void;
+  /** Remove empreendimento e lotes sem contrato ativo. Retorna motivo se bloqueado. */
+  removeDevelopment: (id: string) => { ok: boolean; reason?: string };
+  /** Remove lote se não houver contrato vinculado / status vendido. */
+  removeLot: (id: string) => { ok: boolean; reason?: string };
   massGenerateLots: (input: {
     developmentId: string;
     quadra: string;
@@ -244,6 +248,70 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
             d.id === id ? { ...d, ...patch } : d
           ),
         }));
+      },
+      removeDevelopment: (id) => {
+        const active = state.contracts.some(
+          (c) =>
+            c.developmentId === id &&
+            (c.status === "ativo" || c.status === "renegociado")
+        );
+        if (active) {
+          return {
+            ok: false,
+            reason: "Há contratos ativos neste empreendimento",
+          };
+        }
+        setState((s) => ({
+          ...s,
+          developments: s.developments.filter((d) => d.id !== id),
+          lots: s.lots.filter((l) => l.developmentId !== id),
+          paymentPlans: s.paymentPlans.filter((p) => p.developmentId !== id),
+          priceTables: s.priceTables.filter((t) => t.developmentId !== id),
+        }));
+        return { ok: true };
+      },
+      removeLot: (id) => {
+        const lot = state.lots.find((l) => l.id === id);
+        if (!lot) return { ok: false, reason: "Lote não encontrado" };
+        if (
+          lot.status === "vendido" ||
+          lot.status === "quitado" ||
+          lot.status === "escritura"
+        ) {
+          return {
+            ok: false,
+            reason: `Lote ${lot.status} não pode ser excluído`,
+          };
+        }
+        if (
+          lot.contractId ||
+          state.contracts.some(
+            (c) => c.lotId === id && c.status !== "cancelado"
+          )
+        ) {
+          return {
+            ok: false,
+            reason: "Lote vinculado a contrato",
+          };
+        }
+        setState((s) => ({
+          ...s,
+          lots: s.lots.filter((l) => l.id !== id),
+          developments: s.developments.map((d) =>
+            d.id === lot.developmentId
+              ? {
+                  ...d,
+                  qtdLotes: Math.max(
+                    0,
+                    s.lots.filter(
+                      (l) => l.developmentId === d.id && l.id !== id
+                    ).length
+                  ),
+                }
+              : d
+          ),
+        }));
+        return { ok: true };
       },
       massGenerateLots: ({ developmentId, quadra, qtd, area, valor }) => {
         const emp = state.developments.find((d) => d.id === developmentId);

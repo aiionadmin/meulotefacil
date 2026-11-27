@@ -58,10 +58,43 @@ const LOT_STATUSES: LotStatus[] = [
   "vendido",
 ];
 
+const EMPTY_EMP_FORM = {
+  codigo: "",
+  nome: "",
+  tipo: "loteamento" as Development["tipo"],
+  modalidade: "loteamento" as Development["modalidade"],
+  status: "em_andamento" as Development["status"],
+  cidade: "Campinas",
+  uf: "SP",
+  cep: "",
+  areaTotal: "",
+  codigoMunicipio: "",
+  padrao: "",
+  confrontacao: "",
+  matriculaNumero: "",
+  matriculaData: "",
+  adminRazao: "",
+  adminCnpj: "",
+  adminEndereco: "",
+  contaCorrentePadrao: "",
+  numeracaoPropria: false,
+  recadoPadrao: "",
+  qtdQuadras: 4,
+  qtdLotes: 0,
+  diasMora: 0,
+  taxaMoraMes: 0.01,
+  taxaMulta: 0.02,
+  diaMulta: 0,
+  observacoes: "",
+};
+
 export default function EmpreendimentosPage() {
   const {
     state,
     addDevelopment,
+    updateDevelopment,
+    removeDevelopment,
+    removeLot,
     massGenerateLots,
     importLots,
     changeLotStatus,
@@ -76,6 +109,20 @@ export default function EmpreendimentosPage() {
   const [q, setQ] = useState("");
   const [empFilter, setEmpFilter] = useState("todos");
   const [openEmp, setOpenEmp] = useState(false);
+  const [editingEmpId, setEditingEmpId] = useState<string | null>(null);
+  const [openLotEdit, setOpenLotEdit] = useState(false);
+  const [lotForm, setLotForm] = useState({
+    quadra: "",
+    lote: "",
+    area: 0,
+    valor: 0,
+    status: "disponivel" as LotStatus,
+    matricula: "",
+    frente: "",
+    fundo: "",
+    direita: "",
+    esquerda: "",
+  });
   const [openMass, setOpenMass] = useState(false);
   const [openStatus, setOpenStatus] = useState(false);
   const [openImport, setOpenImport] = useState(false);
@@ -87,34 +134,7 @@ export default function EmpreendimentosPage() {
   );
   const [selected, setSelected] = useState<Lot | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [empForm, setEmpForm] = useState({
-    codigo: "",
-    nome: "",
-    tipo: "loteamento" as Development["tipo"],
-    modalidade: "loteamento" as Development["modalidade"],
-    status: "em_andamento" as Development["status"],
-    cidade: "Campinas",
-    uf: "SP",
-    cep: "",
-    areaTotal: "",
-    codigoMunicipio: "",
-    padrao: "",
-    confrontacao: "",
-    matriculaNumero: "",
-    matriculaData: "",
-    adminRazao: "",
-    adminCnpj: "",
-    adminEndereco: "",
-    contaCorrentePadrao: "",
-    numeracaoPropria: false,
-    recadoPadrao: "",
-    qtdQuadras: 4,
-    qtdLotes: 0,
-    diasMora: 0,
-    taxaMoraMes: 0.01,
-    taxaMulta: 0.02,
-    diaMulta: 0,
-  });
+  const [empForm, setEmpForm] = useState({ ...EMPTY_EMP_FORM });
   const [mass, setMass] = useState({
     developmentId: state.developments[0]?.id ?? "",
     quadra: "E",
@@ -126,6 +146,46 @@ export default function EmpreendimentosPage() {
     status: "juridico" as LotStatus,
     motivo: "",
   });
+
+  function openNewEmp() {
+    setEditingEmpId(null);
+    setEmpForm({ ...EMPTY_EMP_FORM });
+    setOpenEmp(true);
+  }
+
+  function openEditEmp(d: Development) {
+    setEditingEmpId(d.id);
+    setEmpForm({
+      codigo: d.codigo,
+      nome: d.nome,
+      tipo: d.tipo,
+      modalidade: d.modalidade ?? "loteamento",
+      status: d.status,
+      cidade: d.cidade,
+      uf: d.uf,
+      cep: d.cep ?? "",
+      areaTotal: d.areaTotal ?? "",
+      codigoMunicipio: d.codigoMunicipio ?? "",
+      padrao: d.padrao ?? "",
+      confrontacao: d.confrontacao ?? "",
+      matriculaNumero: d.matriculaNumero ?? "",
+      matriculaData: d.matriculaData ?? "",
+      adminRazao: d.adminRazao ?? "",
+      adminCnpj: d.adminCnpj ?? "",
+      adminEndereco: d.adminEndereco ?? "",
+      contaCorrentePadrao: d.contaCorrentePadrao ?? "",
+      numeracaoPropria: d.numeracaoPropria ?? false,
+      recadoPadrao: d.recadoPadrao ?? "",
+      qtdQuadras: d.qtdQuadras,
+      qtdLotes: d.qtdLotes,
+      diasMora: d.diasMora,
+      taxaMoraMes: d.taxaMoraMes,
+      taxaMulta: d.taxaMulta,
+      diaMulta: d.diaMulta,
+      observacoes: d.observacoes ?? "",
+    });
+    setOpenEmp(true);
+  }
 
   const lotes = useMemo(() => {
     let list = filterByDevelopmentEmpresa(state.lots, state.developments);
@@ -197,7 +257,7 @@ export default function EmpreendimentosPage() {
             >
               Importar lotes
             </Button>
-            <Button size="sm" onClick={() => setOpenEmp(true)}>
+            <Button size="sm" onClick={openNewEmp}>
               Novo empreendimento
             </Button>
           </>
@@ -214,7 +274,14 @@ export default function EmpreendimentosPage() {
       />
 
       <ModuleSection title="Empreendimentos">
+        <p className="mb-2 text-xs text-muted-foreground">
+          Clique na linha para editar · use Excluir na ficha do formulário.
+        </p>
         <DataTable
+          onRowClick={(i) => {
+            const d = developments[i];
+            if (d) openEditEmp(d);
+          }}
           columns={[
             { key: "codigo", label: "Código" },
             { key: "nome", label: "Nome" },
@@ -223,6 +290,7 @@ export default function EmpreendimentosPage() {
             { key: "cidade", label: "Cidade" },
             { key: "status", label: "Status" },
             { key: "lotes", label: "Lotes" },
+            { key: "acoes", label: "" },
           ]}
           rows={developments.map((d) => ({
             codigo: d.codigo,
@@ -232,6 +300,19 @@ export default function EmpreendimentosPage() {
             cidade: `${d.cidade}/${d.uf}`,
             status: <StatusPill tone="info">{d.status.replace(/_/g, " ")}</StatusPill>,
             lotes: state.lots.filter((l) => l.developmentId === d.id).length,
+            acoes: (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditEmp(d);
+                }}
+              >
+                Editar
+              </Button>
+            ),
           }))}
         />
       </ModuleSection>
@@ -331,12 +412,13 @@ export default function EmpreendimentosPage() {
       />
 
       <DetailSheet
-        open={!!selected}
+        open={!!selected && !openLotEdit}
         onOpenChange={(o) => !o && setSelected(null)}
         title={selected ? `${selected.quadra}/${selected.lote}` : ""}
       >
         {selected ? (
           <div className="space-y-2">
+            <DetailRow label="Empreendimento" value={selected.empNome} />
             <DetailRow label="Status" value={selected.status} />
             <DetailRow label="Área" value={`${selected.area} m²`} />
             <DetailRow label="Valor" value={formatBRL(selected.valor)} />
@@ -347,43 +429,229 @@ export default function EmpreendimentosPage() {
               value={`venda ${selected.bloqueiaVenda ? "sim" : "não"} · fin. ${selected.bloqueiaFinanceiro ? "sim" : "não"}`}
             />
             <DetailRow label="Comprador" value={selected.compradorNome ?? "—"} />
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                updateLot(selected.id, {
-                  valor: selected.valor + 5000,
-                  valorM2:
-                    Math.round(((selected.valor + 5000) / selected.area) * 100) /
-                    100,
-                });
-                notify("Valor atualizado (+R$ 5.000)");
-                setSelected(null);
-              }}
-            >
-              + R$ 5.000 no valor
-            </Button>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setLotForm({
+                    quadra: selected.quadra,
+                    lote: selected.lote,
+                    area: selected.area,
+                    valor: selected.valor,
+                    status: selected.status,
+                    matricula: selected.matricula ?? "",
+                    frente: selected.frente ?? "",
+                    fundo: selected.fundo ?? "",
+                    direita: selected.direita ?? "",
+                    esquerda: selected.esquerda ?? "",
+                  });
+                  setOpenLotEdit(true);
+                }}
+              >
+                Editar lote
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  updateLot(selected.id, {
+                    valor: selected.valor + 5000,
+                    valorM2:
+                      Math.round(
+                        ((selected.valor + 5000) / selected.area) * 100
+                      ) / 100,
+                  });
+                  notify("Valor atualizado (+R$ 5.000)");
+                  setSelected(null);
+                }}
+              >
+                + R$ 5.000 no valor
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  const res = removeLot(selected.id);
+                  if (!res.ok) {
+                    notify("Não excluído", res.reason ?? "");
+                    return;
+                  }
+                  notify("Lote excluído", `${selected.quadra}/${selected.lote}`);
+                  setSelected(null);
+                }}
+              >
+                Excluir lote
+              </Button>
+            </div>
           </div>
         ) : null}
       </DetailSheet>
 
       <FormDialog
+        open={openLotEdit}
+        onOpenChange={(o) => {
+          setOpenLotEdit(o);
+          if (!o) setSelected(null);
+        }}
+        title={
+          selected
+            ? `Editar lote ${selected.quadra}/${selected.lote}`
+            : "Editar lote"
+        }
+        onSubmit={() => {
+          if (!selected) return;
+          if (!lotForm.quadra.trim() || !lotForm.lote.trim()) {
+            notify("Quadra e lote obrigatórios");
+            return;
+          }
+          const area = Number(lotForm.area) || 0;
+          const valor = Number(lotForm.valor) || 0;
+          updateLot(selected.id, {
+            quadra: lotForm.quadra.trim(),
+            lote: lotForm.lote.trim(),
+            area,
+            valor,
+            valorM2: area > 0 ? Math.round((valor / area) * 100) / 100 : 0,
+            status: lotForm.status,
+            matricula: lotForm.matricula || undefined,
+            frente: lotForm.frente || undefined,
+            fundo: lotForm.fundo || undefined,
+            direita: lotForm.direita || undefined,
+            esquerda: lotForm.esquerda || undefined,
+          });
+          if (lotForm.status !== selected.status) {
+            changeLotStatus(
+              [selected.id],
+              lotForm.status,
+              "Edição manual do cadastro"
+            );
+          }
+          notify("Lote atualizado", `${lotForm.quadra}/${lotForm.lote}`);
+          setOpenLotEdit(false);
+          setSelected(null);
+        }}
+      >
+        <Field label="Quadra *">
+          <Input
+            value={lotForm.quadra}
+            onChange={(e) =>
+              setLotForm({ ...lotForm, quadra: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Lote *">
+          <Input
+            value={lotForm.lote}
+            onChange={(e) => setLotForm({ ...lotForm, lote: e.target.value })}
+          />
+        </Field>
+        <Field label="Área (m²)">
+          <Input
+            type="number"
+            value={lotForm.area}
+            onChange={(e) =>
+              setLotForm({ ...lotForm, area: Number(e.target.value) || 0 })
+            }
+          />
+        </Field>
+        <Field label="Valor">
+          <Input
+            type="number"
+            value={lotForm.valor}
+            onChange={(e) =>
+              setLotForm({ ...lotForm, valor: Number(e.target.value) || 0 })
+            }
+          />
+        </Field>
+        <Field label="Status">
+          <select
+            className={fieldControlClass}
+            value={lotForm.status}
+            onChange={(e) =>
+              setLotForm({
+                ...lotForm,
+                status: e.target.value as LotStatus,
+              })
+            }
+          >
+            {LOT_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Matrícula">
+          <Input
+            value={lotForm.matricula}
+            onChange={(e) =>
+              setLotForm({ ...lotForm, matricula: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Frente">
+          <Input
+            value={lotForm.frente}
+            onChange={(e) =>
+              setLotForm({ ...lotForm, frente: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Fundo">
+          <Input
+            value={lotForm.fundo}
+            onChange={(e) => setLotForm({ ...lotForm, fundo: e.target.value })}
+          />
+        </Field>
+        <Field label="Direita">
+          <Input
+            value={lotForm.direita}
+            onChange={(e) =>
+              setLotForm({ ...lotForm, direita: e.target.value })
+            }
+          />
+        </Field>
+        <Field label="Esquerda">
+          <Input
+            value={lotForm.esquerda}
+            onChange={(e) =>
+              setLotForm({ ...lotForm, esquerda: e.target.value })
+            }
+          />
+        </Field>
+      </FormDialog>
+
+      <FormDialog
         open={openEmp}
-        onOpenChange={setOpenEmp}
-        title="Novo empreendimento"
+        onOpenChange={(o) => {
+          setOpenEmp(o);
+          if (!o) setEditingEmpId(null);
+        }}
+        title={
+          editingEmpId ? "Editar empreendimento" : "Novo empreendimento"
+        }
         onSubmit={() => {
           if (!empForm.codigo || !empForm.nome) {
             notify("Código e nome obrigatórios");
             return;
           }
-          addDevelopment({
-            ...empForm,
-            empresaId:
-              selectedId === "todas" ? developments[0]?.empresaId : selectedId,
-          });
-          notify("Empreendimento criado", empForm.nome);
+          if (editingEmpId) {
+            updateDevelopment(editingEmpId, {
+              ...empForm,
+            });
+            notify("Empreendimento atualizado", empForm.nome);
+          } else {
+            addDevelopment({
+              ...empForm,
+              empresaId:
+                selectedId === "todas"
+                  ? developments[0]?.empresaId
+                  : selectedId,
+            });
+            notify("Empreendimento criado", empForm.nome);
+          }
           setOpenEmp(false);
+          setEditingEmpId(null);
         }}
       >
         <Field label="Código *">
@@ -529,6 +797,42 @@ export default function EmpreendimentosPage() {
             }
           />
         </Field>
+        <Field label="Observações">
+          <Input
+            value={empForm.observacoes}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, observacoes: e.target.value })
+            }
+          />
+        </Field>
+        {editingEmpId ? (
+          <div className="flex justify-between gap-2 border-t border-linha pt-3">
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    "Excluir este empreendimento e seus lotes sem contrato?"
+                  )
+                ) {
+                  return;
+                }
+                const res = removeDevelopment(editingEmpId);
+                if (!res.ok) {
+                  notify("Não excluído", res.reason ?? "");
+                  return;
+                }
+                notify("Empreendimento excluído", empForm.nome);
+                setOpenEmp(false);
+                setEditingEmpId(null);
+              }}
+            >
+              Excluir empreendimento
+            </Button>
+          </div>
+        ) : null}
       </FormDialog>
 
       <FormDialog
