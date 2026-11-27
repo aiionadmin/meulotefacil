@@ -16,6 +16,11 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { canApprove } from "@/lib/alcadas/check";
+import {
+  notifyStub,
+  sendOcEmailStub,
+  sendOcWhatsAppStub,
+} from "@/lib/integrations";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCompras } from "@/lib/store/compras-store";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
@@ -409,21 +414,28 @@ export default function OrdensCompraPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      notify(
-                        "WhatsApp",
-                        `OC ${live.numero} · ${formatBRL(live.valor)}`
-                      )
-                    }
+                    onClick={() => {
+                      const r = sendOcWhatsAppStub({
+                        ordemId: live.id,
+                        numero: live.numero,
+                      });
+                      const n = notifyStub(r, "WhatsApp OC");
+                      notify(n.title, n.description);
+                    }}
                   >
                     Enviar WhatsApp
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      notify("E-mail", `OC ${live.numero} enviada`)
-                    }
+                    onClick={() => {
+                      const r = sendOcEmailStub({
+                        ordemId: live.id,
+                        numero: live.numero,
+                      });
+                      const n = notifyStub(r, "E-mail OC");
+                      notify(n.title, n.description);
+                    }}
                   >
                     Enviar e-mail
                   </Button>

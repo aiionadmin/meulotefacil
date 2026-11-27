@@ -21,6 +21,11 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
+import {
+  notifyStub,
+  sendCotacaoEmailStub,
+  sendCotacaoWhatsAppStub,
+} from "@/lib/integrations";
 import { useCompras } from "@/lib/store/compras-store";
 import { parseCotacaoPdf } from "@/lib/compras/cotacao-pdf";
 import type { Cotacao } from "@/lib/domain/compras-types";
@@ -208,6 +213,38 @@ export default function CotacoesPage() {
                     <div className="text-xs">
                       Qualificação {f.qualificacao}/5 · link público /cotacao/
                       {f.publicToken}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const r = sendCotacaoEmailStub({
+                            cotacaoId: live.id,
+                            fornecedor: f.fornecedor,
+                            email: f.email,
+                          });
+                          const n = notifyStub(r, "E-mail cotação");
+                          notify(n.title, n.description);
+                        }}
+                      >
+                        Enviar e-mail
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const r = sendCotacaoWhatsAppStub({
+                            cotacaoId: live.id,
+                            fornecedor: f.fornecedor,
+                            telefone: f.telefone,
+                          });
+                          const n = notifyStub(r, "WhatsApp cotação");
+                          notify(n.title, n.description);
+                        }}
+                      >
+                        Enviar WhatsApp
+                      </Button>
                     </div>
                   </li>
                 ))}

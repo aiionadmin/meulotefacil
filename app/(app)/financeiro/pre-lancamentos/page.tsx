@@ -14,6 +14,10 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import {
+  configurePreLancamentoWhatsAppStub,
+  notifyStub,
+} from "@/lib/integrations";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useFinanceiro } from "@/lib/store/financeiro-store";
 import type { PreLancamento } from "@/lib/domain/financeiro-types";
@@ -63,6 +67,22 @@ export default function PreLancamentosPage() {
           <>
             <Button size="sm" variant="outline" asChild>
               <Link href="/financeiro/pagamentos">Pagamentos</Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const r = configurePreLancamentoWhatsAppStub();
+                const n = notifyStub(r, "WhatsApp pré-lançamento");
+                notify(n.title, n.description);
+              }}
+            >
+              Configurar WhatsApp
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/configuracoes/parametros/integracoes">
+                Integrações
+              </Link>
             </Button>
             <Button size="sm" onClick={() => { setFormDirty(false); setOpen(true); }}>
               Novo

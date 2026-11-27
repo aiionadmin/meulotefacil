@@ -17,7 +17,7 @@ Base: tip dual-write resto (#109). Sem deploy.
 - Selects de etapa/item no centro de custo; preenchimento automático quando a flag está ligada
 
 ## Pendente / fora deste bloco
-- Integrações externas (NFSe/Sefaz, e-mail, WhatsApp/banco)
+- Integrações externas → ver `docs/replica-externos-stubs-pr.md` (PR seguinte)
 - Storage real de anexos (hoje registra nome / parse local)
 
 ## Como testar
