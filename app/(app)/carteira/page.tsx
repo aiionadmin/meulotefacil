@@ -26,6 +26,10 @@ import { useEmpresa } from "@/lib/empresa/context";
 import { statusLabel } from "@/lib/status/labels";
 import { paginate } from "@/lib/ui/pagination";
 import { downloadCsv } from "@/lib/export/list-export";
+import {
+  fichaFinanceiraNav,
+  resolveContract,
+} from "@/lib/financeiro/ficha-links";
 
 const CONSULTA = "2026-11-24";
 
@@ -59,7 +63,8 @@ function CarteiraInner() {
   const { openClient } = useClientCard();
   const { filterByDevelopmentEmpresa } = useEmpresa();
   const search = useSearchParams();
-  const contratoQ = search.get("contrato") ?? "";
+  const contratoParam = search.get("contrato") ?? "";
+  const numeroParam = search.get("numero") ?? "";
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<RowView | null>(null);
   const [page, setPage] = useState(1);
@@ -75,6 +80,14 @@ function CarteiraInner() {
     refreshEncargos(CONSULTA);
   }, [refreshEncargos]);
 
+  const contratoFiltroId = useMemo(() => {
+    const c = resolveContract(
+      state.contracts,
+      contratoParam || numeroParam || null
+    );
+    return c?.id ?? (contratoParam || "");
+  }, [state.contracts, contratoParam, numeroParam]);
+
   const filtered = useMemo(() => {
     const scoped = filterByDevelopmentEmpresa(
       state.installments.map((p) => {
@@ -84,7 +97,8 @@ function CarteiraInner() {
       state.developments
     ) as (Installment & { developmentId?: string })[];
     let list: Installment[] = scoped;
-    if (contratoQ) list = list.filter((p) => p.contractId === contratoQ);
+    if (contratoFiltroId)
+      list = list.filter((p) => p.contractId === contratoFiltroId);
     const term = q.trim().toLowerCase();
     if (term) {
       list = list.filter((p) =>
@@ -100,14 +114,14 @@ function CarteiraInner() {
     state.contracts,
     state.developments,
     q,
-    contratoQ,
+    contratoFiltroId,
     filterByDevelopmentEmpresa,
   ]);
 
   // B18 — se filtro de contrato e volume alto, usa API paginada com encargos só da página
   useEffect(() => {
     let cancelled = false;
-    if (!contratoQ || filtered.length < 50) {
+    if (!contratoFiltroId || filtered.length < 50) {
       setServerPage(null);
       setError(null);
       return;
@@ -115,7 +129,7 @@ function CarteiraInner() {
     setLoading(true);
     setError(null);
     const params = new URLSearchParams({
-      contractId: contratoQ,
+      contractId: contratoFiltroId,
       page: String(page),
       pageSize: "20",
       consulta: CONSULTA,
@@ -151,7 +165,7 @@ function CarteiraInner() {
     return () => {
       cancelled = true;
     };
-  }, [contratoQ, filtered.length, page]);
+  }, [contratoFiltroId, filtered.length, page]);
 
   const views: RowView[] = useMemo(() => {
     if (serverPage) return serverPage.items;
@@ -187,7 +201,7 @@ function CarteiraInner() {
     });
     return v.status === "vencida";
   }).length;
-  const contratoFiltro = state.contracts.find((c) => c.id === contratoQ);
+  const contratoFiltro = state.contracts.find((c) => c.id === contratoFiltroId);
   const totalRows = serverPage?.total ?? filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / 20));
 
@@ -340,10 +354,19 @@ function CarteiraInner() {
         }}
         placeholder="Buscar contrato, comprador, parcela…"
       >
-        {contratoQ ? (
+        {contratoFiltroId ? (
           <Button size="sm" variant="ghost" asChild>
             <Link href="/carteira">Limpar filtro contrato</Link>
           </Button>
+        ) : null}
+        {contratoFiltroId ? (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {fichaFinanceiraNav(contratoFiltroId).map((l) => (
+              <Link key={l.label} className="underline" href={l.href}>
+                {l.label}
+              </Link>
+            ))}
+          </div>
         ) : null}
       </FilterBar>
 
@@ -503,6 +526,13 @@ function CarteiraInner() {
               label="Pagamento"
               value={selected.pagoEm ? formatDateBR(selected.pagoEm) : "—"}
             />
+            <div className="flex flex-wrap gap-2 border-b border-linha pb-3 text-xs">
+              {fichaFinanceiraNav(selected.contractId).map((l) => (
+                <Link key={l.label} className="underline" href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2 pt-3">
               {selected.status !== "paga" ? (
                 <Button

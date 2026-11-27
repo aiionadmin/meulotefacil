@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,6 +25,10 @@ import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useClientCard } from "@/lib/client/client-card-context";
 import type { Contract } from "@/lib/domain/carteira-types";
+import {
+  carteiraContratoHref,
+  fichaFinanceiraNav,
+} from "@/lib/financeiro/ficha-links";
 
 const STATUS_COLS = [
   { id: "ativo", label: "Ativo" },
@@ -35,9 +40,21 @@ const STATUS_COLS = [
 ];
 
 export default function ContratosPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-muted-foreground">Carregando…</p>}
+    >
+      <ContratosInner />
+    </Suspense>
+  );
+}
+
+function ContratosInner() {
   const { state, saldoDevedor, addContract, registrarOperacao } = useCarteira();
   const { filterByDevelopmentEmpresa } = useEmpresa();
   const { openClient } = useClientCard();
+  const search = useSearchParams();
+  const abrirId = search.get("abrir") ?? "";
   const [selected, setSelected] = useState<Contract | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -54,6 +71,12 @@ export default function ContratosPage() {
     () => filterByDevelopmentEmpresa(state.contracts, state.developments),
     [filterByDevelopmentEmpresa, state.contracts, state.developments]
   );
+
+  useEffect(() => {
+    if (!abrirId) return;
+    const c = state.contracts.find((x) => x.id === abrirId);
+    if (c) setSelected(c);
+  }, [abrirId, state.contracts]);
   const installments = useMemo(
     () => filterByDevelopmentEmpresa(
       state.installments.map((i) => {
@@ -212,9 +235,18 @@ export default function ContratosPage() {
               value={formatBRL(saldoDevedor(selected.id))}
             />
             <DetailRow label="Reajuste" value={selected.tipoReajuste} />
+            <div className="flex flex-wrap gap-2 border-b border-linha pb-3 text-xs">
+              {fichaFinanceiraNav(selected.id).map((l) => (
+                <Link key={l.label} className="underline" href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2 pt-2">
               <Button size="sm" asChild>
-                <Link href={`/carteira?contrato=${selected.id}`}>Ficha</Link>
+                <Link href={carteiraContratoHref(selected.id)}>
+                  Ficha financeira
+                </Link>
               </Button>
               {(
                 [
