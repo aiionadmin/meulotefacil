@@ -16,6 +16,12 @@ import {
   FilterBar,
   notify,
 } from "@/components/app/ModuleToolkit";
+import {
+  EMPTY_GEO_EMP,
+  GeoEmpFilters,
+  developmentIdsMatching,
+  type GeoEmpFilterValues,
+} from "@/components/app/GeoEmpFilters";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useClientCard } from "@/lib/client/client-card-context";
@@ -66,6 +72,7 @@ function CarteiraInner() {
   const contratoParam = search.get("contrato") ?? "";
   const numeroParam = search.get("numero") ?? "";
   const [q, setQ] = useState("");
+  const [geo, setGeo] = useState<GeoEmpFilterValues>({ ...EMPTY_GEO_EMP });
   const [selected, setSelected] = useState<RowView | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -97,6 +104,13 @@ function CarteiraInner() {
       state.developments
     ) as (Installment & { developmentId?: string })[];
     let list: Installment[] = scoped;
+    const geoIds = developmentIdsMatching(state.developments, geo);
+    if (geoIds) {
+      list = list.filter((p) => {
+        const c = state.contracts.find((x) => x.id === p.contractId);
+        return c ? geoIds.has(c.developmentId) : false;
+      });
+    }
     if (contratoFiltroId)
       list = list.filter((p) => p.contractId === contratoFiltroId);
     const term = q.trim().toLowerCase();
@@ -114,6 +128,7 @@ function CarteiraInner() {
     state.contracts,
     state.developments,
     q,
+    geo,
     contratoFiltroId,
     filterByDevelopmentEmpresa,
   ]);
@@ -354,6 +369,14 @@ function CarteiraInner() {
         }}
         placeholder="Buscar contrato, comprador, parcela…"
       >
+        <GeoEmpFilters
+          developments={state.developments}
+          value={geo}
+          onChange={(next) => {
+            setGeo(next);
+            setPage(1);
+          }}
+        />
         {contratoFiltroId ? (
           <Button size="sm" variant="ghost" asChild>
             <Link href="/carteira">Limpar filtro contrato</Link>
