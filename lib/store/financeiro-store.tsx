@@ -14,7 +14,10 @@ import {
 } from "@/lib/domain/financeiro-seed";
 import {
   dualWriteCategoria,
+  dualWriteConta,
+  dualWriteLancamento,
   dualWriteNatureza,
+  dualWritePagamento,
   dualWritePlano,
 } from "@/lib/persist/dual-write";
 import { useStorePersist } from "@/lib/persist/use-store-persist";
@@ -307,6 +310,8 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
             contas,
           };
         });
+        void dualWriteLancamento(lan);
+        for (const p of pags) void dualWritePagamento(p);
         return { ok: true, lancamento: lan, pagamentos: pags };
       },
       baixarPagamento: (id, valor, forma) => {
@@ -315,87 +320,86 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
         if (!pag || pag.status === "pago") return false;
         const resto = Math.round((pag.valor - pag.valorPago) * 100) / 100;
         const baixa = Math.min(valor, resto);
+        const valorPago = Math.round((pag.valorPago + baixa) * 100) / 100;
+        const status: PagamentoStatus =
+          valorPago >= pag.valor
+            ? "pago"
+            : valorPago > 0
+              ? "parcial"
+              : pag.status;
+        const next: Pagamento = {
+          ...pag,
+          valorPago,
+          status,
+          forma: forma ?? pag.forma,
+          pagoEm: status === "pago" ? todayIso() : pag.pagoEm,
+          historico: [
+            ...pag.historico,
+            {
+              valor: baixa,
+              data: todayIso(),
+              contaId: pag.contaId,
+              forma: forma ?? pag.forma,
+              quem: "Admin Demo",
+            },
+          ],
+        };
         setState((s) => ({
           ...s,
-          pagamentos: s.pagamentos.map((p) => {
-            if (p.id !== id) return p;
-            const valorPago = Math.round((p.valorPago + baixa) * 100) / 100;
-            const status: PagamentoStatus =
-              valorPago >= p.valor
-                ? "pago"
-                : valorPago > 0
-                  ? "parcial"
-                  : p.status;
-            return {
-              ...p,
-              valorPago,
-              status,
-              forma: forma ?? p.forma,
-              pagoEm: status === "pago" ? todayIso() : p.pagoEm,
-              historico: [
-                ...p.historico,
-                {
-                  valor: baixa,
-                  data: todayIso(),
-                  contaId: p.contaId,
-                  forma: forma ?? p.forma,
-                  quem: "Admin Demo",
-                },
-              ],
-            };
-          }),
+          pagamentos: s.pagamentos.map((p) => (p.id === id ? next : p)),
           contas: s.contas.map((c) =>
             c.id === pag.contaId
               ? { ...c, saldo: Math.round((c.saldo - baixa) * 100) / 100 }
               : c
           ),
         }));
+        void dualWritePagamento(next);
         return true;
       },
       estornarPagamento: (id) => {
         const pag = state.pagamentos.find((p) => p.id === id);
         if (!pag || pag.valorPago <= 0) return false;
         const estorno = pag.valorPago;
+        const next: Pagamento = {
+          ...pag,
+          valorPago: 0,
+          status: "em_aberto",
+          pagoEm: undefined,
+          conciliado: false,
+          historico: [],
+        };
         setState((s) => ({
           ...s,
-          pagamentos: s.pagamentos.map((p) =>
-            p.id === id
-              ? {
-                  ...p,
-                  valorPago: 0,
-                  status: "em_aberto" as PagamentoStatus,
-                  pagoEm: undefined,
-                  conciliado: false,
-                  historico: [],
-                }
-              : p
-          ),
+          pagamentos: s.pagamentos.map((p) => (p.id === id ? next : p)),
           contas: s.contas.map((c) =>
             c.id === pag.contaId
               ? { ...c, saldo: Math.round((c.saldo + estorno) * 100) / 100 }
               : c
           ),
         }));
+        void dualWritePagamento(next);
         return true;
       },
       conciliarPagamento: (id) => {
+        const pag = state.pagamentos.find((p) => p.id === id);
+        if (!pag) return false;
+        const next = { ...pag, conciliado: true };
         setState((s) => ({
           ...s,
-          pagamentos: s.pagamentos.map((p) =>
-            p.id === id ? { ...p, conciliado: true } : p
-          ),
+          pagamentos: s.pagamentos.map((p) => (p.id === id ? next : p)),
         }));
+        void dualWritePagamento(next);
         return true;
       },
       desconciliarPagamento: (id) => {
         const p = state.pagamentos.find((x) => x.id === id);
         if (!p?.conciliado) return false;
+        const next = { ...p, conciliado: false };
         setState((s) => ({
           ...s,
-          pagamentos: s.pagamentos.map((x) =>
-            x.id === id ? { ...x, conciliado: false } : x
-          ),
+          pagamentos: s.pagamentos.map((x) => (x.id === id ? next : x)),
         }));
+        void dualWritePagamento(next);
         return true;
       },
       baixarPagamentosLote: (ids) => {
@@ -660,6 +664,7 @@ export function FinanceiroStoreProvider({ children }: { children: ReactNode }) {
           ativa: input.ativa ?? true,
         };
         setState((s) => ({ ...s, contas: [...s.contas, c] }));
+        void dualWriteConta(c);
         return c;
       },
       transferir: (input) => {
