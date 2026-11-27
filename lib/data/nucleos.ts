@@ -16,10 +16,16 @@ export type NucleoVideo = {
   href: string;
 };
 
+/**
+ * Núcleo operacional = bairro (REURB e loteamento).
+ * Empreendimentos referenciam `nucleoId` / `bairro` em `Development`.
+ */
 export type Nucleo = {
   id: string;
   slug: string;
   nome: string;
+  /** Alias explícito: núcleo é o bairro. */
+  bairro?: string;
   cidade: string;
   estado: string;
   modalidade: Modalidade;

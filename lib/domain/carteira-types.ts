@@ -56,6 +56,13 @@ export type Development = {
   status: DevelopmentStatus;
   cidade: string;
   uf: string;
+  /**
+   * Bairro do empreendimento. No modelo operacional, **núcleo = bairro**
+   * (REURB e loteamento). Use o mesmo texto do núcleo quando houver vínculo.
+   */
+  bairro?: string;
+  /** Id do núcleo/bairro em `lib/data/nucleos` quando for REURB / regularização. */
+  nucleoId?: string;
   cep?: string;
   areaTotal?: string;
   codigoMunicipio?: string;
