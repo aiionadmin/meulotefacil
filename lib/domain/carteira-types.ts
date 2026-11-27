@@ -64,6 +64,11 @@ export type Development = {
   /** Id do núcleo/bairro em `lib/data/nucleos` quando for REURB / regularização. */
   nucleoId?: string;
   cep?: string;
+  /** Endereço / referência para mapa (rua, número, etc.). */
+  endereco?: string;
+  /** Coordenadas opcionais (prioridade sobre endereço no Maps). */
+  latitude?: number;
+  longitude?: number;
   areaTotal?: string;
   codigoMunicipio?: string;
   padrao?: string;

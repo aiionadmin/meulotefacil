@@ -21,6 +21,7 @@ import {
   notify,
 } from "@/components/app/ModuleToolkit";
 import { SearchSelect } from "@/components/app/SearchSelect";
+import { EmpreendimentoMap } from "@/components/app/EmpreendimentoMap";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { formatBRL } from "@/lib/masks/br";
 import { downloadTextTemplate } from "@/lib/export/list-export";
@@ -68,6 +69,9 @@ const EMPTY_EMP_FORM = {
   cidade: "Campinas",
   uf: "SP",
   cep: "",
+  endereco: "",
+  latitude: "",
+  longitude: "",
   areaTotal: "",
   codigoMunicipio: "",
   padrao: "",
@@ -176,6 +180,15 @@ export default function EmpreendimentosPage() {
       cidade: d.cidade,
       uf: d.uf,
       cep: d.cep ?? "",
+      endereco: d.endereco ?? "",
+      latitude:
+        d.latitude !== undefined && d.latitude !== null
+          ? String(d.latitude)
+          : "",
+      longitude:
+        d.longitude !== undefined && d.longitude !== null
+          ? String(d.longitude)
+          : "",
       areaTotal: d.areaTotal ?? "",
       codigoMunicipio: d.codigoMunicipio ?? "",
       padrao: d.padrao ?? "",
@@ -664,8 +677,21 @@ export default function EmpreendimentosPage() {
             notify("Código e nome obrigatórios");
             return;
           }
+          const {
+            latitude: latStr,
+            longitude: lngStr,
+            endereco: enderecoStr,
+            ...empRest
+          } = empForm;
+          const lat = latStr.trim() === "" ? undefined : Number(latStr);
+          const lng = lngStr.trim() === "" ? undefined : Number(lngStr);
           const patch = {
-            ...empForm,
+            ...empRest,
+            endereco: enderecoStr.trim() || undefined,
+            latitude:
+              lat !== undefined && Number.isFinite(lat) ? lat : undefined,
+            longitude:
+              lng !== undefined && Number.isFinite(lng) ? lng : undefined,
             bairro: empForm.bairro.trim() || undefined,
             nucleoId: empForm.nucleoId.trim() || undefined,
             cartorioId: empForm.cartorioId.trim() || undefined,
@@ -767,6 +793,49 @@ export default function EmpreendimentosPage() {
             onChange={(e) => setEmpForm({ ...empForm, cep: e.target.value })}
           />
         </Field>
+        <Field label="Endereço / referência (mapa)">
+          <Input
+            value={empForm.endereco}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, endereco: e.target.value })
+            }
+            placeholder="Rua, número ou ponto de referência"
+          />
+        </Field>
+        <Field label="Latitude (opcional)">
+          <Input
+            value={empForm.latitude}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, latitude: e.target.value })
+            }
+            placeholder="-22.9056"
+            inputMode="decimal"
+          />
+        </Field>
+        <Field label="Longitude (opcional)">
+          <Input
+            value={empForm.longitude}
+            onChange={(e) =>
+              setEmpForm({ ...empForm, longitude: e.target.value })
+            }
+            placeholder="-47.0608"
+            inputMode="decimal"
+          />
+        </Field>
+        <div className="col-span-full">
+          <EmpreendimentoMap
+            location={{
+              nome: empForm.nome,
+              endereco: empForm.endereco,
+              bairro: empForm.bairro,
+              cidade: empForm.cidade,
+              uf: empForm.uf,
+              cep: empForm.cep,
+              latitude: empForm.latitude,
+              longitude: empForm.longitude,
+            }}
+          />
+        </div>
         <Field label="Área total">
           <Input
             value={empForm.areaTotal}
