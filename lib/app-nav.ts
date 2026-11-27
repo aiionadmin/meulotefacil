@@ -118,6 +118,11 @@ export const APP_NAV: AppNavGroup[] = [
         description: "Lotes clicáveis por status",
       },
       {
+        href: "/empreendimentos/dxf-wizard",
+        label: "Wizard DXF → lotes",
+        description: "Importar DXF e gerar cadastro de lotes",
+      },
+      {
         href: "/empreendimentos/hub",
         label: "Visão do empreendimento",
         description: "Abas resumo à arquivos",
