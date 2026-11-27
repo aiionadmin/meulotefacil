@@ -86,6 +86,12 @@ type FluxoApi = {
       observacoes?: string;
     }
   ) => Lead;
+  updateLead: (
+    id: string,
+    patch: Partial<Omit<Lead, "id" | "criadoEm">>
+  ) => Lead | null;
+  /** Remove lead se não houver proposta aberta/reservada vinculada. */
+  removeLead: (id: string) => { ok: boolean; reason?: string };
   moveLead: (
     id: string,
     para: JornadaColuna,
@@ -194,6 +200,52 @@ export function FluxoStoreProvider({ children }: { children: ReactNode }) {
         };
         setState((s) => ({ ...s, leads: [lead, ...s.leads] }));
         return lead;
+      },
+      updateLead: (id, patch) => {
+        const current = state.leads.find((l) => l.id === id);
+        if (!current) return null;
+        const merged = { ...current, ...patch };
+        const scored = computeLeadScore(merged);
+        const next: Lead = {
+          ...merged,
+          id,
+          criadoEm: current.criadoEm,
+          score: patch.score ?? scored.score,
+          classificacao: patch.classificacao ?? scored.classificacao,
+          responsavel:
+            patch.responsavel ??
+            patch.corretor ??
+            current.responsavel ??
+            "Atendimento",
+        };
+        setState((s) => ({
+          ...s,
+          leads: s.leads.map((l) => (l.id === id ? next : l)),
+        }));
+        return next;
+      },
+      removeLead: (id) => {
+        const lead = state.leads.find((l) => l.id === id);
+        if (!lead) return { ok: false, reason: "Lead não encontrado" };
+        const linked = state.proposals.some(
+          (p) =>
+            p.leadId === id &&
+            (p.status === "aberta" || p.status === "reservada")
+        );
+        if (linked) {
+          return {
+            ok: false,
+            reason: "Há proposta aberta ou reservada vinculada",
+          };
+        }
+        setState((s) => ({
+          ...s,
+          leads: s.leads.filter((l) => l.id !== id),
+          proposals: s.proposals.map((p) =>
+            p.leadId === id ? { ...p, leadId: undefined } : p
+          ),
+        }));
+        return { ok: true };
       },
       moveLead: (id, para, opts) => {
         const lead = state.leads.find((l) => l.id === id);

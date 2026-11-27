@@ -24,38 +24,93 @@ import type { Lead, LeadOrigem } from "@/lib/domain/fluxo-types";
 import { statusLabel } from "@/lib/status/labels";
 import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
 
+type LeadForm = {
+  nome: string;
+  telefone: string;
+  email: string;
+  empInteresse: string;
+  origem: LeadOrigem;
+  campanha: string;
+  corretor: string;
+  tipoInteresse: string;
+  finalidade: string;
+  faixaValor: string;
+  entradaDisponivel: number;
+  parcelaCabe: number;
+  formaPagamento: string;
+  prazoDecidir: string;
+  cidade: string;
+  bairro: string;
+  visitou: boolean;
+  dataVisita: string;
+  melhorHorario: string;
+  canalPreferido: string;
+  objecoes: string;
+  observacoes: string;
+};
+
+const EMPTY_FORM: LeadForm = {
+  nome: "",
+  telefone: "",
+  email: "",
+  empInteresse: "Residencial Horizonte",
+  origem: "whatsapp",
+  campanha: "",
+  corretor: "",
+  tipoInteresse: "lote",
+  finalidade: "moradia",
+  faixaValor: "",
+  entradaDisponivel: 0,
+  parcelaCabe: 0,
+  formaPagamento: "parcelado",
+  prazoDecidir: "",
+  cidade: "",
+  bairro: "",
+  visitou: false,
+  dataVisita: "",
+  melhorHorario: "",
+  canalPreferido: "whatsapp",
+  objecoes: "",
+  observacoes: "",
+};
+
+function leadToForm(l: Lead): LeadForm {
+  return {
+    nome: l.nome,
+    telefone: l.telefone,
+    email: l.email ?? "",
+    empInteresse: l.empInteresse ?? "",
+    origem: l.origem,
+    campanha: l.campanha ?? "",
+    corretor: l.corretor ?? "",
+    tipoInteresse: l.tipoInteresse ?? "lote",
+    finalidade: l.finalidade ?? "moradia",
+    faixaValor: l.faixaValor ?? "",
+    entradaDisponivel: l.entradaDisponivel ?? 0,
+    parcelaCabe: l.parcelaCabe ?? 0,
+    formaPagamento: l.formaPagamento ?? "parcelado",
+    prazoDecidir: l.prazoDecidir ?? "",
+    cidade: l.cidade ?? "",
+    bairro: l.bairro ?? "",
+    visitou: Boolean(l.visitou),
+    dataVisita: l.dataVisita ?? "",
+    melhorHorario: l.melhorHorario ?? "",
+    canalPreferido: l.canalPreferido ?? "whatsapp",
+    objecoes: l.objecoes ?? "",
+    observacoes: l.observacoes ?? "",
+  };
+}
+
 export default function LeadsPage() {
-  const { state, addLead, moveLead } = useFluxo();
+  const { state, addLead, updateLead, removeLead, moveLead } = useFluxo();
   const { state: carteira } = useCarteira();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<LeadForm>(EMPTY_FORM);
   const server = useServerPage({
     url: "/api/list/leads",
     page: 1,
     pageSize: 25,
-  });
-  const [form, setForm] = useState({
-    nome: "",
-    telefone: "",
-    email: "",
-    empInteresse: "Residencial Horizonte",
-    origem: "whatsapp" as LeadOrigem,
-    campanha: "",
-    corretor: "",
-    tipoInteresse: "lote",
-    finalidade: "moradia",
-    faixaValor: "",
-    entradaDisponivel: 0,
-    parcelaCabe: 0,
-    formaPagamento: "parcelado",
-    prazoDecidir: "",
-    cidade: "",
-    bairro: "",
-    visitou: false,
-    dataVisita: "",
-    melhorHorario: "",
-    canalPreferido: "whatsapp",
-    objecoes: "",
-    observacoes: "",
   });
 
   const activeLeads = useMemo(
@@ -89,22 +144,51 @@ export default function LeadsPage() {
   );
 
   const columns = JORNADA_COLS.filter((c) =>
-    ["novo_contato", "em_atendimento", "proposta_reserva", "contrato", "carteira_em_dia"].includes(
-      c.id
-    )
+    [
+      "novo_contato",
+      "em_atendimento",
+      "proposta_reserva",
+      "contrato",
+      "carteira_em_dia",
+    ].includes(c.id)
   ).map((c) => ({ id: c.id, label: c.label }));
+
+  function openCreate() {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setOpen(true);
+  }
+
+  function openEdit(id: string) {
+    const lead = state.leads.find((l) => l.id === id);
+    if (!lead) {
+      notify("Lead não encontrado");
+      return;
+    }
+    setEditingId(id);
+    setForm(leadToForm(lead));
+    setOpen(true);
+  }
+
+  function closeForm(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setEditingId(null);
+      setForm(EMPTY_FORM);
+    }
+  }
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Leads"
-        description="Qualificação completa, score e Kanban | Lista."
+        description="CRUD completo — qualificação, score e Kanban | Lista."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
               <Link href="/quadros/jornada">Abrir quadro</Link>
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button size="sm" onClick={openCreate}>
               Novo lead
             </Button>
           </>
@@ -130,16 +214,21 @@ export default function LeadsPage() {
               ? "…"
               : server.data
                 ? `${server.data.total} · ${Math.round(server.data.elapsedMs ?? 0)}ms`
-                : server.error ?? "—",
+                : (server.error ?? "—"),
           },
         ]}
       />
+
+      <p className="text-sm text-muted-foreground">
+        Clique no card ou na linha para editar · use Excluir no formulário.
+      </p>
 
       <ProcessBoard
         storageKey="leads"
         columns={columns}
         rows={activeLeads}
         toCard={toCard}
+        onOpen={openEdit}
         onMove={(id, to) => {
           const ok = moveLead(id, to as Lead["etapa"]);
           if (!ok) notify("Movimento bloqueado", "Jornada só avança");
@@ -243,16 +332,43 @@ export default function LeadsPage() {
 
       <FormDialog
         open={open}
-        onOpenChange={setOpen}
-        title="Novo lead"
+        onOpenChange={closeForm}
+        title={editingId ? "Editar lead" : "Novo lead"}
+        submitLabel={editingId ? "Salvar" : "Cadastrar"}
         onSubmit={() => {
-          if (!form.nome || !form.telefone) {
+          if (!form.nome.trim() || !form.telefone.trim()) {
             notify("Nome e telefone obrigatórios");
             return;
           }
-          addLead(form);
-          notify("Lead criado · score calculado");
-          setOpen(false);
+          const payload = {
+            ...form,
+            nome: form.nome.trim(),
+            telefone: form.telefone.trim(),
+            email: form.email.trim() || undefined,
+            empInteresse: form.empInteresse.trim() || undefined,
+            campanha: form.campanha.trim() || undefined,
+            corretor: form.corretor.trim() || undefined,
+            faixaValor: form.faixaValor.trim() || undefined,
+            prazoDecidir: form.prazoDecidir.trim() || undefined,
+            cidade: form.cidade.trim() || undefined,
+            bairro: form.bairro.trim() || undefined,
+            dataVisita: form.dataVisita.trim() || undefined,
+            melhorHorario: form.melhorHorario.trim() || undefined,
+            objecoes: form.objecoes.trim() || undefined,
+            observacoes: form.observacoes.trim() || undefined,
+          };
+          if (editingId) {
+            const updated = updateLead(editingId, payload);
+            if (!updated) {
+              notify("Não foi possível salvar", "Lead não encontrado");
+              return;
+            }
+            notify("Lead atualizado", updated.nome);
+          } else {
+            addLead(payload);
+            notify("Lead criado · score calculado");
+          }
+          closeForm(false);
         }}
       >
         <Field label="Nome *">
@@ -315,9 +431,7 @@ export default function LeadsPage() {
           <select
             className={fieldControlClass}
             value={form.finalidade}
-            onChange={(e) =>
-              setForm({ ...form, finalidade: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, finalidade: e.target.value })}
           >
             <option value="moradia">Moradia</option>
             <option value="investimento">Investimento</option>
@@ -383,6 +497,33 @@ export default function LeadsPage() {
             onChange={(e) => setForm({ ...form, objecoes: e.target.value })}
           />
         </Field>
+        {editingId ? (
+          <div className="flex justify-between gap-2 border-t border-linha pt-3">
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    `Excluir o lead "${form.nome}"? Esta ação remove o registro da lista.`
+                  )
+                ) {
+                  return;
+                }
+                const res = removeLead(editingId);
+                if (!res.ok) {
+                  notify("Não excluído", res.reason ?? "");
+                  return;
+                }
+                notify("Lead excluído", form.nome);
+                closeForm(false);
+              }}
+            >
+              Excluir lead
+            </Button>
+          </div>
+        ) : null}
       </FormDialog>
     </div>
   );
