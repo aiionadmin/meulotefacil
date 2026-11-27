@@ -239,12 +239,14 @@ export function ClientCardSheet() {
     };
   }, [open, fase1, fluxo, carteira, parte5]);
 
-  if (!open || !data) return null;
-
-  const defaultTab = open.tab ?? "resumo";
-  const titulo = data.person?.nome ?? open.nome;
+  // Keep <Sheet> mounted when closed. Early `return null` while Radix still
+  // thought open=true left `pointer-events: none` on <body> and blocked menus
+  // (ficha financeira → card do cliente → fechar / navegar).
+  const defaultTab = open?.tab ?? "resumo";
+  const titulo = data?.person?.nome ?? open?.nome ?? "";
 
   const sendOutbound = () => {
+    if (!open || !data) return;
     const texto =
       msg.trim() || defaultOutboundMessage(canal, titulo);
     if (canal === "whatsapp") {
@@ -287,7 +289,13 @@ export function ClientCardSheet() {
   };
 
   return (
-    <Sheet open onOpenChange={(o) => !o && closeClient()}>
+    <Sheet
+      open={Boolean(open)}
+      onOpenChange={(next) => {
+        if (!next) closeClient();
+      }}
+    >
+      {open && data ? (
       <SheetContent
         side="right"
         className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl"
@@ -733,6 +741,7 @@ export function ClientCardSheet() {
           </div>
         </Tabs>
       </SheetContent>
+      ) : null}
     </Sheet>
   );
 }
