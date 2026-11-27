@@ -42,6 +42,12 @@ import { useCarteira } from "@/lib/store/carteira-store";
 import { useSystemSettings } from "@/lib/store/system-settings-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { validateCartorioObrigatorio } from "@/lib/domain/cartorio-required";
+import { nucleos } from "@/lib/data/nucleos";
+import {
+  findNucleoByBairro,
+  findNucleoById,
+  nucleoBairroNome,
+} from "@/lib/domain/nucleo-bairro";
 import { statusLabel } from "@/lib/status/labels";
 
 const STATUS_TONE: Record<LotStatus, "ok" | "warn" | "danger" | "info" | "neutral"> = {
@@ -227,7 +233,11 @@ export default function EmpreendimentosPage() {
       diaMulta: d.diaMulta,
       observacoes: d.observacoes ?? "",
       bairro: d.bairro ?? "",
-      nucleoId: d.nucleoId ?? "",
+      nucleoId:
+        d.nucleoId ||
+        findNucleoById(d.nucleoId)?.id ||
+        findNucleoByBairro(d.bairro, d.cidade)?.id ||
+        "",
       cartorioId: d.cartorioId ?? "",
       cartorioNome: d.cartorioNome ?? "",
       cartorioCidade: d.cartorioCidade ?? "",
@@ -715,8 +725,8 @@ export default function EmpreendimentosPage() {
             notify("Código e nome obrigatórios");
             return;
           }
-          if (!empForm.bairro.trim()) {
-            notify("Bairro (núcleo) obrigatório");
+          if (!empForm.nucleoId.trim() || !empForm.bairro.trim()) {
+            notify("Selecione o bairro / núcleo");
             return;
           }
           {
@@ -810,21 +820,45 @@ export default function EmpreendimentosPage() {
             </option>
           </select>
         </Field>
-        <Field label="Bairro (núcleo) *">
-          <Input
-            value={empForm.bairro}
-            onChange={(e) => setEmpForm({ ...empForm, bairro: e.target.value })}
-            placeholder="Núcleo = bairro em todo o sistema"
-          />
-        </Field>
-        <Field label="Núcleo REURB (id opcional)">
-          <Input
+        <Field label="Bairro / núcleo *">
+          <select
+            className={fieldControlClass}
             value={empForm.nucleoId}
-            onChange={(e) =>
-              setEmpForm({ ...empForm, nucleoId: e.target.value })
-            }
-            placeholder="ex.: n-lisa"
-          />
+            required
+            onChange={(e) => {
+              const id = e.target.value;
+              const n = nucleos.find((x) => x.id === id);
+              if (!n) {
+                setEmpForm({
+                  ...empForm,
+                  nucleoId: "",
+                  bairro: "",
+                });
+                return;
+              }
+              setEmpForm({
+                ...empForm,
+                nucleoId: n.id,
+                bairro: nucleoBairroNome(n),
+                cidade: n.cidade || empForm.cidade,
+                uf: n.estado || empForm.uf,
+              });
+            }}
+          >
+            <option value="">Selecione o núcleo (bairro)…</option>
+            {nucleos.map((n) => (
+              <option key={n.id} value={n.id}>
+                {nucleoBairroNome(n)} · {n.cidade}/{n.estado}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Cadastro em{" "}
+            <a className="underline" href="/nucleos">
+              /nucleos
+            </a>
+            . Núcleo = bairro em todo o sistema.
+          </p>
         </Field>
         <Field label="Cidade">
           <Input
