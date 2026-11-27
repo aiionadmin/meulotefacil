@@ -21,6 +21,13 @@ export function isLotNumberLayer(layer: string): boolean {
   return NUMERO_LAYER.test(layer);
 }
 
+/** Identidade estável: Quadra/Lote (números se repetem entre quadras). */
+export function formatLotRef(quadra: string, lote: string): string {
+  const q = quadra.trim() || "?";
+  const n = lote.replace(/\D/g, "").padStart(2, "0") || lote.trim();
+  return `${q}/${n}`;
+}
+
 export function normalizeLotCode(raw: string): string {
   const t = raw.replace(/\s+/g, " ").trim();
   if (!t) return "";
@@ -47,9 +54,21 @@ export function parseQuadraLote(
 }
 
 /**
+ * Infere a quadra pelo nome da camada DXF (ex.: "03-Numero-Lote" → "3").
+ * Não usa contagem global — cada quadra tem sua própria numeração.
+ */
+export function inferQuadraFromLayer(layer: string): string | undefined {
+  const m = layer.match(/^(\d{2,3})\b/);
+  if (m) return m[1].replace(/^0+/, "") || m[1];
+  const q = layer.match(/quadra\s*[-_]?([A-Za-z0-9]+)/i);
+  if (q) return q[1].toUpperCase();
+  return undefined;
+}
+
+/**
  * Associa um pick DXF aos lotes do empreendimento.
- * Preferência: match exato quadra+lote; senão lote; se vários, o de menor distância
- * euclidiana ao rótulo (se `label` tiver x/y e lotes tiverem centro aproximado via polígono).
+ * Sempre prioriza Quadra+Lote: o número do lote se repete entre quadras,
+ * então nunca tratamos “lote 5” como identidade global (“5 de N”).
  */
 export function matchLotsFromPick(
   pick: DxfPickPayload,
@@ -57,18 +76,27 @@ export function matchLotsFromPick(
 ): Lot[] {
   const parsed = parseQuadraLote(pick.code);
   if (!parsed) return [];
-  const candidates = lots.filter((l) => {
+
+  const target = parsed.lote.padStart(2, "0");
+  const sameNumber = lots.filter((l) => {
     const n = l.lote.replace(/\D/g, "").padStart(2, "0");
-    const target = parsed.lote.padStart(2, "0");
-    if (n !== target && l.lote !== parsed.lote) return false;
-    if (parsed.quadra) {
-      return l.quadra.toUpperCase() === parsed.quadra.toUpperCase();
-    }
-    return true;
+    return n === target || l.lote === parsed.lote;
   });
+
+  const quadra =
+    parsed.quadra ?? inferQuadraFromLayer(pick.layer) ?? undefined;
+
+  let candidates = sameNumber;
+  if (quadra) {
+    const scoped = sameNumber.filter(
+      (l) => l.quadra.toUpperCase() === quadra.toUpperCase()
+    );
+    if (scoped.length) candidates = scoped;
+  }
+
   if (candidates.length <= 1) return candidates;
 
-  // Desempate por centro do polígono (quando existe)
+  // Desempate espacial pelo polígono da planta (quando existir)
   const scored = candidates.map((l) => {
     const poly = l.plantaPoligono;
     if (!poly || poly.length < 1) return { l, d: Number.POSITIVE_INFINITY };
@@ -79,6 +107,7 @@ export function matchLotsFromPick(
   });
   scored.sort((a, b) => a.d - b.d);
   if (Number.isFinite(scored[0].d)) return [scored[0].l];
+  // Ambíguo: devolve todos para o UI escolher Quadra/Lote (sem “N de M”)
   return candidates;
 }
 
@@ -93,9 +122,9 @@ export function labelsToLotRows(
     const code = normalizeLotCode(lab.text);
     const parsed = parseQuadraLote(code);
     if (!parsed) continue;
-    const quadra = parsed.quadra ?? inferQuadraFromLayer(lab.layer);
+    const quadra = parsed.quadra ?? inferQuadraFromLayer(lab.layer) ?? "DXF";
     const lote = parsed.lote.padStart(2, "0");
-    const key = `${quadra}/${lote}`;
+    const key = formatLotRef(quadra, lote);
     if (!out.has(key)) out.set(key, { quadra, lote });
   }
   return [...out.values()].map((r) => ({
@@ -103,10 +132,4 @@ export function labelsToLotRows(
     area: defaults.area,
     precoVista: defaults.precoVista,
   }));
-}
-
-function inferQuadraFromLayer(layer: string): string {
-  const m = layer.match(/^(\d{2,3})\b/);
-  if (m) return m[1].replace(/^0+/, "") || m[1];
-  return "DXF";
 }
