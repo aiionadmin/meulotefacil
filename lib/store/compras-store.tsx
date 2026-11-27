@@ -404,65 +404,64 @@ export function ComprasStoreProvider({ children }: { children: ReactNode }) {
         return cot;
       },
       setVencedor: (cotacaoId, itemId, supplierId) => {
+        const cot = state.cotacoes.find((c) => c.id === cotacaoId);
+        if (!cot) return false;
+        const next: Cotacao = {
+          ...cot,
+          precos: cot.precos.map((p) =>
+            p.itemId === itemId
+              ? { ...p, vencedor: p.supplierId === supplierId }
+              : p
+          ),
+        };
         setState((s) => ({
           ...s,
-          cotacoes: s.cotacoes.map((c) => {
-            if (c.id !== cotacaoId) return c;
-            return {
-              ...c,
-              precos: c.precos.map((p) =>
-                p.itemId === itemId
-                  ? { ...p, vencedor: p.supplierId === supplierId }
-                  : p
-              ),
-            };
-          }),
+          cotacoes: s.cotacoes.map((c) =>
+            c.id === cotacaoId ? next : c
+          ),
         }));
+        void dualWriteCotacao(next);
         return true;
       },
       setPrecoCotacao: (cotacaoId, itemId, supplierId, precoUnitario) => {
         if (precoUnitario < 0) return false;
-        let ok = false;
-        setState((s) => {
-          const cot = s.cotacoes.find((c) => c.id === cotacaoId);
-          if (!cot) return s;
-          ok = true;
-          const exists = cot.precos.some(
-            (p) => p.itemId === itemId && p.supplierId === supplierId
-          );
-          return {
-            ...s,
-            cotacoes: s.cotacoes.map((c) => {
-              if (c.id !== cotacaoId) return c;
-              if (exists) {
-                return {
-                  ...c,
-                  precos: c.precos.map((p) =>
-                    p.itemId === itemId && p.supplierId === supplierId
-                      ? { ...p, precoUnitario }
-                      : p
-                  ),
-                };
-              }
-              const item = c.itens.find((i) => i.id === itemId);
-              return {
-                ...c,
-                precos: [
-                  ...c.precos,
-                  {
-                    id: uid("pr"),
-                    itemId,
-                    supplierId,
-                    precoUnitario,
-                    quantidadeCotada: item?.quantidade ?? 1,
-                    vencedor: false,
-                  },
-                ],
-              };
-            }),
-          };
-        });
-        return ok;
+        const cot = state.cotacoes.find((c) => c.id === cotacaoId);
+        if (!cot) return false;
+        const exists = cot.precos.some(
+          (p) => p.itemId === itemId && p.supplierId === supplierId
+        );
+        const next: Cotacao = exists
+          ? {
+              ...cot,
+              precos: cot.precos.map((p) =>
+                p.itemId === itemId && p.supplierId === supplierId
+                  ? { ...p, precoUnitario }
+                  : p
+              ),
+            }
+          : {
+              ...cot,
+              precos: [
+                ...cot.precos,
+                {
+                  id: uid("pr"),
+                  itemId,
+                  supplierId,
+                  precoUnitario,
+                  quantidadeCotada:
+                    cot.itens.find((i) => i.id === itemId)?.quantidade ?? 1,
+                  vencedor: false,
+                },
+              ],
+            };
+        setState((s) => ({
+          ...s,
+          cotacoes: s.cotacoes.map((c) =>
+            c.id === cotacaoId ? next : c
+          ),
+        }));
+        void dualWriteCotacao(next);
+        return true;
       },
       addArquivoCotacao: (cotacaoId, nome, supplierId) => {
         const n = nome.trim();

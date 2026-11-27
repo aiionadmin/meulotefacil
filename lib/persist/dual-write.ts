@@ -122,24 +122,91 @@ export async function dualWriteComprasConfig(
 }
 
 export async function dualWriteObra(
-  obra: Pick<Obra, "id" | "codigo" | "nome" | "status" | "tipo" | "clienteNome">,
+  obra: Pick<
+    Obra,
+    | "id"
+    | "codigo"
+    | "nome"
+    | "status"
+    | "tipo"
+    | "clienteNome"
+    | "visivelPara"
+  >,
   orgId: string = DEMO_ORG_ID
 ): Promise<SoftResult> {
   const sb = client();
   if (!sb) return { ok: true, skipped: true };
+  const oid = stableUuid(obra.id);
   const { error } = await sb.from("obras").upsert(
     {
-      id: stableUuid(obra.id),
+      id: oid,
       organization_id: orgId,
       codigo: obra.codigo,
       nome: obra.nome,
       status: obra.status,
       tipo: obra.tipo || "loteamento",
       cliente_nome: obra.clienteNome ?? null,
+      visivel_para: obra.visivelPara ?? [],
     } as never,
     { onConflict: "id" }
   );
   warn("obras", error);
+  if (!error) {
+    // Resolve usuários por perfil/nome e sincroniza obra_visibilidade
+    const labels = (obra.visivelPara ?? []).map((v) => v.trim()).filter(Boolean);
+    await sb.from("obra_visibilidade").delete().eq("obra_id", oid);
+    if (labels.length) {
+      const lower = labels.map((l) => l.toLowerCase());
+      const { data: users } = await sb
+        .from("users")
+        .select("id, nome, profile_id")
+        .eq("organization_id", orgId)
+        .is("deleted_at", null);
+      const profileIds = [
+        ...new Set(
+          (users ?? [])
+            .map((u) => (u as { profile_id?: string | null }).profile_id)
+            .filter((x): x is string => !!x)
+        ),
+      ];
+      const perfilById = new Map<string, string>();
+      if (profileIds.length) {
+        const { data: profiles } = await sb
+          .from("profiles")
+          .select("id, nome")
+          .in("id", profileIds);
+        for (const p of profiles ?? []) {
+          perfilById.set(
+            (p as { id: string }).id,
+            ((p as { nome?: string }).nome ?? "").toLowerCase()
+          );
+        }
+      }
+      const matched = (users ?? []).filter((u) => {
+        const row = u as {
+          id: string;
+          nome?: string;
+          profile_id?: string | null;
+        };
+        const perfil = row.profile_id
+          ? (perfilById.get(row.profile_id) ?? "")
+          : "";
+        const nome = (row.nome ?? "").toLowerCase();
+        return lower.some(
+          (t) => t === perfil || t === nome || t === "administrador"
+        );
+      });
+      if (matched.length) {
+        const { error: ve } = await sb.from("obra_visibilidade").insert(
+          matched.map((u) => ({
+            obra_id: oid,
+            user_id: (u as { id: string }).id,
+          })) as never
+        );
+        warn("obra_visibilidade", ve);
+      }
+    }
+  }
   return { ok: !error };
 }
 
@@ -340,7 +407,64 @@ export async function dualWriteCotacao(
     { onConflict: "id" }
   );
   warn("quotations", error);
-  return { ok: !error };
+  if (error) return { ok: false };
+
+  await sb.from("quotation_prices").delete().eq("quotation_id", id);
+  await sb.from("quotation_items").delete().eq("quotation_id", id);
+  await sb.from("quotation_suppliers").delete().eq("quotation_id", id);
+
+  if (cot.itens.length) {
+    const { error: ie } = await sb.from("quotation_items").insert(
+      cot.itens.map((it, i) => ({
+        id: stableUuid(it.id),
+        quotation_id: id,
+        request_item_id: it.requestItemId
+          ? stableUuid(it.requestItemId)
+          : null,
+        descricao: it.descricao,
+        unidade: it.unidade,
+        quantidade: it.quantidade,
+        valor_orcamento: it.valorOrcamento,
+        ordem: i,
+      })) as never
+    );
+    warn("quotation_items", ie);
+  }
+
+  if (cot.fornecedores.length) {
+    const { error: se } = await sb.from("quotation_suppliers").insert(
+      cot.fornecedores.map((f) => ({
+        id: stableUuid(f.id),
+        quotation_id: id,
+        fornecedor: f.fornecedor,
+        contato: f.contato ?? null,
+        email: f.email ?? null,
+        telefone: f.telefone ?? null,
+        qualificacao: f.qualificacao,
+        public_token: f.publicToken,
+        respondido: f.respondido,
+      })) as never
+    );
+    warn("quotation_suppliers", se);
+  }
+
+  if (cot.precos.length) {
+    const { error: pe } = await sb.from("quotation_prices").insert(
+      cot.precos.map((p) => ({
+        id: stableUuid(p.id),
+        quotation_id: id,
+        item_id: stableUuid(p.itemId),
+        supplier_id: stableUuid(p.supplierId),
+        preco_unitario: p.precoUnitario,
+        quantidade_cotada: p.quantidadeCotada,
+        prazo_dias: p.prazoDias ?? null,
+        vencedor: p.vencedor,
+      })) as never
+    );
+    warn("quotation_prices", pe);
+  }
+
+  return { ok: true };
 }
 
 export async function dualWriteOrdem(

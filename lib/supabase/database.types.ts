@@ -96,6 +96,7 @@ export type Database = {
           tipo: string;
           status: string;
           cliente_nome: string | null;
+          visivel_para: string[];
           deleted_at: string | null;
         };
         Insert: {
@@ -106,6 +107,7 @@ export type Database = {
           tipo?: string;
           status?: string;
           cliente_nome?: string | null;
+          visivel_para?: string[];
           deleted_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["obras"]["Insert"]>;
