@@ -34,6 +34,7 @@ import { parseXlsxBytes, xlsxRowsToCsv } from "@/lib/import/xlsx-parse";
 import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
+import { validateCartorioObrigatorio } from "@/lib/domain/cartorio-required";
 import { statusLabel } from "@/lib/status/labels";
 
 const STATUS_TONE: Record<LotStatus, "ok" | "warn" | "danger" | "info" | "neutral"> = {
@@ -677,6 +678,20 @@ export default function EmpreendimentosPage() {
             notify("Código e nome obrigatórios");
             return;
           }
+          if (!empForm.bairro.trim()) {
+            notify("Bairro (núcleo) obrigatório");
+            return;
+          }
+          {
+            const cartorioErr = validateCartorioObrigatorio({
+              cartorioId: empForm.cartorioId,
+              cartorioNome: empForm.cartorioNome,
+            });
+            if (cartorioErr) {
+              notify("Cartório obrigatório", cartorioErr);
+              return;
+            }
+          }
           const {
             latitude: latStr,
             longitude: lngStr,
@@ -885,9 +900,9 @@ export default function EmpreendimentosPage() {
         </Field>
 
         <p className="col-span-full mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Cartório e certidão
+          Cartório e certidão (cartório obrigatório)
         </p>
-        <Field label="Cartório cadastrado">
+        <Field label="Cartório cadastrado *">
           <SearchSelect
             value={empForm.cartorioId}
             onChange={(id) => {
@@ -901,19 +916,21 @@ export default function EmpreendimentosPage() {
                 cartorioContato: c?.contato ?? empForm.cartorioContato,
               });
             }}
-            placeholder="Buscar cartório (H25)…"
+            placeholder="Buscar cartório (obrigatório)…"
             options={state.cartorios.map((c) => ({
               value: c.id,
               label: `${c.nome} · ${c.cidade}/${c.uf}`,
             }))}
           />
         </Field>
-        <Field label="Cartório (nome)">
+        <Field label="Cartório (nome) *">
           <Input
             value={empForm.cartorioNome}
             onChange={(e) =>
               setEmpForm({ ...empForm, cartorioNome: e.target.value })
             }
+            required
+            placeholder="Obrigatório se não houver cartório na lista"
           />
         </Field>
         <Field label="Cartório (cidade)">
