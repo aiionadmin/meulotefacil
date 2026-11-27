@@ -79,7 +79,29 @@ export default function FluxoCaixaPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => printList("Fluxo de caixa")}
+              onClick={() => {
+                const headers = [
+                  "Plano",
+                  "Tipo",
+                  ...matriz.periodos.flatMap((p) => [`${p} real.`, `${p} prev.`]),
+                  "Total real.",
+                  "Total prev.",
+                ];
+                const rows = matriz.linhas.map((l) => [
+                  l.planoNome,
+                  l.fluxo,
+                  ...matriz.periodos.flatMap((p) => {
+                    const c = l.porPeriodo[p] ?? { realizado: 0, previsto: 0 };
+                    return [c.realizado, c.previsto];
+                  }),
+                  l.totalRealizado,
+                  l.totalPrevisto,
+                ]);
+                void printList("Fluxo de caixa", headers, rows, {
+                  filename: "fluxo-caixa",
+                });
+                notify("Impressão gerada");
+              }}
             >
               Imprimir
             </Button>

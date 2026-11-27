@@ -95,7 +95,31 @@ export default function CaixaPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => printList("Caixa")}
+              onClick={() => {
+                void printList(
+                  "Caixa",
+                  [
+                    "Data",
+                    "Cliente",
+                    "Valor",
+                    "Forma",
+                    "Autenticação",
+                    "Vias",
+                    "Estornado",
+                  ],
+                  state.caixa.map((m) => [
+                    m.data,
+                    m.cliente,
+                    m.valor,
+                    m.forma,
+                    m.autenticacao,
+                    m.vias,
+                    m.estornado ? "sim" : "não",
+                  ]),
+                  { filename: "caixa" }
+                );
+                notify("Impressão gerada");
+              }}
             >
               Imprimir
             </Button>

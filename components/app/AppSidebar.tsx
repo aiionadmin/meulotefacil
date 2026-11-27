@@ -30,6 +30,7 @@ import {
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { getAppNav } from "@/lib/app-nav";
+import { releaseDialogLock } from "@/lib/ui/release-dialog-lock";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "/dashboard": LayoutDashboard,
@@ -122,7 +123,14 @@ export function AppSidebar({
       )}
     >
       <div className="flex h-16 items-center justify-between gap-2 border-b border-sidebar-border px-4">
-        <Link href="/dashboard" onClick={onNavigate} className="min-w-0">
+        <Link
+          href="/dashboard"
+          onClick={() => {
+            releaseDialogLock();
+            onNavigate?.();
+          }}
+          className="min-w-0"
+        >
           {collapsed && !mobile ? (
             <Logo variant="symbol" tone="paper" symbolClassName="h-8 w-8" />
           ) : (
@@ -164,7 +172,18 @@ export function AppSidebar({
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={onNavigate}
+                    onClick={(e) => {
+                      releaseDialogLock();
+                      onNavigate?.();
+                      // Ficha financeira: hard nav limpa portals órfãos do Radix
+                      if (item.href === "/carteira") {
+                        e.preventDefault();
+                        window.setTimeout(() => {
+                          releaseDialogLock();
+                          window.location.assign("/carteira");
+                        }, 30);
+                      }
+                    }}
                     className={cn(
                       "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       active

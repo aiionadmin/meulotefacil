@@ -28,9 +28,12 @@ import { useCarteira } from "@/lib/store/carteira-store";
 import type { FormaPagamento, Recebimento } from "@/lib/domain/financeiro-types";
 import {
   carteiraContratoHref,
-  fichaFinanceiraNav,
   resolveContract,
 } from "@/lib/financeiro/ficha-links";
+import {
+  FichaFinanceiraButton,
+  FichaNavLinks,
+} from "@/components/app/FichaNavLinks";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
 
 export default function RecebimentosPage() {
@@ -281,22 +284,24 @@ export default function RecebimentosPage() {
                     ? carteiraContratoHref(ct.id)
                     : `/carteira?numero=${encodeURIComponent(live.contratoRef)}`;
                   return (
-                    <Link className="underline" href={href}>
+                    <FichaFinanceiraButton
+                      href={href}
+                      onBeforeNavigate={() => setSelected(null)}
+                      className="underline"
+                    >
                       {`${live.contratoRef} (ficha financeira)`}
-                    </Link>
+                    </FichaFinanceiraButton>
                   );
                 })()}
               />
             ) : null}
-            <div className="flex flex-wrap gap-2 border-t border-linha pt-3 text-xs">
-              {fichaFinanceiraNav(
+            <FichaNavLinks
+              contractId={
                 resolveContract(cart.contracts, live.contratoRef)?.id
-              ).map((l) => (
-                <Link key={l.href + l.label} className="underline" href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-            </div>
+              }
+              onBeforeNavigate={() => setSelected(null)}
+              className="border-t border-linha pt-3"
+            />
             <div className="flex flex-wrap gap-2 pt-2">
               {live.origem === "contrato" ? (
                 <p className="text-xs text-muted-foreground">

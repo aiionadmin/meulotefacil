@@ -4,10 +4,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
+import { releaseDialogLock } from "@/lib/ui/release-dialog-lock";
 
 export type ClientCardTab =
   | "resumo"
@@ -46,12 +49,22 @@ const Ctx = createContext<ClientCardApi | null>(null);
 
 export function ClientCardProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<ClientCardRef | null>(null);
+  const pathname = usePathname();
 
   const openClient = useCallback((ref: ClientCardRef) => {
     setOpen(ref);
   }, []);
 
-  const closeClient = useCallback(() => setOpen(null), []);
+  const closeClient = useCallback(() => {
+    setOpen(null);
+    queueMicrotask(releaseDialogLock);
+  }, []);
+
+  // Close card on navigation so Sheet doesn't unmount mid-open.
+  useEffect(() => {
+    setOpen((prev) => (prev ? null : prev));
+    releaseDialogLock();
+  }, [pathname]);
 
   const value = useMemo(
     () => ({ open, openClient, closeClient }),

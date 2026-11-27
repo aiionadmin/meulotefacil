@@ -39,6 +39,7 @@ import {
 import { parseXlsxBytes, xlsxRowsToCsv } from "@/lib/import/xlsx-parse";
 import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useFinanceiro } from "@/lib/store/financeiro-store";
 import { useSystemSettings } from "@/lib/store/system-settings-store";
 import type { Development, Lot, LotStatus } from "@/lib/domain/carteira-types";
 import { validateCartorioObrigatorio } from "@/lib/domain/cartorio-required";
@@ -131,9 +132,21 @@ export default function EmpreendimentosPage() {
     changeLotStatus,
     updateLot,
   } = useCarteira();
+  const { state: fin } = useFinanceiro();
   const { validadeReservaDias } = useSystemSettings();
   const { selectedId, filterByEmpresa, filterByDevelopmentEmpresa } =
     useEmpresa();
+  const contaOpts = useMemo(
+    () =>
+      fin.contas
+        .filter((c) => c.ativa)
+        .map((c) => ({
+          value: c.nome,
+          label: c.nome,
+          meta: c.banco || c.tipo,
+        })),
+    [fin.contas]
+  );
   const developmentsAll = useMemo(
     () => filterByEmpresa(state.developments),
     [filterByEmpresa, state.developments]
@@ -347,6 +360,7 @@ export default function EmpreendimentosPage() {
           Clique na linha para editar · use Excluir na ficha do formulário.
         </p>
         <DataTable
+          exportName="empreendimentos"
           onRowClick={(i) => {
             const d = developments[i];
             if (d) openEditEmp(d);
@@ -775,7 +789,7 @@ export default function EmpreendimentosPage() {
               ...patch,
               empresaId:
                 selectedId === "todas"
-                  ? developments[0]?.empresaId
+                  ? developmentsAll[0]?.empresaId
                   : selectedId,
             });
             notify("Empreendimento criado", empForm.nome);
@@ -995,41 +1009,19 @@ export default function EmpreendimentosPage() {
             }))}
           />
         </Field>
-        <Field label="Cartório (nome) *">
-          <Input
-            value={empForm.cartorioNome}
-            onChange={(e) =>
-              setEmpForm({ ...empForm, cartorioNome: e.target.value })
-            }
-            required
-            placeholder="Obrigatório se não houver cartório na lista"
-          />
-        </Field>
-        <Field label="Cartório (cidade)">
-          <Input
-            value={empForm.cartorioCidade}
-            onChange={(e) =>
-              setEmpForm({ ...empForm, cartorioCidade: e.target.value })
-            }
-          />
-        </Field>
-        <Field label="Cartório (UF)">
-          <Input
-            value={empForm.cartorioUf}
-            onChange={(e) =>
-              setEmpForm({ ...empForm, cartorioUf: e.target.value })
-            }
-            maxLength={2}
-          />
-        </Field>
-        <Field label="Cartório (contato)">
-          <Input
-            value={empForm.cartorioContato}
-            onChange={(e) =>
-              setEmpForm({ ...empForm, cartorioContato: e.target.value })
-            }
-          />
-        </Field>
+        {empForm.cartorioNome ? (
+          <p className="text-xs text-muted-foreground">
+            Cartório: {empForm.cartorioNome}
+            {empForm.cartorioCidade
+              ? ` · ${empForm.cartorioCidade}/${empForm.cartorioUf}`
+              : ""}
+            {empForm.cartorioContato ? ` · ${empForm.cartorioContato}` : ""}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Selecione um cartório cadastrado acima (obrigatório).
+          </p>
+        )}
         <Field label="Certidão (número)">
           <Input
             value={empForm.certidaoNumero}
@@ -1090,11 +1082,13 @@ export default function EmpreendimentosPage() {
           />
         </Field>
         <Field label="Conta corrente padrão">
-          <Input
+          <SearchSelect
             value={empForm.contaCorrentePadrao}
-            onChange={(e) =>
-              setEmpForm({ ...empForm, contaCorrentePadrao: e.target.value })
+            onChange={(contaCorrentePadrao) =>
+              setEmpForm({ ...empForm, contaCorrentePadrao })
             }
+            options={contaOpts}
+            placeholder="Selecionar conta cadastrada…"
           />
         </Field>
         <Field label="Recado padrão">

@@ -16,6 +16,9 @@ import { ProcessList } from "@/components/app/ProcessList";
 import { SearchSelect } from "@/components/app/SearchSelect";
 import { formatBRL } from "@/lib/masks/br";
 import { useObras } from "@/lib/store/obras-store";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { peopleOptions } from "@/lib/ui/people-options";
+import Link from "next/link";
 
 type MedicaoContratoStatus = "em_elaboracao" | "aprovada" | "lancada";
 
@@ -57,6 +60,7 @@ const SEED: MedicaoContrato[] = [
 
 export default function MedicaoContratosPage() {
   const { state } = useObras();
+  const { state: fase1 } = useFase1();
   const [rows, setRows] = useState(SEED);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -76,6 +80,10 @@ export default function MedicaoContratosPage() {
         label: `${o.codigo} · ${o.nome}`,
       })),
     [state.obras]
+  );
+  const fornecedorOpts = useMemo(
+    () => peopleOptions(fase1.people, "fornecedor"),
+    [fase1.people]
   );
 
   return (
@@ -216,13 +224,20 @@ export default function MedicaoContratosPage() {
           />
         </Field>
         <Field label="Fornecedor *">
-          <input
-            className={fieldControlClass}
+          <SearchSelect
             value={form.fornecedor}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, fornecedor: e.target.value }))
-            }
+            onChange={(fornecedor) => setForm((f) => ({ ...f, fornecedor }))}
+            options={fornecedorOpts}
+            placeholder="Selecionar fornecedor cadastrado…"
           />
+          {fornecedorOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Nenhum fornecedor.{" "}
+              <Link className="underline" href="/cadastros/fornecedores">
+                Cadastrar
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Objeto">
           <input

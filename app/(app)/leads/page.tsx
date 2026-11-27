@@ -20,10 +20,20 @@ import { SearchSelect } from "@/components/app/SearchSelect";
 import { useServerPage } from "@/lib/ui/use-server-page";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useEmpresa } from "@/lib/empresa/context";
 import type { Lead, LeadOrigem } from "@/lib/domain/fluxo-types";
 import { statusLabel } from "@/lib/status/labels";
 import { JORNADA_COLS } from "@/lib/domain/fluxo-seed";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import {
+  EMPTY_GEO_EMP,
+  GeoEmpFilters,
+  developmentIdsMatching,
+  type GeoEmpFilterValues,
+} from "@/components/app/GeoEmpFilters";
+import { FilterBar } from "@/components/app/ModuleToolkit";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { peopleOptions } from "@/lib/ui/people-options";
 
 type LeadForm = {
   nome: string;
@@ -105,26 +115,107 @@ function leadToForm(l: Lead): LeadForm {
 export default function LeadsPage() {
   const { state, addLead, updateLead, removeLead, moveLead } = useFluxo();
   const { state: carteira } = useCarteira();
+  const { state: fase1 } = useFase1();
+  const {
+    selectedId,
+    scopedDevelopments,
+    empresaIdForEmpNome,
+    filterByEmpresa,
+  } = useEmpresa();
   const [open, setOpen] = useNovoParam();
+  const [geo, setGeo] = useState<GeoEmpFilterValues>(EMPTY_GEO_EMP);
+  const [q, setQ] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<LeadForm>(EMPTY_FORM);
+  const corretorOpts = useMemo(
+    () => peopleOptions(fase1.people, "corretor"),
+    [fase1.people]
+  );
   const server = useServerPage({
     url: "/api/list/leads",
     page: 1,
     pageSize: 25,
   });
 
+  const developments = useMemo(
+    () => scopedDevelopments(carteira.developments),
+    [scopedDevelopments, carteira.developments]
+  );
+
+  const geoIds = useMemo(
+    () => developmentIdsMatching(developments, geo),
+    [developments, geo]
+  );
+
+  const empNamesAllowed = useMemo(() => {
+    if (!geoIds) return null;
+    return new Set(
+      developments
+        .filter((d) => geoIds.has(d.id))
+        .map((d) => d.nome.toLowerCase())
+    );
+  }, [developments, geoIds]);
+
   const activeLeads = useMemo(
     () =>
-      state.leads.filter(
-        (l) =>
-          l.etapa !== "perdido" &&
-          l.etapa !== "cancelado" &&
-          l.etapa !== "distrato" &&
-          l.etapa !== "retomado" &&
-          l.etapa !== "quitado" &&
-          l.etapa !== "escritura"
-      ),
+      state.leads.filter((l) => {
+        if (
+          l.etapa === "perdido" ||
+          l.etapa === "cancelado" ||
+          l.etapa === "distrato" ||
+          l.etapa === "retomado" ||
+          l.etapa === "quitado" ||
+          l.etapa === "escritura"
+        ) {
+          return false;
+        }
+        const leadEmpresa =
+          l.empresaId ||
+          empresaIdForEmpNome(l.empInteresse, carteira.developments);
+        if (
+          selectedId !== "todas" &&
+          !filterByEmpresa([{ empresaId: leadEmpresa }]).length
+        ) {
+          return false;
+        }
+        if (empNamesAllowed) {
+          const nome = (l.empInteresse || "").toLowerCase();
+          if (!nome || !empNamesAllowed.has(nome)) return false;
+        }
+        if (geo.cidade !== "todas" && l.cidade && l.cidade !== geo.cidade) {
+          return false;
+        }
+        if (geo.bairro !== "todos" && l.bairro && l.bairro !== geo.bairro) {
+          return false;
+        }
+        const term = q.trim().toLowerCase();
+        if (!term) return true;
+        return [l.nome, l.empInteresse, l.cidade, l.bairro, l.telefone, l.email]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(term);
+      }),
+    [
+      state.leads,
+      empNamesAllowed,
+      geo,
+      q,
+      selectedId,
+      filterByEmpresa,
+      empresaIdForEmpNome,
+      carteira.developments,
+    ]
+  );
+
+  const leadSuggestions = useMemo(
+    () =>
+      state.leads.flatMap((l) => [
+        l.nome,
+        l.empInteresse ?? "",
+        l.cidade ?? "",
+        l.bairro ?? "",
+      ]),
     [state.leads]
   );
 
@@ -219,6 +310,19 @@ export default function LeadsPage() {
           },
         ]}
       />
+
+      <FilterBar
+        value={q}
+        onChange={setQ}
+        placeholder="Buscar lead, empreendimento, cidade…"
+        suggestions={leadSuggestions}
+      >
+        <GeoEmpFilters
+          developments={developments}
+          value={geo}
+          onChange={setGeo}
+        />
+      </FilterBar>
 
       <p className="text-sm text-muted-foreground">
         Clique no card ou na linha para editar · use Excluir no formulário.
@@ -412,14 +516,24 @@ export default function LeadsPage() {
           />
         </Field>
         <Field label="Corretor">
-          <Input
+          <SearchSelect
             value={form.corretor}
-            onChange={(e) => setForm({ ...form, corretor: e.target.value })}
+            onChange={(corretor) => setForm({ ...form, corretor })}
+            options={corretorOpts}
+            placeholder="Selecionar corretor cadastrado…"
           />
+          {corretorOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre em{" "}
+              <Link className="underline" href="/cadastros/corretores">
+                Corretores
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Empreendimento de interesse">
           <SearchSelect
-            options={carteira.developments.map((d) => ({
+            options={developments.map((d) => ({
               value: d.nome,
               label: d.nome,
               meta: d.modalidade,

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   downloadExcel,
   downloadListPdf,
-  printList,
+  exportFileSlug,
+  exportTitleFromName,
   reactNodeText,
 } from "@/lib/export/list-export";
+import { useEmpresa } from "@/lib/empresa/context";
 import { usePageTitle } from "@/lib/ui/use-page-title";
 import { paginate } from "@/lib/ui/pagination";
 
@@ -93,7 +96,37 @@ export function DataTable({
   exportRows?: Record<string, React.ReactNode>[];
 }) {
   const [page, setPage] = useState(1);
-  const title = exportName ?? "lista";
+  const pathname = usePathname();
+  const { selectedCnpj, selected: empresaSel } = useEmpresa();
+  const routeSlug = useMemo(() => {
+    const parts = (pathname || "")
+      .split("/")
+      .filter((p) => p && p !== "(app)");
+    return parts[parts.length - 1] || "lista";
+  }, [pathname]);
+  const fileName = exportFileSlug(exportName?.trim() || routeSlug);
+  const pdfTitle = exportTitleFromName(fileName);
+  const printOpts = useMemo(
+    () => ({
+      filename: fileName,
+      cnpj: selectedCnpj,
+      empresa: empresaSel
+        ? {
+            razaoSocial: empresaSel.razaoSocial,
+            nomeFantasia: empresaSel.nome,
+            cnpj: empresaSel.cnpj,
+            telefone: empresaSel.telefone,
+            email: empresaSel.email,
+            endereco: empresaSel.endereco,
+            bairro: empresaSel.bairro,
+            cidade: empresaSel.cidade,
+            uf: empresaSel.uf,
+            cep: empresaSel.cep,
+          }
+        : undefined,
+    }),
+    [fileName, selectedCnpj, empresaSel]
+  );
 
   const pageData = useMemo(() => {
     if (!enablePaginate) {
@@ -110,9 +143,14 @@ export function DataTable({
 
   const exportMatrix = useMemo(() => {
     const source = exportRows ?? rows;
-    const headers = columns.map((c) => c.label);
+    const exportCols = columns.filter(
+      (c) =>
+        c.label.trim() &&
+        !/^(acoes|ações|actions|opcoes|opções)$/i.test(c.key)
+    );
+    const headers = exportCols.map((c) => c.label);
     const data = source.map((row) =>
-      columns.map((c) => reactNodeText(row[c.key]))
+      exportCols.map((c) => reactNodeText(row[c.key]))
     );
     return { headers, data };
   }, [columns, rows, exportRows]);
@@ -136,7 +174,7 @@ export function DataTable({
             size="sm"
             variant="outline"
             onClick={() =>
-              downloadExcel(title, exportMatrix.headers, exportMatrix.data)
+              downloadExcel(fileName, exportMatrix.headers, exportMatrix.data)
             }
           >
             Excel
@@ -146,7 +184,12 @@ export function DataTable({
             size="sm"
             variant="outline"
             onClick={() =>
-              downloadListPdf(title, exportMatrix.headers, exportMatrix.data)
+              void downloadListPdf(
+                pdfTitle,
+                exportMatrix.headers,
+                exportMatrix.data,
+                printOpts
+              )
             }
           >
             PDF
@@ -155,7 +198,14 @@ export function DataTable({
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => printList(title)}
+            onClick={() =>
+              void downloadListPdf(
+                pdfTitle,
+                exportMatrix.headers,
+                exportMatrix.data,
+                printOpts
+              )
+            }
           >
             Imprimir
           </Button>

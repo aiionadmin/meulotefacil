@@ -47,3 +47,14 @@ export function custoPorGrupo(
   }
   return out;
 }
+
+/** Valor medido a partir dos itens do orçamento e % do período. */
+export function valorMedicaoItens(
+  itens: { orcado: number; pctPeriodo: number }[]
+): number {
+  const total = itens.reduce((a, i) => {
+    const pct = Math.max(0, Math.min(100, i.pctPeriodo));
+    return a + (Math.max(0, i.orcado) * pct) / 100;
+  }, 0);
+  return Math.round(total * 100) / 100;
+}

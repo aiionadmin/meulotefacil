@@ -12,14 +12,22 @@ import {
 import {
   DetailRow,
   DetailSheet,
+  FilterBar,
   notify,
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
+import {
+  EMPTY_GEO_EMP,
+  GeoEmpFilters,
+  developmentIdsMatching,
+  type GeoEmpFilterValues,
+} from "@/components/app/GeoEmpFilters";
 import { formatBRL, formatDateBR } from "@/lib/masks/br";
 import { downloadExcel, downloadTextTemplate } from "@/lib/export/list-export";
 import { parseCnab400Retorno } from "@/lib/cnab/retorno";
 import { useServerPage } from "@/lib/ui/use-server-page";
 import { useCarteira } from "@/lib/store/carteira-store";
+import { useEmpresa } from "@/lib/empresa/context";
 import type { BankSlip } from "@/lib/domain/carteira-types";
 
 export default function BoletosPage() {
@@ -30,7 +38,9 @@ export default function BoletosPage() {
     processarRetorno,
     cancelarBoletosPorIds,
   } = useCarteira();
+  const { scopedDevelopments, filterByDevelopmentEmpresa } = useEmpresa();
   const [q, setQ] = useState("");
+  const [geo, setGeo] = useState<GeoEmpFilterValues>(EMPTY_GEO_EMP);
   const [selected, setSelected] = useState<BankSlip | null>(null);
   const novoRan = useRef(false);
   useEffect(() => {
@@ -56,16 +66,53 @@ export default function BoletosPage() {
     q,
   });
 
+  const developments = useMemo(
+    () => scopedDevelopments(state.developments),
+    [scopedDevelopments, state.developments]
+  );
+
+  const geoIds = useMemo(
+    () => developmentIdsMatching(developments, geo),
+    [developments, geo]
+  );
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return state.bankSlips;
-    return state.bankSlips.filter((b) =>
-      [b.nossoNumero, b.contratoNumero, b.status, b.banco]
+    const scopedContracts = filterByDevelopmentEmpresa(
+      state.contracts,
+      state.developments
+    );
+    const allowedContracts = new Set(scopedContracts.map((c) => c.id));
+    return state.bankSlips.filter((b) => {
+      if (!allowedContracts.has(b.contractId)) return false;
+      if (geoIds) {
+        const ct = state.contracts.find((c) => c.id === b.contractId);
+        if (!ct || !geoIds.has(ct.developmentId)) return false;
+      }
+      if (!term) return true;
+      return [b.nossoNumero, b.contratoNumero, b.status, b.banco]
         .join(" ")
         .toLowerCase()
-        .includes(term)
-    );
-  }, [state.bankSlips, q]);
+        .includes(term);
+    });
+  }, [
+    state.bankSlips,
+    q,
+    geoIds,
+    state.contracts,
+    state.developments,
+    filterByDevelopmentEmpresa,
+  ]);
+
+  const boletoSuggestions = useMemo(
+    () =>
+      state.bankSlips.flatMap((b) => [
+        b.nossoNumero,
+        b.contratoNumero,
+        b.banco,
+      ]),
+    [state.bankSlips]
+  );
 
   const toCard = useCallback(
     (b: BankSlip) => ({
@@ -195,6 +242,19 @@ export default function BoletosPage() {
         ]}
       />
 
+      <FilterBar
+        value={q}
+        onChange={setQ}
+        placeholder="Buscar nosso número, contrato, banco…"
+        suggestions={boletoSuggestions}
+      >
+        <GeoEmpFilters
+          developments={developments}
+          value={geo}
+          onChange={setGeo}
+        />
+      </FilterBar>
+
       <ProcessBoard
         storageKey="boletos"
         columns={STATUS_COLS}
@@ -249,6 +309,7 @@ export default function BoletosPage() {
 
       <ModuleSection title="Arquivos de remessa">
         <DataTable
+          exportName="remessas-cnab"
           columns={[
             { key: "nome", label: "Arquivo" },
             { key: "quando", label: "Criado" },

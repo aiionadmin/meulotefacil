@@ -32,10 +32,8 @@ import { useEmpresa } from "@/lib/empresa/context";
 import { statusLabel } from "@/lib/status/labels";
 import { paginate } from "@/lib/ui/pagination";
 import { downloadCsv } from "@/lib/export/list-export";
-import {
-  fichaFinanceiraNav,
-  resolveContract,
-} from "@/lib/financeiro/ficha-links";
+import { resolveContract } from "@/lib/financeiro/ficha-links";
+import { FichaNavLinks } from "@/components/app/FichaNavLinks";
 
 const CONSULTA = "2026-11-24";
 
@@ -83,9 +81,13 @@ function CarteiraInner() {
     elapsedMs: number;
   } | null>(null);
 
+  // Só na montagem: `refreshEncargos` vem do api useMemo([state]) e
+  // sempre gera novo state → dependência [refreshEncargos] = loop infinito
+  // (Maximum update depth → UI “travada” sem cliques/teclado).
   useEffect(() => {
     refreshEncargos(CONSULTA);
-  }, [refreshEncargos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
 
   const contratoFiltroId = useMemo(() => {
     const c = resolveContract(
@@ -383,13 +385,7 @@ function CarteiraInner() {
           </Button>
         ) : null}
         {contratoFiltroId ? (
-          <div className="flex flex-wrap gap-2 text-xs">
-            {fichaFinanceiraNav(contratoFiltroId).map((l) => (
-              <Link key={l.label} className="underline" href={l.href}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
+          <FichaNavLinks contractId={contratoFiltroId} />
         ) : null}
       </FilterBar>
 
@@ -407,6 +403,7 @@ function CarteiraInner() {
       ) : null}
 
       <DataTable
+        exportName="ficha-financeira"
         paginate={false}
         columns={[
           { key: "tipo", label: "Tipo" },
@@ -549,13 +546,11 @@ function CarteiraInner() {
               label="Pagamento"
               value={selected.pagoEm ? formatDateBR(selected.pagoEm) : "—"}
             />
-            <div className="flex flex-wrap gap-2 border-b border-linha pb-3 text-xs">
-              {fichaFinanceiraNav(selected.contractId).map((l) => (
-                <Link key={l.label} className="underline" href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-            </div>
+            <FichaNavLinks
+              contractId={selected.contractId}
+              onBeforeNavigate={() => setSelected(null)}
+              className="border-b border-linha pb-3"
+            />
             <div className="flex flex-wrap gap-2 pt-3">
               {selected.status !== "paga" ? (
                 <Button

@@ -32,11 +32,13 @@ function CommandDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden p-0">
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
-          {children}
-        </Command>
-      </DialogContent>
+      {open ? (
+        <DialogContent className="overflow-hidden p-0">
+          <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
+            {children}
+          </Command>
+        </DialogContent>
+      ) : null}
     </Dialog>
   );
 }

@@ -32,10 +32,11 @@ import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useClientCard } from "@/lib/client/client-card-context";
 import type { Contract } from "@/lib/domain/carteira-types";
+import { carteiraContratoHref } from "@/lib/financeiro/ficha-links";
 import {
-  carteiraContratoHref,
-  fichaFinanceiraNav,
-} from "@/lib/financeiro/ficha-links";
+  FichaFinanceiraButton,
+  FichaNavLinks,
+} from "@/components/app/FichaNavLinks";
 import {
   EMPTY_GEO_EMP,
   GeoEmpFilters,
@@ -43,6 +44,10 @@ import {
   type GeoEmpFilterValues,
 } from "@/components/app/GeoEmpFilters";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import { useSystemSettings } from "@/lib/store/system-settings-store";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { peopleIdOptions } from "@/lib/ui/people-options";
+
 
 const STATUS_COLS = [
   { id: "ativo", label: "Ativo" },
@@ -65,16 +70,23 @@ export default function ContratosPage() {
 
 function ContratosInner() {
   const { state, saldoDevedor, addContract, registrarOperacao } = useCarteira();
+  const { indicePadrao } = useSystemSettings();
   const { filterByDevelopmentEmpresa } = useEmpresa();
+  const { state: fase1 } = useFase1();
   const { openClient } = useClientCard();
   const search = useSearchParams();
   const abrirId = search.get("abrir") ?? "";
   const [selected, setSelected] = useState<Contract | null>(null);
   const [geo, setGeo] = useState<GeoEmpFilterValues>({ ...EMPTY_GEO_EMP });
   const [open, setOpen] = useNovoParam();
+  const compradorOpts = useMemo(
+    () => peopleIdOptions(fase1.people, ["cliente", "comprador"]),
+    [fase1.people]
+  );
   const [form, setForm] = useState({
     developmentId: state.developments[0]?.id ?? "",
     lotId: "",
+    compradorId: "",
     compradorNome: "",
     preco: 180000,
     entrada: 20000,
@@ -146,9 +158,7 @@ function ContratosInner() {
         description="Nascem da proposta aprovada (C12). Kanban por situação."
         actions={
           <>
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/carteira">Ficha financeira</Link>
-            </Button>
+            <FichaFinanceiraButton href="/carteira" />
             <Button size="sm" variant="outline" asChild>
               <Link href="/vendas">Propostas</Link>
             </Button>
@@ -276,19 +286,17 @@ function ContratosInner() {
               <DetailRow label="Permuta" value={selected.permutaDescricao} />
             ) : null}
             <DetailRow label="Reajuste" value={selected.tipoReajuste} />
-            <div className="flex flex-wrap gap-2 border-b border-linha pb-3 text-xs">
-              {fichaFinanceiraNav(selected.id).map((l) => (
-                <Link key={l.label} className="underline" href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-            </div>
+            <FichaNavLinks
+              contractId={selected.id}
+              onBeforeNavigate={() => setSelected(null)}
+              className="border-b border-linha pb-3"
+            />
             <div className="flex flex-wrap gap-2 pt-2">
-              <Button size="sm" asChild>
-                <Link href={carteiraContratoHref(selected.id)}>
-                  Ficha financeira
-                </Link>
-              </Button>
+              <FichaFinanceiraButton
+                href={carteiraContratoHref(selected.id)}
+                onBeforeNavigate={() => setSelected(null)}
+                variant="default"
+              />
               {(
                 [
                   ["retomada", "Retomar lote"],
@@ -343,8 +351,8 @@ function ContratosInner() {
         onOpenChange={setOpen}
         title="Nova venda / contrato"
         onSubmit={() => {
-          if (!form.lotId || !form.compradorNome) {
-            notify("Selecione lote e informe o comprador");
+          if (!form.lotId || !form.compradorId || !form.compradorNome) {
+            notify("Selecione lote e comprador cadastrado");
             return;
           }
           const permutaErr = validatePermutaDescricao(
@@ -364,6 +372,7 @@ function ContratosInner() {
             permutaDescricao: isPermuta
               ? form.permutaDescricao.trim()
               : undefined,
+            tipoReajuste: indicePadrao,
           });
           if (!ct) {
             notify(
@@ -410,14 +419,28 @@ function ContratosInner() {
             placeholder="Buscar lote…"
           />
         </Field>
-        <Field label="Comprador *">
-          <Input
-            value={form.compradorNome}
-            onChange={(e) =>
-              setForm({ ...form, compradorNome: e.target.value })
-            }
-            required
+        <Field label="Comprador cadastrado *">
+          <SearchSelect
+            value={form.compradorId}
+            onChange={(compradorId) => {
+              const p = compradorOpts.find((o) => o.value === compradorId);
+              setForm({
+                ...form,
+                compradorId,
+                compradorNome: p?.label ?? "",
+              });
+            }}
+            options={compradorOpts}
+            placeholder="Selecionar comprador cadastrado…"
           />
+          {compradorOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre em{" "}
+              <Link className="underline" href="/cadastros/clientes">
+                Clientes
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Forma de pagamento *">
           <select

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { DemoStoreProvider } from "@/lib/store/demo-store";
@@ -19,11 +20,17 @@ import { ClientCardSheet } from "@/components/client/ClientCardSheet";
 import { EmpresaProvider } from "@/lib/empresa/context";
 import { AppSidebar } from "./AppSidebar";
 import { AppTopbar } from "./AppTopbar";
+import { DialogLockGuard } from "./DialogLockGuard";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -50,17 +57,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         </div>
 
                         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                          <SheetContent
-                            side="left"
-                            className="w-72 border-0 bg-transparent p-0"
-                          >
-                            <AppSidebar
-                              collapsed={false}
-                              onToggle={() => undefined}
-                              mobile
-                              onNavigate={() => setMobileOpen(false)}
-                            />
-                          </SheetContent>
+                          {mobileOpen ? (
+                            <SheetContent
+                              side="left"
+                              className="w-72 border-0 bg-transparent p-0"
+                            >
+                              <AppSidebar
+                                collapsed={false}
+                                onToggle={() => undefined}
+                                mobile
+                                onNavigate={() => setMobileOpen(false)}
+                              />
+                            </SheetContent>
+                          ) : null}
                         </Sheet>
 
                         <div className="flex min-w-0 flex-1 flex-col">
@@ -71,6 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         </div>
                       </div>
                       <Toaster richColors position="top-right" closeButton />
+                      <DialogLockGuard />
                       <ClientCardSheet />
                     </DemoStoreProvider>
                     </ClientCardProvider>

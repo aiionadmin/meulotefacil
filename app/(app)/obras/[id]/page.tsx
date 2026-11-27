@@ -29,6 +29,8 @@ import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
 import { precoComBdi } from "@/lib/money/orcamento";
 import type { PropostaStatus } from "@/lib/domain/obras-types";
+import { SearchSelect } from "@/components/app/SearchSelect";
+import { responsavelOptions } from "@/lib/ui/people-options";
 
 type AbaObra =
   | "orcamento"
@@ -70,7 +72,11 @@ export default function ObraDetalhePage() {
     gerarCurvaS,
     updateObra,
   } = useObras();
-  const { currentUser, currentProfileName: perfilNome } = useFase1();
+  const {
+    currentUser,
+    currentProfileName: perfilNome,
+    state: fase1,
+  } = useFase1();
   const obraRaw = state.obras.find((o) => o.id === id);
   const obra =
     obraRaw && canSeeObra(obraRaw, currentUser, perfilNome) ? obraRaw : undefined;
@@ -295,16 +301,18 @@ export default function ObraDetalhePage() {
               </Field>
             </div>
             <Field label="Responsável">
-              <Input
+              <SearchSelect
                 value={obra.proposta?.responsavel ?? ""}
-                onChange={(e) =>
+                onChange={(responsavel) =>
                   updateObra(obra.id, {
                     proposta: {
                       ...obra.proposta,
-                      responsavel: e.target.value,
+                      responsavel,
                     },
                   })
                 }
+                options={responsavelOptions(fase1.people, fase1.users)}
+                placeholder="Selecionar responsável cadastrado…"
               />
             </Field>
             <Field label="Condição de pagamento">
@@ -430,7 +438,31 @@ export default function ObraDetalhePage() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => printList(`Físico-financeiro · ${obra.nome}`)}
+                onClick={() => {
+                  void printList(
+                    `Físico-financeiro · ${obra.nome}`,
+                    [
+                      "Período",
+                      "Atividades",
+                      "Físico plan. %",
+                      "Físico real. %",
+                      "Fin. plan.",
+                      "Fin. real.",
+                      "Saldo fin.",
+                    ],
+                    fisicoFin.map((r) => [
+                      r.periodo,
+                      r.atividades,
+                      r.fisicoPlanPct,
+                      r.fisicoRealPct,
+                      r.finPlan,
+                      r.finReal,
+                      r.saldoFin,
+                    ]),
+                    { filename: `fisico-financeiro-${obra.codigo}` }
+                  );
+                  notify("Impressão gerada");
+                }}
               >
                 Imprimir
               </Button>
@@ -594,7 +626,14 @@ export default function ObraDetalhePage() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  printList(`${r} · ${obra.nome}`);
+                  void printList(
+                    `${r} · ${obra.nome}`,
+                    ["Obra", "Código", "Relatório"],
+                    [[obra.nome, obra.codigo, r]],
+                    {
+                      filename: `${r.toLowerCase().replace(/\s+/g, "-")}-${obra.codigo}`,
+                    }
+                  );
                   notify(r);
                 }}
               >

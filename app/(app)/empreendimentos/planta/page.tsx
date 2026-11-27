@@ -12,6 +12,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { DxfViewer, type DxfPickEvent } from "@/components/dxf/DxfViewer";
 import {
+  formatLotRef,
   labelsToLotRows,
   matchLotsFromPick,
   normalizeLotCode,
@@ -50,6 +51,8 @@ export default function PlantaPage() {
   const [devId, setDevId] = useState(state.developments[0]?.id ?? "");
   const [selected, setSelected] = useState<Lot | null>(null);
   const [pickHint, setPickHint] = useState<string | null>(null);
+  /** Ambíguo no DXF: mesmo nº em várias quadras — escolher Quadra/Lote. */
+  const [pickChoices, setPickChoices] = useState<Lot[] | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfName, setPdfName] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -93,6 +96,8 @@ export default function PlantaPage() {
     setSavedName(null);
     setLabels([]);
     setPickHint(null);
+    setPickChoices(null);
+    setSelected(null);
 
     const meta = emp?.plantaDxf;
     if (!meta) {
@@ -121,24 +126,28 @@ export default function PlantaPage() {
   const onPick = useCallback(
     (ev: DxfPickEvent) => {
       const code = normalizeLotCode(ev.text);
-      const matches = matchLotsFromPick(
-        { ...ev, code },
-        lots
-      );
+      const matches = matchLotsFromPick({ ...ev, code }, lots);
       if (matches.length === 1) {
         setSelected(matches[0]);
+        setPickChoices(null);
         setPickHint(null);
-        notify("Lote na planta", `${matches[0].quadra}/${matches[0].lote}`);
+        notify(
+          "Lote na planta",
+          formatLotRef(matches[0].quadra, matches[0].lote)
+        );
         return;
       }
       if (matches.length > 1) {
-        setSelected(matches[0]);
+        // Número se repete por quadra — não usar “lote N de M”
+        setSelected(null);
+        setPickChoices(matches);
         setPickHint(
-          `Vários lotes com nº ${code}: mostrando ${matches[0].quadra}/${matches[0].lote} (${matches.length} candidatos)`
+          "Este número existe em mais de uma quadra. Escolha Quadra/Lote:"
         );
         return;
       }
       setSelected(null);
+      setPickChoices(null);
       setPickHint(
         `Rótulo DXF “${ev.text}” (${ev.layer}) sem lote cadastrado — use Gerar lotes do DXF`
       );
@@ -215,30 +224,57 @@ export default function PlantaPage() {
 
   const ficha = (
     <DetailSheet
-      open={!!selected || !!pickHint}
+      open={!!selected || !!pickHint || !!pickChoices?.length}
       onOpenChange={(o) => {
         if (!o) {
           setSelected(null);
           setPickHint(null);
+          setPickChoices(null);
         }
       }}
       title={
         selected
-          ? `Lote ${selected.quadra}/${selected.lote}`
-          : pickHint
-            ? "Seleção na planta"
-            : ""
+          ? formatLotRef(selected.quadra, selected.lote)
+          : pickChoices?.length
+            ? "Escolher Quadra/Lote"
+            : pickHint
+              ? "Seleção na planta"
+              : ""
       }
     >
-      {pickHint && !selected ? (
+      {pickChoices?.length ? (
+        <div className="space-y-3">
+          {pickHint ? (
+            <p className="text-sm text-muted-foreground">{pickHint}</p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {pickChoices.map((l) => (
+              <Button
+                key={l.id}
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSelected(l);
+                  setPickChoices(null);
+                  setPickHint(null);
+                  notify("Lote na planta", formatLotRef(l.quadra, l.lote));
+                }}
+              >
+                {formatLotRef(l.quadra, l.lote)}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {pickHint && !selected && !pickChoices?.length ? (
         <p className="text-sm text-muted-foreground">{pickHint}</p>
       ) : null}
       {selected ? (
         <div className="space-y-2">
-          {pickHint ? (
-            <p className="mb-2 text-xs text-amber-800">{pickHint}</p>
-          ) : null}
-          <DetailRow label="Código" value={`${selected.quadra}/${selected.lote}`} />
+          <DetailRow
+            label="Quadra / Lote"
+            value={formatLotRef(selected.quadra, selected.lote)}
+          />
           <DetailRow label="Empreendimento" value={selected.empNome} />
           <DetailRow
             label="Status"
@@ -607,8 +643,12 @@ export default function PlantaPage() {
                       (l.plantaPoligono?.length ?? 0) >= 3 &&
                         "ring-2 ring-white/80"
                     )}
+                    title={formatLotRef(l.quadra, l.lote)}
+                    aria-label={formatLotRef(l.quadra, l.lote)}
                     onClick={() => {
                       setSelected(l);
+                      setPickChoices(null);
+                      setPickHint(null);
                       if (editMode && polyDraft.length >= 3) {
                         setLotPlantaPoligono(l.id, polyDraft);
                         notify(

@@ -9,7 +9,7 @@ import {
 } from "@/lib/domain/nucleo-bairro";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { NucleosMap } from "@/components/site/NucleosMap";
+import { EmpreendimentoMap } from "@/components/app/EmpreendimentoMap";
 import { ModuleHeader, ModuleSection } from "@/components/app/ModulePage";
 import { fieldControlClass } from "@/components/app/ModuleToolkit";
 import { useCarteira } from "@/lib/store/carteira-store";
@@ -35,6 +35,17 @@ export default function NucleosPage() {
     ? developmentsForNucleo(state.developments, selected)
     : [];
 
+  const mapLocation = useMemo(() => {
+    if (!selected) return null;
+    const bairro = nucleoBairroNome(selected);
+    return {
+      nome: selected.nome,
+      bairro,
+      cidade: selected.cidade,
+      uf: selected.estado,
+    };
+  }, [selected]);
+
   return (
     <div className="space-y-6">
       <ModuleHeader
@@ -42,7 +53,19 @@ export default function NucleosPage() {
         description="No sistema, núcleo = bairro. Empreendimentos (loteamento) e REURB (bairro + morador) se vinculam ao mesmo cadastro."
       />
 
-      <NucleosMap />
+      {mapLocation ? (
+        <ModuleSection
+          title={`Mapa · ${mapLocation.bairro}`}
+          description={`${mapLocation.cidade}/${mapLocation.uf} — o mapa acompanha o núcleo selecionado na tabela.`}
+        >
+          <EmpreendimentoMap
+            key={selected?.id ?? "map"}
+            location={mapLocation}
+            heightClassName="h-72 sm:h-80"
+            title="Google Maps"
+          />
+        </ModuleSection>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <input

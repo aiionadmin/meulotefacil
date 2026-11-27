@@ -17,6 +17,7 @@ import {
 } from "@/components/app/ModuleToolkit";
 import { ProcessBoard } from "@/components/kanban/ProcessBoard";
 import { PaginatedTable } from "@/components/app/PaginatedTable";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
 import { parseNfeXml } from "@/lib/import/nfe-xml";
 import {
   captureSefazStub,
@@ -134,6 +135,60 @@ export default function NotasFiscaisPage() {
       </ModuleSection>
 
       <ModuleSection title="Meus CNPJs">
+        <div className="mb-2 flex flex-wrap justify-end gap-2">
+          <SelectAllCheckboxes
+            groupLabel="Emissão NFSe"
+            allIds={cnpjs.map((c) => `emi:${c.id}`)}
+            selected={cnpjs
+              .filter((c) => c.emissaoNfse)
+              .map((c) => `emi:${c.id}`)}
+            onChange={(next) => {
+              const set = new Set(
+                Array.isArray(next)
+                  ? next
+                  : Object.keys(next).filter((k) => next[k])
+              );
+              const anyOn = set.size > 0;
+              for (const c of cnpjs) {
+                const on = set.has(`emi:${c.id}`);
+                if (c.emissaoNfse === on) continue;
+                updateMeuCnpj(c.id, { emissaoNfse: on });
+              }
+              updateIntegrationsConfig({ nfse: { enabled: anyOn } });
+              notify(
+                anyOn ? "Emissão NFSe em todos" : "Emissão NFSe desligada"
+              );
+            }}
+            className="shrink-0"
+          />
+          <SelectAllCheckboxes
+            groupLabel="Captura"
+            allIds={cnpjs.map((c) => `cap:${c.id}`)}
+            selected={cnpjs
+              .filter((c) => c.capturaAutomatica)
+              .map((c) => `cap:${c.id}`)}
+            onChange={(next) => {
+              const set = new Set(
+                Array.isArray(next)
+                  ? next
+                  : Object.keys(next).filter((k) => next[k])
+              );
+              const anyOn = set.size > 0;
+              for (const c of cnpjs) {
+                const on = set.has(`cap:${c.id}`);
+                if (c.capturaAutomatica === on) continue;
+                updateMeuCnpj(c.id, { capturaAutomatica: on });
+              }
+              updateIntegrationsConfig({ sefaz: { enabled: anyOn } });
+              notify(
+                anyOn
+                  ? "Captura Sefaz em todos"
+                  : "Captura Sefaz desligada"
+              );
+            }}
+            className="shrink-0"
+          />
+        </div>
         <PaginatedTable
           columns={[
             { key: "cnpj", label: "CNPJ" },

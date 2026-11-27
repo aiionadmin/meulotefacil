@@ -5,8 +5,8 @@ import { ExternalLink, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   buildMapsQuery,
-  googleMapsEmbedUrl,
   googleMapsSearchUrl,
+  resolveMapsEmbedUrl,
   type MapsLocationInput,
   resolveGoogleMapsApiKey,
 } from "@/lib/maps/google-maps";
@@ -21,7 +21,7 @@ type Props = {
 };
 
 /**
- * Mapa do empreendimento: iframe Embed se houver chave; senão placeholder + link.
+ * Mapa dinâmico: Embed API com chave; sem chave usa embed clássico da query.
  */
 export function EmpreendimentoMap({
   location,
@@ -33,10 +33,9 @@ export function EmpreendimentoMap({
   const searchUrl = useMemo(() => googleMapsSearchUrl(query), [query]);
   const clientKey = useMemo(() => resolveGoogleMapsApiKey(), []);
 
-  const [embedUrl, setEmbedUrl] = useState<string | null>(() => {
-    if (clientKey && query) return googleMapsEmbedUrl(query, clientKey);
-    return null;
-  });
+  const [embedUrl, setEmbedUrl] = useState<string | null>(() =>
+    resolveMapsEmbedUrl(query, clientKey)
+  );
   const [loading, setLoading] = useState(!clientKey && Boolean(query));
 
   useEffect(() => {
@@ -46,21 +45,23 @@ export function EmpreendimentoMap({
       return;
     }
     if (clientKey) {
-      setEmbedUrl(googleMapsEmbedUrl(query, clientKey));
+      setEmbedUrl(resolveMapsEmbedUrl(query, clientKey));
       setLoading(false);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
+    // Fallback imediato enquanto a API confirma (com ou sem chave).
+    setEmbedUrl(resolveMapsEmbedUrl(query, null));
     const params = new URLSearchParams({ q: query });
     fetch(`/api/maps/embed-url?${params.toString()}`)
       .then((r) => r.json())
       .then((data: { embedUrl?: string | null }) => {
-        if (!cancelled) setEmbedUrl(data.embedUrl ?? null);
+        if (!cancelled && data.embedUrl) setEmbedUrl(data.embedUrl);
       })
       .catch(() => {
-        if (!cancelled) setEmbedUrl(null);
+        /* mantém fallback */
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -93,6 +94,7 @@ export function EmpreendimentoMap({
       >
         {embedUrl ? (
           <iframe
+            key={embedUrl}
             title={title}
             src={embedUrl}
             className="absolute inset-0 h-full w-full border-0"
@@ -105,14 +107,6 @@ export function EmpreendimentoMap({
             <MapPin className="h-8 w-8 text-brand-orange" aria-hidden />
             {loading ? (
               <p className="text-sm text-muted-foreground">Carregando mapa…</p>
-            ) : query ? (
-              <>
-                <p className="max-w-sm text-sm text-ink/80">{query}</p>
-                <p className="text-xs text-muted-foreground">
-                  Mapa embutido disponível quando a chave da API estiver no
-                  ambiente. Use o link para abrir no Google Maps.
-                </p>
-              </>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Informe bairro, cidade ou endereço para ver no mapa.

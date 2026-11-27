@@ -19,6 +19,7 @@ import type {
   ContractOperation,
   Development,
   Escritura,
+  IndexQuote,
   Installment,
   Lot,
   LotStatus,
@@ -112,6 +113,7 @@ type CarteiraApi = {
     developmentId: string;
     lotId: string;
     compradorNome: string;
+    compradorId?: string;
     preco: number;
     entrada: number;
     qtdParcelas: number;
@@ -119,7 +121,16 @@ type CarteiraApi = {
     formaPagamento?: string;
     permutaDescricao?: string;
     paymentPlanId?: string;
+    /** Índice de reajuste (padrão do sistema). */
+    tipoReajuste?: string;
   }) => Contract | null;
+  upsertIndexQuote: (data: {
+    id?: string;
+    indice: string;
+    competencia: string;
+    fator: number;
+  }) => IndexQuote;
+  removeIndexQuote: (id: string) => boolean;
   updateInstallment: (
     id: string,
     patch: Partial<{
@@ -211,19 +222,35 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
     state,
     setState,
     seed: unifiedCarteiraSeed,
-    merge: (seed, saved) => ({
-      ...seed,
-      ...saved,
-      receiptParams: {
-        ...seed.receiptParams,
-        ...(saved as CarteiraState).receiptParams,
-      },
-      adjustments: ((saved as CarteiraState).adjustments ?? []).map((a) => ({
-        ...a,
-        residuosGerados: a.residuosGerados ?? 0,
-        residuoIds: a.residuoIds ?? [],
-      })),
-    }),
+    merge: (seed, saved) => {
+      const s = saved as CarteiraState;
+      const byId = new Map(seed.developments.map((d) => [d.id, d]));
+      const byNome = new Map(
+        seed.developments.map((d) => [d.nome.trim().toLowerCase(), d])
+      );
+      return {
+        ...seed,
+        ...s,
+        developments: (s.developments ?? seed.developments).map((d) => {
+          if (d.empresaId) return d;
+          const fromSeed =
+            byId.get(d.id) ?? byNome.get(d.nome.trim().toLowerCase());
+          return {
+            ...d,
+            empresaId: fromSeed?.empresaId ?? DEMO_ORG_ID,
+          };
+        }),
+        receiptParams: {
+          ...seed.receiptParams,
+          ...s.receiptParams,
+        },
+        adjustments: (s.adjustments ?? []).map((a) => ({
+          ...a,
+          residuosGerados: a.residuosGerados ?? 0,
+          residuoIds: a.residuoIds ?? [],
+        })),
+      };
+    },
   });
 
   const saldoDevedor = useCallback(
@@ -558,9 +585,9 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
       },
       saldoDevedor,
       refreshEncargos: (consulta = todayIso()) => {
-        setState((s) => ({
-          ...s,
-          installments: s.installments.map((p) => {
+        setState((s) => {
+          let changed = false;
+          const installments = s.installments.map((p) => {
             if (p.status === "paga" || p.status === "cancelada") return p;
             const ct = s.contracts.find((c) => c.id === p.contractId);
             const r = resolveInstallmentStatus({
@@ -572,26 +599,38 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
               taxaMulta: ct?.multaPct ?? 0.02,
               diasTolerancia: ct?.diasTolerancia ?? 0,
             });
+            if (
+              p.juros === r.juros &&
+              p.multa === r.multa &&
+              p.status === r.status
+            ) {
+              return p;
+            }
+            changed = true;
             return {
               ...p,
               juros: r.juros,
               multa: r.multa,
               status: r.status,
             };
-          }),
-          cards: s.cards.map((card) => {
-            if (!card.contractId) return card;
-            const atrasada = s.installments.some(
-              (p) =>
-                p.contractId === card.contractId &&
-                p.status === "vencida"
-            );
-            if (atrasada && card.coluna === "carteira_em_dia") {
-              return { ...card, coluna: "cobranca" as const };
-            }
-            return card;
-          }),
-        }));
+          });
+          if (!changed) return s;
+          return {
+            ...s,
+            installments,
+            cards: s.cards.map((card) => {
+              if (!card.contractId) return card;
+              const atrasada = installments.some(
+                (p) =>
+                  p.contractId === card.contractId && p.status === "vencida"
+              );
+              if (atrasada && card.coluna === "carteira_em_dia") {
+                return { ...card, coluna: "cobranca" as const };
+              }
+              return card;
+            }),
+          };
+        });
       },
       baixarParcela: (installmentId) => {
         setState((s) => {
@@ -908,10 +947,38 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           };
         });
       },
+      upsertIndexQuote: ({ id, indice, competencia, fator }) => {
+        const quote: IndexQuote = {
+          id: id || uid("ix"),
+          indice: indice.trim().toUpperCase(),
+          competencia: competencia.trim(),
+          fator: Number(fator) || 1,
+        };
+        setState((s) => {
+          const exists = s.indices.some((q) => q.id === quote.id);
+          return {
+            ...s,
+            indices: exists
+              ? s.indices.map((q) => (q.id === quote.id ? quote : q))
+              : [quote, ...s.indices],
+          };
+        });
+        return quote;
+      },
+      removeIndexQuote: (id) => {
+        let ok = false;
+        setState((s) => {
+          if (!s.indices.some((q) => q.id === id)) return s;
+          ok = true;
+          return { ...s, indices: s.indices.filter((q) => q.id !== id) };
+        });
+        return ok;
+      },
       addContract: ({
         developmentId,
         lotId,
         compradorNome,
+        compradorId,
         preco,
         entrada,
         qtdParcelas,
@@ -919,6 +986,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
         formaPagamento,
         permutaDescricao,
         paymentPlanId,
+        tipoReajuste,
       }) => {
         const emp = state.developments.find((d) => d.id === developmentId);
         const lot = state.lots.find((l) => l.id === lotId);
@@ -947,7 +1015,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           empNome: emp.nome,
           quadra: lot.quadra,
           lote: lot.lote,
-          compradorId: uid("p"),
+          compradorId: compradorId || uid("p"),
           compradorNome,
           preco,
           status: "ativo",
@@ -959,7 +1027,7 @@ export function CarteiraStoreProvider({ children }: { children: ReactNode }) {
           descontoPontualidadePct: 0,
           diaLimiteDesconto: 5,
           emiteBoleto: formaPagamento !== "permuta",
-          tipoReajuste: "IGPM",
+          tipoReajuste: (tipoReajuste || "IGPM").trim().toUpperCase(),
           mesBase: new Date().getMonth() + 1,
           formaPagamento: formaPagamento || "plano",
           permutaDescricao:

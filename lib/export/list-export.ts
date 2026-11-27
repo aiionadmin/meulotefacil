@@ -16,11 +16,40 @@ function escapeCsv(value: unknown): string {
   return s;
 }
 
+/** Nome de arquivo estável: empreendimentos, leads, processos-reurb… */
+export function exportFileSlug(name: string): string {
+  const slug = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\.(csv|xlsx|pdf|html)$/i, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "lista";
+}
+
+/** Título legível no PDF: "processos-reurb" → "Processos REURB". */
+export function exportTitleFromName(name: string): string {
+  const cleaned = name
+    .replace(/\.(csv|xlsx|pdf|html)$/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
+  if (!cleaned) return "Lista";
+  return cleaned
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\bReurb\b/gi, "REURB")
+    .replace(/\bPdf\b/g, "PDF")
+    .replace(/\bCnab\b/gi, "CNAB")
+    .replace(/\bOc\b/g, "OC")
+    .replace(/\bNf\b/gi, "NF");
+}
+
 export function downloadCsv(
   filename: string,
   headers: string[],
   rows: (string | number | null | undefined)[][]
 ) {
+  const slug = exportFileSlug(filename);
   const lines = [
     headers.map(escapeCsv).join(";"),
     ...rows.map((r) => r.map(escapeCsv).join(";")),
@@ -31,7 +60,7 @@ export function downloadCsv(
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename.endsWith(".csv") ? filename : `${filename}.csv`;
+  a.download = `${slug}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -42,15 +71,24 @@ export function downloadExcel(
   headers: string[],
   rows: (string | number | null | undefined)[][]
 ) {
-  const name = filename.replace(/\.xlsx$/i, "").replace(/\.csv$/i, "");
-  downloadCsv(`${name}.csv`, headers, rows);
+  downloadCsv(filename, headers, rows);
 }
 
-export function printList(title: string) {
-  const prev = document.title;
-  document.title = title;
-  window.print();
-  document.title = prev;
+/**
+ * Impressão = mesmo documento formal do PDF (logo + empresa + tabela).
+ * Nunca usa `window.print()` na tela do sistema.
+ */
+export async function printList(
+  title: string,
+  headers: string[] = ["Informação"],
+  rows: (string | number | null | undefined)[][] = [["Sem dados para impressão"]],
+  opts?: {
+    cnpj?: string;
+    empresa?: Partial<PrintEmpresa>;
+    filename?: string;
+  }
+) {
+  await downloadListPdf(title, headers, rows, opts);
 }
 
 function esc(s: string) {
@@ -65,8 +103,15 @@ export async function downloadListPdf(
   title: string,
   headers: string[],
   rows: (string | number | null | undefined)[][],
-  opts?: { cnpj?: string; empresa?: Partial<PrintEmpresa> }
+  opts?: {
+    cnpj?: string;
+    empresa?: Partial<PrintEmpresa>;
+    /** Nome do arquivo baixado (ex.: empreendimentos, leads). */
+    filename?: string;
+  }
 ) {
+  const displayTitle = exportTitleFromName(title);
+  const filename = exportFileSlug(opts?.filename ?? title);
   const { emitente, logoDataUrl } = await resolveEmitenteLogoDataUrl(
     opts?.cnpj
   );
@@ -81,10 +126,10 @@ export async function downloadListPdf(
   const header = buildPrintHeaderHtml({
     empresa,
     logoDataUrl,
-    titulo: title,
+    titulo: displayTitle,
     subtitulo: `Emitente · ${emitente.nomeFantasia}`,
   });
-  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${esc(title)}</title>
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${esc(displayTitle)}</title>
 <style>
 ${PRINT_DOC_CSS}
 table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:.5rem}
@@ -95,7 +140,7 @@ ${header}
 <table><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table>
 <footer class="foot">${esc(empresa.razaoSocial)} · documento gerado pelo sistema</footer>
 </div></body></html>`;
-  openPrintHtml(html, title.replace(/\s+/g, "-").toLowerCase());
+  openPrintHtml(html, filename);
 }
 
 /** Extrai texto de nós React simples (string/número/StatusPill). */

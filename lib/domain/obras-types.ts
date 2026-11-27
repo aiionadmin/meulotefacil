@@ -59,12 +59,17 @@ export type Composicao = {
   itens: ComposicaoItem[];
 };
 
+/** Financeiro (orçamento) × campo (RDO) — ou ambos. */
+export type ObraFinalidade = "financeiro" | "rdo" | "ambos";
+
 export type Obra = {
   id: string;
   codigo: string;
   nome: string;
   tipo: string;
   status: ObraStatus;
+  /** Cadastro financeiro (orçamento) e/ou RDO (diário). Default: ambos. */
+  finalidade?: ObraFinalidade;
   clienteNome: string;
   developmentId?: string;
   developmentNome?: string;

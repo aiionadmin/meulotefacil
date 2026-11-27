@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,12 @@ import { formatBRL } from "@/lib/masks/br";
 import { filterObrasVisiveis } from "@/lib/obras/visibilidade";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { useObras } from "@/lib/store/obras-store";
-import type { ObraStatus } from "@/lib/domain/obras-types";
+import type { ObraFinalidade, ObraStatus } from "@/lib/domain/obras-types";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import { SearchSelect } from "@/components/app/SearchSelect";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
+import { peopleOptions, responsavelOptions } from "@/lib/ui/people-options";
 
 const STATUS_LABEL: Record<ObraStatus, string> = {
   em_orcamento: "Em orçamento",
@@ -43,6 +46,7 @@ const EMPTY_FORM = {
   nome: "",
   tipo: "infraestrutura",
   status: "em_orcamento" as ObraStatus,
+  finalidade: "ambos" as ObraFinalidade,
   clienteNome: "",
   developmentId: "",
   responsavelObra: "",
@@ -90,6 +94,9 @@ export default function ObrasPage() {
   const usuariosAtivos = fase1.users.filter((u) => u.status === "ativo");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [finalidadeFilter, setFinalidadeFilter] = useState<
+    "todos" | ObraFinalidade
+  >("todos");
   const [open, setOpen] = useNovoParam();
   const [formDirty, setFormDirty] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -99,10 +106,36 @@ export default function ObrasPage() {
     setForm((prev) => ({ ...prev, ...patch }));
   }
 
+  function openNova(finalidade: ObraFinalidade) {
+    setForm({ ...EMPTY_FORM, finalidade });
+    setFormDirty(false);
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("novo") !== "1") return;
+      const f = params.get("finalidade");
+      if (f === "financeiro" || f === "rdo" || f === "ambos") {
+        setForm({ ...EMPTY_FORM, finalidade: f });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const filtered = useMemo(() => {
     let list = filterObrasVisiveis(state.obras, currentUser, perfilNome);
     if (statusFilter !== "todos") {
       list = list.filter((o) => o.status === statusFilter);
+    }
+    if (finalidadeFilter !== "todos") {
+      list = list.filter((o) => {
+        const f = o.finalidade ?? "ambos";
+        if (finalidadeFilter === "ambos") return f === "ambos";
+        return f === finalidadeFilter || f === "ambos";
+      });
     }
     const term = q.trim().toLowerCase();
     if (term) {
@@ -115,30 +148,44 @@ export default function ObrasPage() {
       );
     }
     return list;
-  }, [state.obras, q, statusFilter, currentUser, perfilNome]);
+  }, [
+    state.obras,
+    q,
+    statusFilter,
+    finalidadeFilter,
+    currentUser,
+    perfilNome,
+  ]);
+
+  const formTitle =
+    form.finalidade === "financeiro"
+      ? "Nova obra financeira (orçamento)"
+      : form.finalidade === "rdo"
+        ? "Nova obra RDO (diário)"
+        : "Nova obra (financeiro + RDO)";
 
   return (
     <div className="space-y-6">
       <ModuleHeader
         title="Minhas Obras"
-        description="Cadastro próprio de obra (independente dos lotes). Empreendimento é opcional."
+        description="Dois cadastros: obra financeira (orçamento) e obra RDO (diário de campo). Pode marcar Ambos."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <Link href="/gestao">Gestão</Link>
+              <Link href="/orcamentos">Orçamentos</Link>
             </Button>
             <Button size="sm" variant="outline" asChild>
               <Link href="/rdo">RDO</Link>
             </Button>
             <Button
               size="sm"
-              onClick={() => {
-                setForm(EMPTY_FORM);
-                setFormDirty(false);
-                setOpen(true);
-              }}
+              variant="outline"
+              onClick={() => openNova("financeiro")}
             >
-              Nova Obra
+              Nova obra financeira
+            </Button>
+            <Button size="sm" onClick={() => openNova("rdo")}>
+              Nova obra RDO
             </Button>
           </>
         }
@@ -148,9 +195,18 @@ export default function ObrasPage() {
         items={[
           { label: "Obras", value: state.obras.length },
           {
-            label: "Em andamento",
-            value: state.obras.filter((o) => o.status === "em_andamento")
-              .length,
+            label: "Financeiro",
+            value: state.obras.filter((o) => {
+              const f = o.finalidade ?? "ambos";
+              return f === "financeiro" || f === "ambos";
+            }).length,
+          },
+          {
+            label: "RDO",
+            value: state.obras.filter((o) => {
+              const f = o.finalidade ?? "ambos";
+              return f === "rdo" || f === "ambos";
+            }).length,
           },
           {
             label: "Orçado",
@@ -158,16 +214,22 @@ export default function ObrasPage() {
               state.obras.reduce((a, o) => a + o.orcado, 0)
             ),
           },
-          {
-            label: "Realizado",
-            value: formatBRL(
-              state.obras.reduce((a, o) => a + o.realizado, 0)
-            ),
-          },
         ]}
       />
 
       <FilterBar value={q} onChange={setQ} placeholder="Busque uma obra">
+        <select
+          className={fieldControlClass + " max-w-[180px]"}
+          value={finalidadeFilter}
+          onChange={(e) =>
+            setFinalidadeFilter(e.target.value as "todos" | ObraFinalidade)
+          }
+        >
+          <option value="todos">Todas finalidades</option>
+          <option value="financeiro">Financeiro</option>
+          <option value="rdo">RDO</option>
+          <option value="ambos">Ambos</option>
+        </select>
         <select
           className={fieldControlClass + " max-w-[180px]"}
           value={statusFilter}
@@ -190,6 +252,7 @@ export default function ObrasPage() {
           { key: "obra", label: "Obra" },
           { key: "cliente", label: "Cliente" },
           { key: "tipo", label: "Tipo" },
+          { key: "finalidade", label: "Cadastro" },
           { key: "status", label: "Status da Obra" },
           { key: "visivel", label: "Visível para" },
           { key: "fisico", label: "Físico" },
@@ -212,6 +275,23 @@ export default function ObrasPage() {
           ),
           cliente: o.clienteNome,
           tipo: o.tipo,
+          finalidade: (
+            <StatusPill
+              tone={
+                (o.finalidade ?? "ambos") === "financeiro"
+                  ? "info"
+                  : (o.finalidade ?? "ambos") === "rdo"
+                    ? "warn"
+                    : "ok"
+              }
+            >
+              {(o.finalidade ?? "ambos") === "financeiro"
+                ? "Financeiro"
+                : (o.finalidade ?? "ambos") === "rdo"
+                  ? "RDO"
+                  : "Ambos"}
+            </StatusPill>
+          ),
           status: (
             <StatusPill tone="info">{STATUS_LABEL[o.status]}</StatusPill>
           ),
@@ -250,7 +330,7 @@ export default function ObrasPage() {
       <FormSheet
         open={open}
         onOpenChange={setOpen}
-        title="Nova Obra"
+        title={formTitle}
         submitLabel="Salvar dados da obra"
         wide
         dirty={formDirty}
@@ -278,6 +358,10 @@ export default function ObrasPage() {
                   },
                 ]
               : undefined;
+          if (!form.clienteNome.trim()) {
+            notify("Selecione um cliente cadastrado");
+            return;
+          }
           addObra({
             codigo:
               form.codigo.trim() ||
@@ -285,7 +369,8 @@ export default function ObrasPage() {
             nome: form.nome.slice(0, 200),
             tipo: form.tipo,
             status: form.status,
-            clienteNome: form.clienteNome || "Cliente",
+            finalidade: form.finalidade,
+            clienteNome: form.clienteNome.trim(),
             developmentId: emp?.id,
             developmentNome: emp?.nome,
             areaTotal: form.areaTotal || undefined,
@@ -363,12 +448,49 @@ export default function ObrasPage() {
             ))}
           </select>
         </Field>
+        <Field label="Finalidade *">
+          <select
+            className={fieldControlClass}
+            value={form.finalidade}
+            onChange={(e) =>
+              patchForm({
+                finalidade: e.target.value as ObraFinalidade,
+              })
+            }
+          >
+            <option value="financeiro">Financeiro (orçamento)</option>
+            <option value="rdo">RDO (diário de obras)</option>
+            <option value="ambos">Ambos</option>
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Financeiro aparece em Orçamentos; RDO no diário de campo.
+          </p>
+        </Field>
         <Field label="Obra visível para *">
           <div className="space-y-3 rounded-lg border border-linha bg-white p-3">
-            <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="mb-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Perfis
               </p>
+              <SelectAllCheckboxes
+                allIds={perfisAtivos.map((p) => p.nome)}
+                selected={form.visivelPara.filter((v) =>
+                  perfisAtivos.some((p) => p.nome === v)
+                )}
+                onChange={(next) => {
+                  const perfilNames = Array.isArray(next)
+                    ? next
+                    : Object.keys(next).filter((k) => next[k]);
+                  const keepUsers = form.visivelPara.filter((v) =>
+                    usuariosAtivos.some((u) => u.nome === v)
+                  );
+                  patchForm({
+                    visivelPara: [...perfilNames, ...keepUsers],
+                  });
+                }}
+              />
+            </div>
+            <div>
               <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                 {perfisAtivos.map((p) => {
                   const checked = form.visivelPara.includes(p.nome);
@@ -394,9 +516,28 @@ export default function ObrasPage() {
               </div>
             </div>
             <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Usuários
-              </p>
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Usuários
+                </p>
+                <SelectAllCheckboxes
+                  allIds={usuariosAtivos.map((u) => u.nome)}
+                  selected={form.visivelPara.filter((v) =>
+                    usuariosAtivos.some((u) => u.nome === v)
+                  )}
+                  onChange={(next) => {
+                    const userNames = Array.isArray(next)
+                      ? next
+                      : Object.keys(next).filter((k) => next[k]);
+                    const keepPerfis = form.visivelPara.filter((v) =>
+                      perfisAtivos.some((p) => p.nome === v)
+                    );
+                    patchForm({
+                      visivelPara: [...keepPerfis, ...userNames],
+                    });
+                  }}
+                />
+              </div>
               <div className="flex max-h-36 flex-col gap-1.5 overflow-y-auto">
                 {usuariosAtivos.map((u) => {
                   const checked = form.visivelPara.includes(u.nome);
@@ -494,38 +635,38 @@ export default function ObrasPage() {
                   </Field>
                 </div>
                 <Field label="Responsável técnico">
-                  <Input
+                  <SearchSelect
                     value={form.responsavelTecnico}
-                    onChange={(e) =>
-                      patchForm({responsavelTecnico: e.target.value,
-                      })
+                    onChange={(responsavelTecnico) =>
+                      patchForm({ responsavelTecnico })
                     }
+                    options={peopleOptions(fase1.people, "profissional")}
+                    placeholder="Selecionar profissional cadastrado…"
                   />
                 </Field>
                 <Field label="Responsável da obra">
-                  <Input
+                  <SearchSelect
                     value={form.responsavelObra}
-                    onChange={(e) =>
-                      patchForm({responsavelObra: e.target.value,
-                      })
+                    onChange={(responsavelObra) =>
+                      patchForm({ responsavelObra })
                     }
+                    options={responsavelOptions(fase1.people, fase1.users)}
+                    placeholder="Selecionar responsável cadastrado…"
                   />
                 </Field>
                 <Field label="Empreendimento (opcional)">
-                  <select
-                    className={fieldControlClass}
+                  <SearchSelect
                     value={form.developmentId}
-                    onChange={(e) =>
-                      patchForm({developmentId: e.target.value })
+                    onChange={(developmentId) =>
+                      patchForm({ developmentId })
                     }
-                  >
-                    <option value="">Sem vínculo</option>
-                    {carteira.developments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.nome}
-                      </option>
-                    ))}
-                  </select>
+                    options={carteira.developments.map((d) => ({
+                      value: d.id,
+                      label: d.nome,
+                      meta: `${d.cidade}/${d.uf}`,
+                    }))}
+                    placeholder="Selecionar empreendimento…"
+                  />
                 </Field>
               </AccordionContent>
             </AccordionItem>
@@ -535,14 +676,22 @@ export default function ObrasPage() {
                 Dados do cliente
               </AccordionTrigger>
               <AccordionContent className="space-y-3">
-                <Field label="Cliente">
-                  <Input
+                <Field label="Cliente *">
+                  <SearchSelect
                     value={form.clienteNome}
-                    onChange={(e) =>
-                      patchForm({clienteNome: e.target.value })
-                    }
-                    placeholder="Busca / criação rápida"
+                    onChange={(clienteNome) => patchForm({ clienteNome })}
+                    options={peopleOptions(fase1.people, [
+                      "cliente",
+                      "comprador",
+                    ])}
+                    placeholder="Selecionar cliente cadastrado…"
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Cadastre em{" "}
+                    <Link className="underline" href="/cadastros/clientes">
+                      Clientes
+                    </Link>
+                  </p>
                 </Field>
               </AccordionContent>
             </AccordionItem>
@@ -772,6 +921,28 @@ export default function ObrasPage() {
                 Exibir obra para
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-2 flex justify-end">
+                  <SelectAllCheckboxes
+                    allIds={[
+                      "exibirLancamentos",
+                      "exibirFaturamentos",
+                      "exibirCompras",
+                    ]}
+                    selected={{
+                      exibirLancamentos: form.exibirLancamentos,
+                      exibirFaturamentos: form.exibirFaturamentos,
+                      exibirCompras: form.exibirCompras,
+                    }}
+                    onChange={(next) => {
+                      if (Array.isArray(next)) return;
+                      patchForm({
+                        exibirLancamentos: !!next.exibirLancamentos,
+                        exibirFaturamentos: !!next.exibirFaturamentos,
+                        exibirCompras: !!next.exibirCompras,
+                      });
+                    }}
+                  />
+                </div>
                 <div className="flex flex-wrap gap-3 text-sm">
                   {(
                     [
@@ -788,7 +959,7 @@ export default function ObrasPage() {
                         type="checkbox"
                         checked={form[key]}
                         onChange={(e) =>
-                          patchForm({[key]: e.target.checked })
+                          patchForm({ [key]: e.target.checked })
                         }
                       />
                       {label}

@@ -11,6 +11,7 @@ import {
 import { Field, FormDialog, notify } from "@/components/app/ModuleToolkit";
 import { ProcessList } from "@/components/app/ProcessList";
 import { SearchSelect } from "@/components/app/SearchSelect";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
 import { useEmpresa } from "@/lib/empresa/context";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useFase1 } from "@/lib/store/fase1-store";
@@ -304,6 +305,20 @@ export default function UsuariosConfigPage() {
           </label>
           {!form.todasEmpresas ? (
             <div className="space-y-1">
+              <div className="mb-1 flex justify-end">
+                <SelectAllCheckboxes
+                  allIds={empresas.map((e) => e.id)}
+                  selected={form.organizationIds}
+                  onChange={(next) =>
+                    setForm({
+                      ...form,
+                      organizationIds: Array.isArray(next)
+                        ? next
+                        : Object.keys(next).filter((k) => next[k]),
+                    })
+                  }
+                />
+              </div>
               {empresas.map((e) => (
                 <label key={e.id} className="flex items-center gap-2 text-sm">
                   <input
@@ -339,9 +354,23 @@ export default function UsuariosConfigPage() {
           {!form.verTodasObras ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <p className="mb-1 text-xs text-muted-foreground">
-                  Empreendimentos
-                </p>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Empreendimentos
+                  </p>
+                  <SelectAllCheckboxes
+                    allIds={cart.developments.map((d) => d.id)}
+                    selected={form.developmentIds}
+                    onChange={(next) =>
+                      setForm({
+                        ...form,
+                        developmentIds: Array.isArray(next)
+                          ? next
+                          : Object.keys(next).filter((k) => next[k]),
+                      })
+                    }
+                  />
+                </div>
                 {cart.developments.map((d) => (
                   <label
                     key={d.id}
@@ -365,7 +394,21 @@ export default function UsuariosConfigPage() {
                 ))}
               </div>
               <div>
-                <p className="mb-1 text-xs text-muted-foreground">Obras</p>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">Obras</p>
+                  <SelectAllCheckboxes
+                    allIds={obras.obras.map((o) => o.id)}
+                    selected={form.obraIds}
+                    onChange={(next) =>
+                      setForm({
+                        ...form,
+                        obraIds: Array.isArray(next)
+                          ? next
+                          : Object.keys(next).filter((k) => next[k]),
+                      })
+                    }
+                  />
+                </div>
                 {obras.obras.map((o) => (
                   <label
                     key={o.id}

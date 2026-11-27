@@ -8,6 +8,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ProcessList } from "@/components/app/ProcessList";
+import { SelectAllCheckboxes } from "@/components/app/SelectAllCheckboxes";
 import { useFase1 } from "@/lib/store/fase1-store";
 import { PERMISSION_ROUTINES } from "@/lib/permissions/routines";
 import { notify } from "@/components/app/ModuleToolkit";
@@ -105,6 +106,43 @@ export default function PerfisPage() {
           </div>
           {selected ? (
             <p className="text-sm text-ink/70">{selected.descricao}</p>
+          ) : null}
+          {canEdit ? (
+            <SelectAllCheckboxes
+              allIds={PERMISSION_ROUTINES.flatMap((r) => [
+                `${r.id}:ver`,
+                `${r.id}:inserirAlterar`,
+                `${r.id}:remover`,
+              ])}
+              selected={rows.flatMap((row) => {
+                const ids: string[] = [];
+                if (row.ver) ids.push(`${row.rotina.id}:ver`);
+                if (row.inserirAlterar)
+                  ids.push(`${row.rotina.id}:inserirAlterar`);
+                if (row.remover) ids.push(`${row.rotina.id}:remover`);
+                return ids;
+              })}
+              onChange={(next) => {
+                const set = new Set(
+                  Array.isArray(next)
+                    ? next
+                    : Object.keys(next).filter((k) => next[k])
+                );
+                for (const rotina of PERMISSION_ROUTINES) {
+                  setProfilePermission(profileId, rotina.id, {
+                    ver: set.has(`${rotina.id}:ver`),
+                    inserirAlterar: set.has(`${rotina.id}:inserirAlterar`),
+                    remover: set.has(`${rotina.id}:remover`),
+                  });
+                }
+                notify(
+                  set.size === 0
+                    ? "Permissões limpas"
+                    : "Todas as permissões marcadas",
+                  selected?.nome
+                );
+              }}
+            />
           ) : null}
         </div>
 

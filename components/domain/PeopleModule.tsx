@@ -161,7 +161,19 @@ export function PeopleModule({
           },
         ]}
       />
-      <FilterBar value={q} onChange={(v) => { setQ(v); setPage(0); }} placeholder="Buscar nome, CPF/CNPJ, cidade…">
+      <FilterBar
+        value={q}
+        onChange={(v) => {
+          setQ(v);
+          setPage(0);
+        }}
+        placeholder="Buscar nome, CPF/CNPJ, cidade…"
+        suggestions={state.people.flatMap((p) => [
+          p.nome,
+          p.documento,
+          p.cidade ?? "",
+        ])}
+      >
         <select
           className={fieldControlClass + " w-auto"}
           value={pageSize}
@@ -178,6 +190,7 @@ export function PeopleModule({
         </select>
       </FilterBar>
       <DataTable
+        exportName={papelFilter ? `pessoas-${papelFilter}` : "pessoas"}
         onRowClick={(i) => setSelected(rows[i])}
         columns={[
           { key: "nome", label: "Nome" },

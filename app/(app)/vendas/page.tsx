@@ -22,9 +22,19 @@ import { downloadPropostaPdf } from "@/lib/export/proposta-report";
 import { useFluxo } from "@/lib/store/fluxo-store";
 import { useCarteira } from "@/lib/store/carteira-store";
 import { useSystemSettings } from "@/lib/store/system-settings-store";
+import { useEmpresa } from "@/lib/empresa/context";
 import { calcReservaExpiraEm } from "@/lib/domain/system-settings";
 import type { Proposal } from "@/lib/domain/fluxo-types";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import {
+  EMPTY_GEO_EMP,
+  GeoEmpFilters,
+  developmentIdsMatching,
+  type GeoEmpFilterValues,
+} from "@/components/app/GeoEmpFilters";
+import { FilterBar } from "@/components/app/ModuleToolkit";
+import { useFase1 } from "@/lib/store/fase1-store";
+import { peopleOptions, responsavelOptions } from "@/lib/ui/people-options";
 
 const STATUS_COLS = [
   { id: "aberta", label: "Aberta" },
@@ -76,15 +86,79 @@ export default function VendasPage() {
     converterProposal,
   } = useFluxo();
   const { state: carteira, addContract, changeLotStatus } = useCarteira();
-  const { validadeReservaDias } = useSystemSettings();
+  const { validadeReservaDias, indicePadrao } = useSystemSettings();
+  const { scopedDevelopments, filterByDevelopmentEmpresa } = useEmpresa();
+  const { state: fase1 } = useFase1();
   const [open, setOpen] = useNovoParam();
+  const [geo, setGeo] = useState<GeoEmpFilterValues>(EMPTY_GEO_EMP);
+  const [q, setQ] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const developments = useMemo(
+    () => scopedDevelopments(carteira.developments),
+    [scopedDevelopments, carteira.developments]
+  );
+  const clienteOpts = useMemo(
+    () => peopleOptions(fase1.people, ["cliente", "comprador"]),
+    [fase1.people]
+  );
+  const responsavelOpts = useMemo(
+    () => responsavelOptions(fase1.people, fase1.users),
+    [fase1.people, fase1.users]
+  );
+
   const [form, setForm] = useState<ProposalForm>(() =>
     emptyForm(
       state.leads[0]?.id ?? "",
-      carteira.developments[0]?.id ?? "",
+      developments[0]?.id ?? carteira.developments[0]?.id ?? "",
       validadeReservaDias
     )
+  );
+
+  const geoIds = useMemo(
+    () => developmentIdsMatching(developments, geo),
+    [developments, geo]
+  );
+
+  const filteredProposals = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    const scoped = filterByDevelopmentEmpresa(
+      state.proposals.map((p) => ({
+        ...p,
+        developmentId:
+          p.developmentId ||
+          carteira.developments.find((d) => d.nome === p.empNome)?.id,
+      })),
+      carteira.developments
+    );
+    return scoped.filter((p) => {
+      if (geoIds) {
+        const did = p.developmentId;
+        if (!did || !geoIds.has(did)) return false;
+      }
+      if (!term) return true;
+      return [p.cliente, p.empNome, p.loteLabel, p.responsavel]
+        .join(" ")
+        .toLowerCase()
+        .includes(term);
+    });
+  }, [
+    state.proposals,
+    geoIds,
+    q,
+    carteira.developments,
+    filterByDevelopmentEmpresa,
+  ]);
+
+  const searchSuggestions = useMemo(
+    () =>
+      state.proposals.flatMap((p) => [
+        p.cliente,
+        p.empNome,
+        p.loteLabel,
+        p.responsavel,
+      ]),
+    [state.proposals]
   );
 
   const editing = editingId
@@ -311,10 +385,23 @@ export default function VendasPage() {
         formulário.
       </p>
 
+      <FilterBar
+        value={q}
+        onChange={setQ}
+        placeholder="Buscar cliente, empreendimento, lote…"
+        suggestions={searchSuggestions}
+      >
+        <GeoEmpFilters
+          developments={developments}
+          value={geo}
+          onChange={setGeo}
+        />
+      </FilterBar>
+
       <ProcessBoard
         storageKey="propostas"
         columns={STATUS_COLS}
-        rows={state.proposals}
+        rows={filteredProposals}
         toCard={toCard}
         onOpen={(id) => {
           const p = state.proposals.find((x) => x.id === id);
@@ -427,6 +514,7 @@ export default function VendasPage() {
                               ((p.valor - p.entrada) / Math.max(1, p.parcelas)) *
                                 100
                             ) / 100,
+                          tipoReajuste: indicePadrao,
                         });
                         changeLotStatus(
                           [lot.id],
@@ -487,16 +575,26 @@ export default function VendasPage() {
             disabled={locked}
           />
         </Field>
-        <Field label="Cliente">
-          <Input
+        <Field label="Cliente cadastrado">
+          <SearchSelect
             value={form.cliente}
+            onChange={(cliente) => setForm({ ...form, cliente })}
+            options={clienteOpts}
+            placeholder="Selecionar cliente cadastrado…"
             disabled={locked}
-            onChange={(e) => setForm({ ...form, cliente: e.target.value })}
           />
+          {clienteOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cadastre em{" "}
+              <Link className="underline" href="/cadastros/clientes">
+                Clientes
+              </Link>
+            </p>
+          ) : null}
         </Field>
         <Field label="Empreendimento *">
           <SearchSelect
-            options={carteira.developments.map((d) => ({
+            options={developments.map((d) => ({
               value: d.id,
               label: d.nome,
               meta: d.modalidade,
@@ -588,12 +686,12 @@ export default function VendasPage() {
           />
         </Field>
         <Field label="Responsável">
-          <Input
-            disabled={locked}
+          <SearchSelect
             value={form.responsavel}
-            onChange={(e) =>
-              setForm({ ...form, responsavel: e.target.value })
-            }
+            onChange={(responsavel) => setForm({ ...form, responsavel })}
+            options={responsavelOpts}
+            placeholder="Selecionar responsável…"
+            disabled={locked}
           />
         </Field>
         {editingId ? (

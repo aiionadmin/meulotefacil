@@ -56,7 +56,29 @@ export default function ComissoesPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => printList("Comissões")}
+              onClick={() => {
+                void printList(
+                  "Comissões",
+                  [
+                    "Corretor",
+                    "Venda",
+                    "Previsto",
+                    "Liberado",
+                    "Pago",
+                    "Status",
+                  ],
+                  state.comissoes.map((c) => [
+                    c.corretorNome,
+                    c.vendaRef,
+                    c.valorPrevisto,
+                    c.valorLiberado,
+                    c.valorPago,
+                    c.status,
+                  ]),
+                  { filename: "comissoes" }
+                );
+                notify("Impressão gerada");
+              }}
             >
               Imprimir
             </Button>

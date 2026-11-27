@@ -28,9 +28,12 @@ import {
   sendCotacaoWhatsAppStub,
 } from "@/lib/integrations";
 import { useCompras } from "@/lib/store/compras-store";
+import { useFase1 } from "@/lib/store/fase1-store";
 import { parseCotacaoPdf } from "@/lib/compras/cotacao-pdf";
 import type { Cotacao } from "@/lib/domain/compras-types";
 import { useNovoParam } from "@/lib/ui/use-novo-param";
+import { peopleOptions } from "@/lib/ui/people-options";
+import { SearchSelect } from "@/components/app/SearchSelect";
 
 export default function CotacoesPage() {
   const {
@@ -41,6 +44,7 @@ export default function CotacoesPage() {
     gerarOrdensDaCotacao,
     criarCotacaoDeSc,
   } = useCompras();
+  const { state: fase1 } = useFase1();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Cotacao | null>(null);
   const [aba, setAba] = useState<
@@ -55,8 +59,12 @@ export default function CotacoesPage() {
       ),
     [state.solicitacoes]
   );
+  const fornecedorOpts = useMemo(
+    () => peopleOptions(fase1.people, "fornecedor"),
+    [fase1.people]
+  );
   const [scId, setScId] = useState("");
-  const [forn, setForn] = useState("Distribuidora Sul");
+  const [forn, setForn] = useState("");
 
   useEffect(() => {
     if (open && !scId && scElegiveis[0]) setScId(scElegiveis[0].id);
@@ -453,10 +461,18 @@ export default function CotacoesPage() {
             notify("Selecione uma solicitação");
             return;
           }
+          if (!forn.trim()) {
+            notify("Selecione o fornecedor principal cadastrado");
+            return;
+          }
+          const extras = fornecedorOpts
+            .map((o) => o.value)
+            .filter((n) => n !== forn)
+            .slice(0, 2)
+            .map((fornecedor) => ({ fornecedor }));
           const cot = criarCotacaoDeSc(scId, [
-            { fornecedor: forn || "Fornecedor" },
-            { fornecedor: "Materiais Campinas" },
-            { fornecedor: "ConstruMax" },
+            { fornecedor: forn },
+            ...extras,
           ]);
           if (!cot) {
             notify("Não foi possível criar cotação");
@@ -481,8 +497,21 @@ export default function CotacoesPage() {
             ))}
           </select>
         </Field>
-        <Field label="Fornecedor principal">
-          <Input value={forn} onChange={(e) => setForn(e.target.value)} />
+        <Field label="Fornecedor principal *">
+          <SearchSelect
+            value={forn}
+            onChange={setForn}
+            options={fornecedorOpts}
+            placeholder="Selecionar fornecedor cadastrado…"
+          />
+          {fornecedorOpts.length === 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Nenhum fornecedor.{" "}
+              <Link className="underline" href="/cadastros/fornecedores">
+                Cadastrar
+              </Link>
+            </p>
+          ) : null}
         </Field>
         {scElegiveis.length === 0 ? (
           <p className="text-sm text-muted-foreground">

@@ -10,8 +10,9 @@ import {
   downloadCsv,
   downloadExcel,
   downloadListPdf,
-  printList,
+  exportTitleFromName,
 } from "@/lib/export/list-export";
+import { useEmpresa } from "@/lib/empresa/context";
 import { paginate } from "@/lib/ui/pagination";
 import { cn } from "@/lib/utils";
 
@@ -67,8 +68,32 @@ export function ProcessList<T extends { id: string }>({
   storageKey = "default",
   onRowClick,
   bulkActions,
-  exportName = "lista",
+  exportName,
 }: ProcessListProps<T>) {
+  const fileName = exportName?.trim() || storageKey || "lista";
+  const pdfTitle = exportTitleFromName(fileName);
+  const { selectedCnpj, selected: empresaSel } = useEmpresa();
+  const printOpts = useMemo(
+    () => ({
+      filename: fileName,
+      cnpj: selectedCnpj,
+      empresa: empresaSel
+        ? {
+            razaoSocial: empresaSel.razaoSocial,
+            nomeFantasia: empresaSel.nome,
+            cnpj: empresaSel.cnpj,
+            telefone: empresaSel.telefone,
+            email: empresaSel.email,
+            endereco: empresaSel.endereco,
+            bairro: empresaSel.bairro,
+            cidade: empresaSel.cidade,
+            uf: empresaSel.uf,
+            cep: empresaSel.cep,
+          }
+        : undefined,
+    }),
+    [fileName, selectedCnpj, empresaSel]
+  );
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -304,11 +329,11 @@ export function ProcessList<T extends { id: string }>({
             variant="outline"
             onClick={() => {
               downloadCsv(
-                `${exportName}.csv`,
+                fileName,
                 visibleCols.map((c) => c.label),
                 exportRows()
               );
-              notify("CSV exportado");
+              notify("CSV exportado", `${fileName}.csv`);
             }}
           >
             CSV
@@ -318,11 +343,11 @@ export function ProcessList<T extends { id: string }>({
             variant="outline"
             onClick={() => {
               downloadExcel(
-                `${exportName}.xlsx`,
+                fileName,
                 visibleCols.map((c) => c.label),
                 exportRows()
               );
-              notify("Excel exportado");
+              notify("Excel exportado", `${fileName}.csv`);
             }}
           >
             Excel
@@ -331,12 +356,13 @@ export function ProcessList<T extends { id: string }>({
             size="sm"
             variant="outline"
             onClick={() => {
-              downloadListPdf(
-                exportName,
+              void downloadListPdf(
+                pdfTitle,
                 visibleCols.map((c) => c.label),
-                exportRows()
+                exportRows(),
+                printOpts
               );
-              notify("PDF gerado");
+              notify("PDF gerado", pdfTitle);
             }}
           >
             PDF
@@ -344,7 +370,15 @@ export function ProcessList<T extends { id: string }>({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => printList(exportName)}
+            onClick={() => {
+              void downloadListPdf(
+                pdfTitle,
+                visibleCols.map((c) => c.label),
+                exportRows(),
+                printOpts
+              );
+              notify("Impressão gerada", pdfTitle);
+            }}
           >
             Imprimir
           </Button>
@@ -380,6 +414,8 @@ export function ProcessList<T extends { id: string }>({
       <DataTable
         empty={empty}
         paginate={false}
+        exportable={false}
+        exportName={fileName}
         columns={[
           {
             key: "_sel",
@@ -447,7 +483,20 @@ export function ProcessList<T extends { id: string }>({
               if (v) setSelected(new Set(paged.items.map((r) => r.id)));
               else setSelected(new Set());
             }}
+            aria-label={
+              allSelected ? "Limpar seleção" : "Selecionar todos da página"
+            }
           />
+          <button
+            type="button"
+            className="underline-offset-2 hover:underline"
+            onClick={() => {
+              if (allSelected) setSelected(new Set());
+              else setSelected(new Set(paged.items.map((r) => r.id)));
+            }}
+          >
+            {allSelected ? "Limpar seleção" : "Selecionar todos"}
+          </button>
           <span>
             Página {paged.page}/{paged.totalPages} · {paged.total} filtrado(s)
           </span>

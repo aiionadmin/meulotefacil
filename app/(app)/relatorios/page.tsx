@@ -357,7 +357,8 @@ export default function RelatoriosPage() {
               downloadListPdf(
                 "Pagamentos",
                 headers,
-                data.map((r) => r.map(String))
+                data.map((r) => r.map(String)),
+                { filename: "pagamentos" }
               );
               notify("Pagamentos exportados", `${rows.length} linhas`);
             }}
@@ -395,7 +396,8 @@ export default function RelatoriosPage() {
               downloadListPdf(
                 "Recebimentos",
                 headers,
-                data.map((x) => x.map(String))
+                data.map((x) => x.map(String)),
+                { filename: "recebimentos" }
               );
               notify("Recebimentos exportados", `${rows.length} linhas`);
             }}
@@ -434,7 +436,8 @@ export default function RelatoriosPage() {
               downloadListPdf(
                 "Lançamentos",
                 headers,
-                data.map((x) => x.map(String))
+                data.map((x) => x.map(String)),
+                { filename: "lancamentos" }
               );
               notify("Lançamentos exportados", `${rows.length} linhas`);
             }}

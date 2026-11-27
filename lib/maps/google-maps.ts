@@ -63,3 +63,29 @@ export function googleMapsEmbedUrl(query: string, apiKey: string): string {
   });
   return `https://www.google.com/maps/embed/v1/place?${params.toString()}`;
 }
+
+/**
+ * Embed clássico (iframe) sem API key — query dinâmico.
+ * Preferir `googleMapsEmbedUrl` quando houver chave.
+ */
+export function googleMapsEmbedUrlFallback(query: string): string {
+  const q = query.trim() || "Brasil";
+  const params = new URLSearchParams({
+    q,
+    hl: "pt-BR",
+    z: "15",
+    output: "embed",
+  });
+  return `https://maps.google.com/maps?${params.toString()}`;
+}
+
+/** Embed com chave se houver; senão fallback dinâmico. */
+export function resolveMapsEmbedUrl(
+  query: string,
+  apiKey?: string | null
+): string | null {
+  const q = query.trim();
+  if (!q) return null;
+  if (apiKey?.trim()) return googleMapsEmbedUrl(q, apiKey.trim());
+  return googleMapsEmbedUrlFallback(q);
+}
