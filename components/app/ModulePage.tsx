@@ -143,9 +143,14 @@ export function DataTable({
 
   const exportMatrix = useMemo(() => {
     const source = exportRows ?? rows;
-    const headers = columns.map((c) => c.label);
+    const exportCols = columns.filter(
+      (c) =>
+        c.label.trim() &&
+        !/^(acoes|ações|actions|opcoes|opções)$/i.test(c.key)
+    );
+    const headers = exportCols.map((c) => c.label);
     const data = source.map((row) =>
-      columns.map((c) => reactNodeText(row[c.key]))
+      exportCols.map((c) => reactNodeText(row[c.key]))
     );
     return { headers, data };
   }, [columns, rows, exportRows]);
