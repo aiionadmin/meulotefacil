@@ -83,18 +83,25 @@ export default function ReajustesPage() {
             <Button
               size="sm"
               onClick={() => {
-                const q = findIndexQuote(
+                const indice = form.indice || indicePadrao;
+                const mesPreferido =
+                  form.mesBase ||
+                  settings.reajuste.baseAnualMes ||
+                  new Date().getMonth() + 1;
+                let q = findIndexQuote(
                   state.indices,
-                  form.indice || indicePadrao,
-                  competenciaFromMesBase(
-                    form.mesBase ||
-                      settings.reajuste.baseAnualMes ||
-                      new Date().getMonth() + 1
-                  )
+                  indice,
+                  competenciaFromMesBase(mesPreferido)
                 );
+                // Sem cotação no mês-base: usa a mais recente do índice
+                if (!q) q = findIndexQuote(state.indices, indice);
+                const mesBase = q?.competencia
+                  ? Number(q.competencia.slice(5, 7)) || mesPreferido
+                  : mesPreferido;
                 setForm((f) => ({
                   ...f,
-                  indice: f.indice || indicePadrao,
+                  indice,
+                  mesBase,
                   fator: q?.fator ?? f.fator,
                   verificarMercado: true,
                 }));
