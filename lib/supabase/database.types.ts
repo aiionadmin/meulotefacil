@@ -169,6 +169,39 @@ export type Database = {
           Database["public"]["Tables"]["naturezas_receita"]["Insert"]
         >;
       };
+      contas_bancarias: {
+        Row: {
+          id: string;
+          organization_id: string;
+          nome: string;
+          banco: string | null;
+          tipo: string;
+          proprietario: string;
+          data_inicial: string;
+          valor_inicial: number;
+          saldo: number;
+          ativa: boolean;
+          bloqueio_ate: string | null;
+          boleto: boolean;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          nome: string;
+          banco?: string | null;
+          tipo: string;
+          proprietario: string;
+          data_inicial: string;
+          valor_inicial?: number;
+          saldo?: number;
+          ativa?: boolean;
+          bloqueio_ate?: string | null;
+          boleto?: boolean;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["contas_bancarias"]["Insert"]
+        >;
+      };
       lancamentos: {
         Row: {
           id: string;
@@ -176,7 +209,16 @@ export type Database = {
           descricao: string;
           favorecido: string;
           categoria_id: string | null;
+          competencia: string;
+          vencimento: string;
+          pagador: string | null;
+          conta_id: string | null;
           valor: number;
+          numero_doc: string | null;
+          forma: string | null;
+          condicao: string | null;
+          order_id: string | null;
+          observacoes: string | null;
         };
         Insert: {
           id?: string;
@@ -184,9 +226,84 @@ export type Database = {
           descricao: string;
           favorecido: string;
           categoria_id?: string | null;
+          competencia: string;
+          vencimento: string;
+          pagador?: string | null;
+          conta_id?: string | null;
           valor: number;
+          numero_doc?: string | null;
+          forma?: string | null;
+          condicao?: string | null;
+          order_id?: string | null;
+          observacoes?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["lancamentos"]["Insert"]>;
+      };
+      lancamento_centros: {
+        Row: {
+          id: string;
+          lancamento_id: string;
+          centro_tipo: string;
+          obra_id: string | null;
+          label: string;
+          valor: number | null;
+          pct: number | null;
+        };
+        Insert: {
+          id?: string;
+          lancamento_id: string;
+          centro_tipo: string;
+          obra_id?: string | null;
+          label: string;
+          valor?: number | null;
+          pct?: number | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["lancamento_centros"]["Insert"]
+        >;
+      };
+      pagamentos: {
+        Row: {
+          id: string;
+          organization_id: string;
+          lancamento_id: string | null;
+          parcela: string | null;
+          vencimento: string;
+          valor: number;
+          valor_pago: number;
+          status: string;
+          favorecido: string | null;
+          descricao: string | null;
+          categoria_id: string | null;
+          conta_id: string | null;
+          centro_label: string | null;
+          forma: string | null;
+          condicao: string | null;
+          numero_doc: string | null;
+          pago_em: string | null;
+          conciliado: boolean;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          lancamento_id?: string | null;
+          parcela?: string | null;
+          vencimento: string;
+          valor: number;
+          valor_pago?: number;
+          status?: string;
+          favorecido?: string | null;
+          descricao?: string | null;
+          categoria_id?: string | null;
+          conta_id?: string | null;
+          centro_label?: string | null;
+          forma?: string | null;
+          condicao?: string | null;
+          numero_doc?: string | null;
+          pago_em?: string | null;
+          conciliado?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["pagamentos"]["Insert"]>;
       };
       compras_config: {
         Row: {
